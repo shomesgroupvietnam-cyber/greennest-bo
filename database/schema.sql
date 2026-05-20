@@ -1,0 +1,14 @@
+-- GreenNest BuildFlow schema entrypoint.
+-- Use database/migrations for incremental production-safe changes.
+
+-- MVP core tables should include:
+-- users
+-- projects
+-- tasks
+-- documents
+-- document_versions
+-- legal_steps
+-- meetings
+-- decisions
+-- notifications
+-- audit_logs
