@@ -42,7 +42,7 @@ export async function createMeeting(
   const project = await projects.getProject(parsedInput.projectId);
 
   if (!project || project.archivedAt) {
-    throw new Error("Dá»± Ã¡n khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ Ä‘Æ°á»£c lÆ°u trá»¯.");
+    throw new Error("Dự án không tồn tại hoặc đã được lưu trữ.");
   }
 
   const timestamp = now();
@@ -69,7 +69,7 @@ export async function updateMeeting(
   const existingMeeting = await repository.getMeeting(meetingId);
 
   if (!existingMeeting) {
-    throw new Error("KhÃ´ng tÃ¬m tháº¥y cuá»™c há»p.");
+    throw new Error("Không tìm thấy cuộc họp.");
   }
 
   return repository.updateMeeting(meetingId, {
@@ -96,7 +96,7 @@ export async function createDecision(
   const meeting = await repository.getMeeting(parsedInput.meetingId);
 
   if (!meeting) {
-    throw new Error("KhÃ´ng tÃ¬m tháº¥y cuá»™c há»p.");
+    throw new Error("Không tìm thấy cuộc họp.");
   }
 
   const timestamp = now();
@@ -124,11 +124,11 @@ export async function convertDecisionToTask(
   const decision = await repository.getDecision(decisionId);
 
   if (!decision) {
-    throw new Error("KhÃ´ng tÃ¬m tháº¥y quyáº¿t Ä‘á»‹nh/action item.");
+    throw new Error("Không tìm thấy quyết định/action item.");
   }
 
   if (decision.taskId) {
-    throw new Error("Action item nÃ y Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn thÃ nh cÃ´ng viá»‡c.");
+    throw new Error("Action item này đã được chuyển thành công việc.");
   }
 
   const meeting = decision.meetingId ? await repository.getMeeting(decision.meetingId) : undefined;
@@ -137,8 +137,8 @@ export async function convertDecisionToTask(
       projectId: decision.projectId,
       title: decision.decisionText,
       description: [
-        "CÃ´ng viá»‡c Ä‘Æ°á»£c táº¡o tá»« quyáº¿t Ä‘á»‹nh/action item cuá»™c há»p.",
-        meeting ? `Cuá»™c há»p: ${meeting.title}` : undefined
+        "Công việc được tạo từ quyết định/action item cuộc họp.",
+        meeting ? `Cuộc họp: ${meeting.title}` : undefined
       ]
         .filter(Boolean)
         .join("\n"),

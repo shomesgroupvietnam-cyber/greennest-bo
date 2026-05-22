@@ -4,8 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/shared/page-shell";
 import { Button } from "@/components/ui/button";
 import { DOCUMENT_STATUSES, type DocumentStatus } from "@/constants/statuses";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listScopedDocuments, listScopedProjects } from "@/lib/permissions/scoped-resources";
 import { DOCUMENT_TYPES } from "@/modules/documents/constants";
 import { DocumentListTable } from "@/modules/documents/components/document-list-table";
@@ -24,7 +24,8 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const docType = readParam(params.docType) ?? "all";
   const status = (readParam(params.status) ?? "all") as DocumentStatus | "all";
   const ownerId = readParam(params.ownerId) ?? "all";
-  const currentUser = await getCurrentUser();
+  const session = await requirePermission("document.view", { route: "/documents" });
+  const currentUser = session.user;
   const canCreateDocument = can(currentUser, "document.create");
   const canUpdateDocument = can(currentUser, "document.update");
   const [projects, documents] = await Promise.all([

@@ -1,7 +1,15 @@
 import { z } from "zod";
 
 import { DOCUMENT_STATUSES } from "@/constants/statuses";
+import {
+  DEFAULT_DOCUMENT_CLASSIFICATION,
+  DOCUMENT_CLASSIFICATIONS,
+} from "@/modules/documents/constants";
 const documentStatusValues = Object.keys(DOCUMENT_STATUSES) as [keyof typeof DOCUMENT_STATUSES, ...Array<keyof typeof DOCUMENT_STATUSES>];
+const documentClassificationValues = Object.keys(DOCUMENT_CLASSIFICATIONS) as [
+  keyof typeof DOCUMENT_CLASSIFICATIONS,
+  ...Array<keyof typeof DOCUMENT_CLASSIFICATIONS>,
+];
 
 const optionalTextSchema = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
@@ -18,6 +26,7 @@ export const documentInputSchema = z
     projectId: z.string().trim().min(1, "Vui lòng chọn dự án."),
     title: z.string().trim().min(1, "Vui lòng nhập tên hồ sơ."),
     docType: z.string().trim().min(1, "Vui lòng chọn loại hồ sơ."),
+    classification: z.enum(documentClassificationValues).default(DEFAULT_DOCUMENT_CLASSIFICATION),
     fileUrl: optionalUrlSchema,
     externalUrl: optionalUrlSchema,
     version: z.string().trim().min(1, "Vui lòng nhập phiên bản."),

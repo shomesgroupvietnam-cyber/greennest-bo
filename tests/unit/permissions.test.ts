@@ -43,6 +43,10 @@ describe("permission behavior", () => {
     expect(can(executive, "document.create")).toBe(false);
     expect(can(executive, "legal.approve")).toBe(true);
     expect(can(executive, "legal.update")).toBe(false);
+    expect(can(executive, "proposal.view")).toBe(true);
+    expect(can(executive, "proposal.approve")).toBe(true);
+    expect(can(executive, "proposal.reject")).toBe(true);
+    expect(can(executive, "proposal.request_change")).toBe(true);
     expect(can(executive, "report.create")).toBe(true);
     expect(can(executive, "ai.ask")).toBe(true);
     expect(can(executive, "ai.use_rag")).toBe(true);
@@ -53,7 +57,22 @@ describe("permission behavior", () => {
     expect(can(executive, "knowledge.approve")).toBe(true);
     expect(can(executive, "user.invite")).toBe(false);
     expect(can(executive, "settings.manage")).toBe(false);
-    expect(ROLE_DEFAULT_SCREENS.pho_tong_giam_doc.href).toBe("/executive");
+    expect(ROLE_DEFAULT_SCREENS.pho_tong_giam_doc.href).toBe(
+      "/command-center?view=executive-dashboard",
+    );
+  });
+
+  it("routes tong_giam_doc to command center with full system permissions", () => {
+    const ceo = user("tong_giam_doc");
+
+    expect(ROLE_DEFAULT_SCREENS.tong_giam_doc.href).toBe("/command-center");
+    expect(can(ceo, "project.create")).toBe(true);
+    expect(can(ceo, "investment.approve")).toBe(true);
+    expect(can(ceo, "contract.approve")).toBe(true);
+    expect(can(ceo, "hr.approve")).toBe(true);
+    expect(can(ceo, "qa.approve")).toBe(true);
+    expect(can(ceo, "safety.approve")).toBe(true);
+    expect(can(ceo, "settings.manage")).toBe(true);
   });
 
   it("limits to_truong to assigned task updates and execution modules", () => {
@@ -109,12 +128,16 @@ describe("permission behavior", () => {
     expect(can(investment, "investment.create")).toBe(true);
     expect(can(investment, "proposal.create")).toBe(true);
     expect(can(investment, "finance.approve")).toBe(false);
-    expect(ROLE_DEFAULT_SCREENS.dau_tu_phat_trien.href).toBe("/investment-workspace");
+    expect(ROLE_DEFAULT_SCREENS.dau_tu_phat_trien.href).toBe(
+      "/investment-workspace",
+    );
 
     expect(can(financeManager, "finance.approve")).toBe(true);
     expect(can(financeManager, "proposal.approve")).toBe(true);
     expect(can(financeManager, "hr.update")).toBe(false);
-    expect(ROLE_DEFAULT_SCREENS.quan_ly_tai_chinh.href).toBe("/finance-management-workspace");
+    expect(ROLE_DEFAULT_SCREENS.quan_ly_tai_chinh.href).toBe(
+      "/finance-management-workspace",
+    );
 
     expect(can(hr, "hr.update")).toBe(true);
     expect(can(hr, "proposal.review")).toBe(true);
@@ -181,5 +204,24 @@ describe("permission behavior", () => {
     expect(navHrefs).not.toContain("/users");
     expect(navHrefs).not.toContain("/settings");
     expect(ROLE_DEFAULT_SCREENS.viewer.href).toBe("/viewer");
+  });
+
+  it("keeps pending users without module permissions or navigation", () => {
+    const pending = user("pending");
+
+    expect(can(pending, "project.view")).toBe(false);
+    expect(can(pending, "task.view")).toBe(false);
+    expect(can(pending, "document.view")).toBe(false);
+    expect(can(pending, "project:view")).toBe(false);
+    expect(getPermittedNavItems(pending)).toEqual([]);
+    expect(ROLE_DEFAULT_SCREENS.pending.href).toBe("/pending-access");
+  });
+
+  it("accepts colon-format permission aliases for server-side guards", () => {
+    const admin = user("admin");
+
+    expect(can(admin, "project:view")).toBe(true);
+    expect(can(admin, "document:approve")).toBe(true);
+    expect(can(admin, "unknown:view")).toBe(false);
   });
 });

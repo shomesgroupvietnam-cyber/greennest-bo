@@ -132,8 +132,8 @@ Acceptance:
 | Role | Screen | Nội dung chính |
 | --- | --- | --- |
 | Admin | System Admin Dashboard | Users, roles, projects, configuration, audit alerts |
-| Tổng giám đốc | Executive Portfolio Dashboard | Portfolio health, dự án vướng, quyết định chờ duyệt, rủi ro ngân sách |
-| Phó tổng giám đốc | Assigned Portfolio Dashboard | Dự án được giao, phê duyệt, escalations, domain risk |
+| Tổng giám đốc | Ban lãnh đạo | Dashboard lãnh đạo, kế hoạch đầu tư, thẩm quyền, phê duyệt, chỉ đạo, quyết định |
+| Phó tổng giám đốc | Ban lãnh đạo - phạm vi được giao | Dự án được giao, phê duyệt, chỉ đạo điều hành, escalations, domain risk |
 | Giám đốc dự án | Project Director Dashboard | Sức khỏe dự án, milestone, blockers, decision log, workload |
 | Quản lý dự án | PM Workbench | Task, document, legal progress, meeting, weekly report |
 | Tổ trưởng | Team Execution Board | Việc của tổ, gói việc, deadline, issue hiện trường |
@@ -148,7 +148,7 @@ Acceptance:
 ### 5.2.2 Role-based Navigation
 
 - Admin: Dashboard, Projects, Users, Settings, Audit, Reports.
-- Tổng giám đốc/Phó tổng giám đốc: Dashboard, Projects, Tasks, Documents, Legal, Meetings, Reports, Finance read/approve.
+- Tổng giám đốc/Phó tổng giám đốc: Ban lãnh đạo, Dashboard, Projects, Tasks, Documents, Legal, Meetings, Reports, Proposals, Finance read/approve.
 - Giám đốc dự án/Quản lý dự án: Dashboard, Projects, Tasks, Documents, Legal, Meetings, Design, Construction, Reports.
 - Tổ trưởng: Team Execution, Tasks, Documents, Construction package được giao.
 - Kế toán: Finance, Documents tài chính, Tasks tài chính, Reports tài chính.
@@ -257,14 +257,28 @@ Form:
 - Status.
 - Owner.
 
-### 5.7 Legal Checklist Lite
+### 5.7 Trục 1 - BuildFlow hình thành dự án
 
-Mục tiêu: theo dõi 12 bước pháp lý Trục 1 cho từng dự án.
+Mục tiêu: gom Trục 1 thành 5 mục chính, không build theo danh sách 12 bước cũ như menu độc lập.
+
+5 mục chính:
+
+1. Ban lãnh đạo.
+2. Tìm kiếm & phát triển dự án.
+3. Pháp lý.
+4. Thiết kế - Quy hoạch - Kỹ thuật - BIM.
+5. Đề xuất - Họp - Phê duyệt nội bộ.
+
+Trong giai đoạn hiện tại chỉ triển khai Mục 1 - Ban lãnh đạo. Mục 2, 3, 4, 5 chỉ xuất hiện như phân loại nghiệp vụ/workflow, không tạo route/module mới.
+
+### 5.8 Legal Checklist Lite
+
+Mục tiêu: theo dõi đúng 12 bước cũ của Trục 1 cho từng dự án như workflow/checklist nằm trong 5 mục chính.
 
 View:
 
 - Chọn dự án.
-- Checklist 12 bước.
+- Checklist đúng 12 bước cũ, không dùng 13 bước.
 - Status badge.
 - Assignee.
 - Deadline.
@@ -276,8 +290,9 @@ Interaction:
 
 - Cập nhật trạng thái inline hoặc qua drawer/modal.
 - Khi status là `Bị vướng`, bắt buộc nhập notes.
+- Không tạo menu riêng cho từng bước cũ.
 
-### 5.8 Meetings
+### 5.9 Meetings
 
 MVP có thể skeleton hoặc lightweight.
 
@@ -290,14 +305,14 @@ Thành phần:
 
 ## 6. User Flows
 
-### Flow A - Founder xem tình hình
+### Flow A - Founder/Tổng giám đốc xem tình hình
 
 1. Đăng nhập.
-2. Vào Dashboard.
-3. Xem card việc chậm, hồ sơ thiếu, pháp lý vướng.
-4. Click vào alert.
-5. Xem chi tiết task/document/legal step.
-6. Giao người phụ trách hoặc cập nhật ghi chú.
+2. Vào Ban lãnh đạo.
+3. Xem dashboard lãnh đạo, kế hoạch đầu tư, đề xuất chờ duyệt, chỉ đạo điều hành và nhật ký quyết định.
+4. Click vào đề xuất/chỉ đạo/cuộc họp cần xử lý.
+5. Xem chi tiết dữ liệu liên quan.
+6. Phê duyệt, yêu cầu chỉnh sửa, từ chối hoặc giao người phụ trách theo quyền.
 
 ### Flow B - PM tạo dự án
 

@@ -12,31 +12,31 @@ export function DecisionForm({ action }: DecisionFormProps) {
   return (
     <form action={action} className="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
       <div>
-        <h2 className="text-base font-semibold text-slate-950">ThÃªm quyáº¿t Ä‘á»‹nh/action item</h2>
-        <p className="mt-1 text-sm text-slate-600">Action item cÃ³ ngÆ°á»i phá»¥ trÃ¡ch vÃ  deadline cÃ³ thá»ƒ chuyá»ƒn thÃ nh cÃ´ng viá»‡c.</p>
+        <h2 className="text-base font-semibold text-slate-950">Thêm quyết định/action item</h2>
+        <p className="mt-1 text-sm text-slate-600">Action item có người phụ trách và deadline có thể chuyển thành công việc.</p>
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium text-slate-800" htmlFor="decisionText">
-          Ná»™i dung <span className="text-red-600">*</span>
+          Nội dung <span className="text-red-600">*</span>
         </label>
         <textarea className={fieldClass} id="decisionText" name="decisionText" required rows={3} />
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="ownerId">
-            NgÆ°á»i phá»¥ trÃ¡ch
+            Người phụ trách
           </label>
           <input className={fieldClass} id="ownerId" name="ownerId" />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="dueDate">
-            Háº¡n xá»­ lÃ½
+            Hạn xử lý
           </label>
           <input className={fieldClass} id="dueDate" name="dueDate" type="date" />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="status">
-            Tráº¡ng thÃ¡i
+            Trạng thái
           </label>
           <select className={fieldClass} defaultValue="open" id="status" name="status">
             {Object.entries(DECISION_STATUSES).map(([status, label]) => (
@@ -47,7 +47,7 @@ export function DecisionForm({ action }: DecisionFormProps) {
           </select>
         </div>
       </div>
-      <Button type="submit">ThÃªm action item</Button>
+      <Button type="submit">Thêm action item</Button>
     </form>
   );
 }

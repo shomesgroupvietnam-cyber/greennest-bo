@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { selectRepository } from "@/lib/db/repository-mode";
+import { DEFAULT_DOCUMENT_CLASSIFICATION } from "@/modules/documents/constants";
 import type { Document, DocumentListFilters, DocumentVersion } from "@/modules/documents/types";
 
 type DocumentStore = {
@@ -32,6 +33,12 @@ export class JsonDocumentRepository implements DocumentRepository {
     return store.documents
       .filter((document) => !filters.projectId || filters.projectId === "all" || document.projectId === filters.projectId)
       .filter((document) => !filters.docType || filters.docType === "all" || document.docType === filters.docType)
+      .filter(
+        (document) =>
+          !filters.classification ||
+          filters.classification === "all" ||
+          document.classification === filters.classification,
+      )
       .filter((document) => !filters.status || filters.status === "all" || document.status === filters.status)
       .filter((document) => !filters.ownerId || filters.ownerId === "all" || document.ownerId === filters.ownerId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -123,6 +130,7 @@ export class JsonDocumentRepository implements DocumentRepository {
 function normalizeDocument(document: Document): Document {
   return {
     ...document,
+    classification: document.classification ?? DEFAULT_DOCUMENT_CLASSIFICATION,
     approvalStatus: document.approvalStatus ?? (document.status === "complete" ? "approved" : "not_submitted")
   };
 }
@@ -145,6 +153,7 @@ type DocumentRow = {
   project_id: string;
   title: string;
   doc_type: string;
+  classification: Document["classification"] | null;
   file_url: string | null;
   external_url: string | null;
   version: string;
@@ -175,6 +184,7 @@ function toDocument(row: DocumentRow): Document {
     projectId: row.project_id,
     title: row.title,
     docType: row.doc_type,
+    classification: row.classification ?? DEFAULT_DOCUMENT_CLASSIFICATION,
     fileUrl: row.file_url ?? undefined,
     externalUrl: row.external_url ?? undefined,
     version: row.version,
@@ -208,6 +218,7 @@ function documentToRow(document: Document) {
     project_id: document.projectId,
     title: document.title,
     doc_type: document.docType,
+    classification: document.classification ?? DEFAULT_DOCUMENT_CLASSIFICATION,
     file_url: document.fileUrl ?? null,
     external_url: document.externalUrl ?? null,
     version: document.version,
@@ -227,6 +238,7 @@ function documentPatchToRow(patch: Partial<Document>) {
     ...(patch.projectId !== undefined ? { project_id: patch.projectId } : {}),
     ...(patch.title !== undefined ? { title: patch.title } : {}),
     ...(patch.docType !== undefined ? { doc_type: patch.docType } : {}),
+    ...(patch.classification !== undefined ? { classification: patch.classification } : {}),
     ...(patch.fileUrl !== undefined ? { file_url: patch.fileUrl ?? null } : {}),
     ...(patch.externalUrl !== undefined ? { external_url: patch.externalUrl ?? null } : {}),
     ...(patch.version !== undefined ? { version: patch.version } : {}),
@@ -251,6 +263,10 @@ export class SupabaseDocumentRepository implements DocumentRepository {
 
     if (filters.docType && filters.docType !== "all") {
       query = query.eq("doc_type", filters.docType);
+    }
+
+    if (filters.classification && filters.classification !== "all") {
+      query = query.eq("classification", filters.classification);
     }
 
     if (filters.status && filters.status !== "all") {

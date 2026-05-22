@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { loginAction } from "@/lib/auth/actions";
 import { getCurrentSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 type LoginPageProps = {
   searchParams?: Promise<{
+    entry?: string;
+    next?: string;
     error?: string;
     loggedOut?: string;
   }>;
@@ -15,6 +18,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getCurrentSession();
   const params = await searchParams;
   const isMockMode = session.mode === "mock";
+
+  if (params?.entry !== "1") {
+    redirect("/");
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -40,6 +47,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : null}
 
         <form action={loginAction} className="mt-6 space-y-4">
+          <input name="next" type="hidden" value={params?.next ?? ""} />
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-800" htmlFor="email">
               Email

@@ -35,9 +35,36 @@ MVP V1 tập trung vào quản lý dự án, công việc, hồ sơ, checklist p
 
 ## 4. Mô hình 3 trục hệ thống
 
-### Trục 1 - Pháp lý, quy hoạch và đầu tư
+### Trục 1 - BuildFlow hình thành dự án
 
-Quản lý giai đoạn hình thành dự án: quỹ đất, quy hoạch, chấp thuận chủ trương, quy hoạch 1/500, thiết kế cơ sở, báo cáo khả thi, môi trường, PCCC, giao đất, chủ đầu tư, giấy phép xây dựng.
+Trục 1 quản lý giai đoạn hình thành dự án theo 5 mục chính thay vì menu phẳng nhiều bước:
+
+1. Ban lãnh đạo.
+2. Tìm kiếm & phát triển dự án.
+3. Pháp lý.
+4. Thiết kế - Quy hoạch - Kỹ thuật - BIM.
+5. Đề xuất - Họp - Phê duyệt nội bộ.
+
+Các bước cũ của Trục 1 được chốt là 12 bước, không dùng 13 bước. 12 bước này không bị xóa, không trở thành menu độc lập, mà là workflow/checklist nằm trong 5 mục chính để dễ dùng, dễ mở rộng AI và dễ nghiệm thu theo từng mục.
+
+Phân loại 12 bước cũ:
+
+| Bước cũ | Mục chính |
+| --- | --- |
+| Khảo sát quỹ đất | Tìm kiếm & phát triển dự án |
+| Phân tích quy hoạch | Thiết kế - Quy hoạch - Kỹ thuật - BIM |
+| Hồ sơ đề xuất đầu tư | Tìm kiếm & phát triển dự án; liên kết luồng Đề xuất - Họp - Phê duyệt nội bộ |
+| Chủ trương đầu tư | Pháp lý; phê duyệt chủ trương nội bộ thuộc Ban lãnh đạo |
+| Quy hoạch chi tiết 1/500 | Thiết kế - Quy hoạch - Kỹ thuật - BIM; phần nộp/nhận phản hồi cơ quan liên kết Pháp lý |
+| Thiết kế cơ sở | Thiết kế - Quy hoạch - Kỹ thuật - BIM |
+| Báo cáo nghiên cứu khả thi | Thiết kế - Quy hoạch - Kỹ thuật - BIM; phần hiệu quả đầu tư liên kết Tìm kiếm & phát triển dự án |
+| Đánh giá môi trường | Pháp lý |
+| PCCC | Pháp lý; hồ sơ kỹ thuật liên kết Thiết kế - Quy hoạch - Kỹ thuật - BIM |
+| Giao đất/thuê đất | Pháp lý |
+| Chấp nhận chủ đầu tư | Pháp lý |
+| Giấy phép xây dựng | Pháp lý |
+
+Hiện tại chỉ triển khai trước Mục 1 - Ban lãnh đạo. Chưa triển khai Mục 2, 3, 4, 5 thành route/module mới nếu chưa có lệnh tiếp theo.
 
 ### Trục 2 - Thi công và triển khai
 
@@ -54,7 +81,7 @@ Quản lý dashboard, tài chính, dòng tiền, họp, báo cáo, KPI, quyết 
 | M1 | Project Core | Tạo/sửa/xem dự án, thông tin cơ bản, trạng thái, loại dự án | Bắt buộc |
 | M2 | Task Management | Tạo việc, deadline, người phụ trách, trạng thái, mức ưu tiên | Bắt buộc |
 | M3 | Document Center | Upload/link hồ sơ, phân loại, version, trạng thái thiếu/đủ | Bắt buộc |
-| M4 | Legal Checklist Lite | Checklist pháp lý Trục 1, ngày dự kiến, ngày hoàn thành, tình trạng | Bắt buộc |
+| M4 | Legal Checklist Lite | Checklist 12 bước cũ của Trục 1, ngày dự kiến, ngày hoàn thành, tình trạng | Bắt buộc |
 | M5 | Dashboard | Tổng quan dự án, việc chậm, hồ sơ thiếu, chỉ tiêu chính, tiến độ | Bắt buộc |
 | M6 | Auth, Users & Roles Basic | Đăng nhập, mời người dùng, phân quyền theo role công ty/dự án, người phụ trách | Bắt buộc |
 
@@ -114,13 +141,14 @@ Tiêu chí nghiệm thu:
 
 Yêu cầu chức năng:
 
-- Khi tạo dự án, khởi tạo checklist pháp lý mặc định cho Trục 1.
+- Khi tạo dự án, khởi tạo checklist mặc định gồm 12 bước cũ của Trục 1.
+- Checklist này là workflow nội bộ bên trong 5 mục chính của Trục 1, không phải menu Trục 1 độc lập.
 - Mỗi bước có trạng thái: Chưa bắt đầu, Đang làm, Chờ cơ quan, Đã xong, Bị vướng.
 - Mỗi bước có ghi chú, deadline, file liên quan và người phụ trách.
 - Cho phép cập nhật trạng thái, deadline, người phụ trách và ghi chú.
 - Dashboard hiển thị bước pháp lý đang vướng.
 
-Checklist mặc định Trục 1:
+Checklist mặc định Trục 1 gồm đúng 12 bước:
 
 1. Khảo sát quỹ đất.
 2. Phân tích quy hoạch.
@@ -224,7 +252,7 @@ Role screen mặc định:
 - Tạo được công việc gắn với dự án, có deadline và người phụ trách.
 - Thấy được việc quá hạn trên dashboard.
 - Tạo được hồ sơ/link hồ sơ, đánh dấu thiếu/đủ.
-- Cập nhật được checklist pháp lý Trục 1.
+- Cập nhật được checklist 12 bước cũ của Trục 1 mà không tạo menu riêng cho từng bước.
 - Dashboard hiển thị tổng quan đúng theo dữ liệu nhập.
 - Có auth và phân quyền cơ bản theo role công ty/dự án.
 - Giao diện tiếng Việt, dùng được trên laptop và điện thoại.

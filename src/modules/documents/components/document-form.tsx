@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { DOCUMENT_STATUSES } from "@/constants/statuses";
-import { DOCUMENT_TYPES, DEFAULT_DOCUMENT_OWNER_ID } from "@/modules/documents/constants";
+import {
+  DEFAULT_DOCUMENT_CLASSIFICATION,
+  DEFAULT_DOCUMENT_OWNER_ID,
+  DOCUMENT_CLASSIFICATION_LABELS,
+  DOCUMENT_TYPES,
+} from "@/modules/documents/constants";
 import type { Document } from "@/modules/documents/types";
 import type { Project } from "@/modules/projects/types";
 
@@ -53,6 +58,25 @@ export function DocumentForm({ action, defaultProjectId, document, projects, sub
           </label>
           <select className={fieldClass} defaultValue={document?.docType ?? "legal_submission"} id="docType" name="docType" required>
             {Object.entries(DOCUMENT_TYPES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-800" htmlFor="classification">
+            Phân loại bảo mật <span className="text-red-600">*</span>
+          </label>
+          <select
+            className={fieldClass}
+            defaultValue={document?.classification ?? DEFAULT_DOCUMENT_CLASSIFICATION}
+            id="classification"
+            name="classification"
+            required
+          >
+            {Object.entries(DOCUMENT_CLASSIFICATION_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

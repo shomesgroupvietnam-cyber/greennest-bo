@@ -3,7 +3,7 @@
 
 create table if not exists public.ai_interactions (
   id uuid primary key,
-  requested_by uuid not null references public.profiles(id) on delete cascade,
+  requested_by uuid not null references public.users(id) on delete cascade,
   project_id uuid references public.projects(id) on delete set null,
   module text not null check (module in ('project', 'tasks', 'documents', 'legal', 'meetings', 'reports', 'design', 'construction', 'finance', 'general')),
   intent text not null,
@@ -23,7 +23,7 @@ create table if not exists public.ai_interactions (
 create table if not exists public.ai_jobs (
   id uuid primary key,
   interaction_id uuid not null references public.ai_interactions(id) on delete cascade,
-  requested_by uuid not null references public.profiles(id) on delete cascade,
+  requested_by uuid not null references public.users(id) on delete cascade,
   project_id uuid references public.projects(id) on delete set null,
   module text not null check (module in ('project', 'tasks', 'documents', 'legal', 'meetings', 'reports', 'design', 'construction', 'finance', 'general')),
   intent text not null,
@@ -65,7 +65,7 @@ create table if not exists public.ai_action_proposals (
   id uuid primary key,
   interaction_id uuid not null references public.ai_interactions(id) on delete cascade,
   job_id uuid references public.ai_jobs(id) on delete cascade,
-  requested_by uuid not null references public.profiles(id) on delete cascade,
+  requested_by uuid not null references public.users(id) on delete cascade,
   project_id uuid references public.projects(id) on delete set null,
   module text not null check (module in ('project', 'tasks', 'documents', 'legal', 'meetings', 'reports', 'design', 'construction', 'finance', 'general')),
   action_key text not null,
@@ -101,4 +101,3 @@ drop trigger if exists set_ai_action_proposals_updated_at on public.ai_action_pr
 create trigger set_ai_action_proposals_updated_at
 before update on public.ai_action_proposals
 for each row execute function public.set_updated_at();
-

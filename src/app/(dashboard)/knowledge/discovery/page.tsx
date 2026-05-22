@@ -144,7 +144,7 @@ export default async function KnowledgeDiscoveryPage() {
                       {topic.lastRunStatus === "failed" ? (
                         <p className="mt-1 text-xs text-red-600">
                           Retry {topic.retryCount}/{topic.maxRetries}
-                          {topic.nextRetryAt ? ` Â· Lan retry tiep theo: ${formatDate(topic.nextRetryAt)}` : ""}{" "}
+                          {topic.nextRetryAt ? ` · Lan retry tiep theo: ${formatDate(topic.nextRetryAt)}` : ""}{" "}
                           {topic.errorMessage ? ` · ${getFriendlyExternalSearchErrorMessage({ message: topic.errorMessage, code: topic.errorCode })}` : ""}
                         </p>
                       ) : null}

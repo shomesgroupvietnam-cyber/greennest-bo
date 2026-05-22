@@ -28,6 +28,7 @@ function formDataToDocumentInput(formData: FormData): DocumentInput {
     projectId: String(formData.get("projectId") ?? ""),
     title: String(formData.get("title") ?? ""),
     docType: String(formData.get("docType") ?? ""),
+    classification: String(formData.get("classification") ?? "INTERNAL") as DocumentInput["classification"],
     fileUrl: readOptionalString(formData, "fileUrl"),
     externalUrl: readOptionalString(formData, "externalUrl"),
     version: String(formData.get("version") ?? "v1"),
@@ -51,7 +52,12 @@ export async function createDocumentAction(formData: FormData) {
     entityType: "document",
     entityId: document.id,
     action: "document.create",
-    newValue: { projectId: document.projectId, status: document.status, approvalStatus: document.approvalStatus }
+    newValue: {
+      projectId: document.projectId,
+      status: document.status,
+      approvalStatus: document.approvalStatus,
+      classification: document.classification,
+    }
   });
 
   revalidatePath("/documents");
@@ -77,7 +83,12 @@ export async function updateDocumentAction(documentId: string, formData: FormDat
     entityId: document.id,
     action: "document.update",
     oldValue: existingDocument,
-    newValue: { status: document.status, version: document.version, approvalStatus: document.approvalStatus }
+    newValue: {
+      status: document.status,
+      version: document.version,
+      approvalStatus: document.approvalStatus,
+      classification: document.classification,
+    }
   });
 
   revalidatePath("/documents");

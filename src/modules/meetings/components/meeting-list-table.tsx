@@ -29,12 +29,12 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
         action={
           canCreate ? (
             <Button asChild>
-              <Link href="/meetings/new">Táº¡o biÃªn báº£n há»p</Link>
+              <Link href="/meetings/new">Tạo biên bản họp</Link>
             </Button>
           ) : undefined
         }
-        description="Táº¡o meeting note Ä‘á»ƒ lÆ°u láº¡i thÃ´ng tin há»p, quyáº¿t Ä‘á»‹nh vÃ  action item theo dá»± Ã¡n."
-        title="ChÆ°a cÃ³ cuá»™c há»p phÃ¹ há»£p"
+        description="Tạo meeting note để lưu lại thông tin họp, quyết định và action item theo dự án."
+        title="Chưa có cuộc họp phù hợp"
       />
     );
   }
@@ -45,11 +45,11 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Cuá»™c há»p</th>
-              <th className="px-4 py-3">Dá»± Ã¡n</th>
-              <th className="px-4 py-3">Thá»i gian</th>
-              <th className="px-4 py-3">NgÆ°á»i táº¡o</th>
-              <th className="px-4 py-3 text-right">Thao tÃ¡c</th>
+              <th className="px-4 py-3">Cuộc họp</th>
+              <th className="px-4 py-3">Dự án</th>
+              <th className="px-4 py-3">Thời gian</th>
+              <th className="px-4 py-3">Người tạo</th>
+              <th className="px-4 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -62,7 +62,7 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
                     <Link className="font-medium text-emerald-700 hover:text-emerald-800" href={`/meetings/${meeting.id}`}>
                       {meeting.title}
                     </Link>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">{meeting.summary ?? "ChÆ°a cÃ³ tá»‘m táº¯t."}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">{meeting.summary ?? "Chưa có tốm tắt."}</p>
                   </td>
                   <td className="min-w-56 px-4 py-3 text-slate-600">
                     {project ? (
@@ -70,7 +70,7 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
                         {project.code} - {project.name}
                       </Link>
                     ) : (
-                      "KhÃ´ng rÃµ"
+                      "Không rõ"
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(meeting.meetingDate)}</td>
@@ -87,7 +87,7 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
                         <Button asChild size="sm" variant="outline">
                           <Link href={`/meetings/${meeting.id}/edit`}>
                             <Pencil className="h-4 w-4" aria-hidden="true" />
-                            Sá»­a
+                            Sửa
                           </Link>
                         </Button>
                       ) : null}

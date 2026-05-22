@@ -33,8 +33,8 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
 
   if (!can(currentUser, "knowledge.view")) {
     return (
-      <PageShell title="KhÃ´ng cÃ³ quyá»n truy cáº­p" description="Báº¡n cáº§n quyá»n xem Knowledge Center Ä‘á»ƒ má»Ÿ candidate queue.">
-        <UnauthorizedState backHref="/dashboard" backLabel="Vá» dashboard" title="Báº¡n khÃ´ng cÃ³ quyá»n xem Knowledge Candidate" />
+      <PageShell title="Không có quyền truy cập" description="Bạn cần quyền xem Knowledge Center để mở candidate queue.">
+        <UnauthorizedState backHref="/dashboard" backLabel="Về dashboard" title="Bạn không có quyền xem Knowledge Candidate" />
       </PageShell>
     );
   }
@@ -49,7 +49,7 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
   return (
     <PageShell
       title="Knowledge Candidate"
-      description="HÃ ng Ä‘á»£i nguá»“n/insight tá»« chat, AI output, search, upload, meeting, report vÃ  document. Candidate khÃ´ng Ä‘Æ°á»£c Ä‘Æ°a vÃ o RAG tá»± Ä‘á»™ng."
+      description="Hàng đợi nguồn/insight từ chat, AI output, search, upload, meeting, report và document. Candidate không được đưa vào RAG tự động."
     >
       <Button asChild variant="ghost">
         <Link href="/knowledge">
@@ -60,7 +60,7 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
 
       <form className="grid gap-3 rounded-lg border bg-white p-4 shadow-sm lg:grid-cols-[minmax(180px,1fr)_180px_170px_minmax(180px,1fr)_auto]">
         <select className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" defaultValue={selectedModule} name="module">
-          <option value="all">Táº¥t cáº£ module</option>
+          <option value="all">Tất cả module</option>
           {Object.entries(KNOWLEDGE_MODULES).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -68,7 +68,7 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
           ))}
         </select>
         <select className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" defaultValue={sourceType} name="sourceType">
-          <option value="all">Táº¥t cáº£ nguá»“n</option>
+          <option value="all">Tất cả nguồn</option>
           {Object.entries(KNOWLEDGE_CANDIDATE_SOURCE_TYPES).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -76,7 +76,7 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
           ))}
         </select>
         <select className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" defaultValue={status} name="status">
-          <option value="all">Táº¥t cáº£ tráº¡ng thÃ¡i</option>
+          <option value="all">Tất cả trạng thái</option>
           {Object.entries(KNOWLEDGE_CANDIDATE_STATUSES).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -87,10 +87,10 @@ export default async function KnowledgeCandidatesPage({ searchParams }: Knowledg
           className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           defaultValue={query}
           name="query"
-          placeholder="TÃ¬m tiÃªu Ä‘á», ná»™i dung..."
+          placeholder="Tìm tiêu đề, nội dung..."
         />
         <Button type="submit" variant="secondary">
-          Lá»c
+          Lọc
         </Button>
       </form>
 

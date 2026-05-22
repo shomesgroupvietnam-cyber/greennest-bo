@@ -49,23 +49,23 @@ export type KnowledgeCandidateSourceType = "chat" | "ai_response" | "web_search"
 export type KnowledgeCandidateStatus = "candidate" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
 
 export const KNOWLEDGE_CANDIDATE_SOURCE_TYPES: Record<KnowledgeCandidateSourceType, string> = {
-  chat: "Trao Ä‘á»•i/chat",
-  ai_response: "Pháº£n há»“i AI",
+  chat: "Trao đổi/chat",
+  ai_response: "Phản hồi AI",
   web_search: "Web search",
-  upload: "Táº£i lÃªn",
-  meeting: "Cuá»™c há»p",
-  report: "BÃ¡o cÃ¡o",
-  document: "Há»“ sÆ¡",
-  manual: "Nháº­p thá»§ cÃ´ng"
+  upload: "Tải lên",
+  meeting: "Cuộc họp",
+  report: "Báo cáo",
+  document: "Hồ sơ",
+  manual: "Nhập thủ công"
 };
 
 export const KNOWLEDGE_CANDIDATE_STATUSES: Record<KnowledgeCandidateStatus, string> = {
-  candidate: "á»¨ng viÃªn",
-  pending_review: "Chá» review",
-  approved: "ÄÃ£ promote",
-  rejected: "Tá»« chá»‘i",
-  expired: "Háº¿t hiá»‡u lá»±c",
-  superseded: "Bá»‹ thay tháº¿"
+  candidate: "Ứng viên",
+  pending_review: "Chờ review",
+  approved: "Đã promote",
+  rejected: "Từ chối",
+  expired: "Hết hiệu lực",
+  superseded: "Bị thay thế"
 };
 
 export type KnowledgeItem = TimestampFields & {

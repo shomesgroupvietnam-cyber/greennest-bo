@@ -12,4 +12,23 @@ export const DOCUMENT_TYPES = {
   other: "Khác"
 } as const;
 
+export const DOCUMENT_CLASSIFICATIONS = {
+  PUBLIC: "PUBLIC",
+  INTERNAL: "INTERNAL",
+  CONFIDENTIAL: "CONFIDENTIAL",
+  RESTRICTED: "RESTRICTED",
+} as const;
+
+export const DOCUMENT_CLASSIFICATION_LABELS: Record<
+  keyof typeof DOCUMENT_CLASSIFICATIONS,
+  string
+> = {
+  PUBLIC: "PUBLIC - Công khai",
+  INTERNAL: "INTERNAL - Nội bộ",
+  CONFIDENTIAL: "CONFIDENTIAL - Bảo mật",
+  RESTRICTED: "RESTRICTED - Hạn chế truy cập",
+};
+
+export const DEFAULT_DOCUMENT_CLASSIFICATION = "INTERNAL" as const;
+
 export const DEFAULT_DOCUMENT_OWNER_ID = "mock-founder";

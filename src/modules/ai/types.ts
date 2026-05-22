@@ -38,10 +38,28 @@ export const AI_REQUEST_MODES = {
   queued: "Hang doi mock"
 } as const;
 
+export const AI_WORKFLOW_STATUSES = {
+  DRAFT: "DRAFT",
+  REVIEWING: "REVIEWING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+} as const;
+
+export const AI_WORKFLOW_STATUS_LABELS: Record<
+  keyof typeof AI_WORKFLOW_STATUSES,
+  string
+> = {
+  DRAFT: "Bản nháp AI",
+  REVIEWING: "Đang review",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Từ chối",
+};
+
 export type AiModule = keyof typeof AI_MODULES;
 export type AiJobPriority = keyof typeof AI_JOB_PRIORITIES;
 export type AiJobStatus = keyof typeof AI_JOB_STATUSES;
 export type AiRequestMode = keyof typeof AI_REQUEST_MODES;
+export type AiWorkflowStatus = keyof typeof AI_WORKFLOW_STATUSES;
 export type AiInteractionStatus = "pending" | "queued" | "running" | "succeeded" | "failed" | "cancelled";
 export type AiCitationType = "knowledge_chunk" | "knowledge_item" | "internal_record" | "external_candidate_review_only";
 export type AiActionProposalStatus = "proposed" | "accepted" | "rejected" | "expired" | "executed" | "failed";
@@ -118,6 +136,7 @@ export type AiInteraction = TimestampFields & {
   modelName: string;
   usage?: AiUsageMetadata;
   responseValidation?: AiResponseValidationMetadata;
+  workflowStatus?: AiWorkflowStatus;
   status: AiInteractionStatus;
   scopeSnapshot: AiScopeSnapshot;
   completedAt?: string;
@@ -185,6 +204,7 @@ export type AiActionProposal = TimestampFields & {
   proposedPayload: Record<string, unknown>;
   rationale?: string;
   requiredPermission: PermissionAction;
+  workflowStatus?: AiWorkflowStatus;
   status: AiActionProposalStatus;
   decidedBy?: EntityId;
   decidedAt?: string;

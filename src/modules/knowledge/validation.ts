@@ -50,8 +50,8 @@ export const knowledgeCandidateInputSchema = z.object({
   ),
   sourceRefId: optionalText,
   module: z.enum(Object.keys(KNOWLEDGE_MODULES) as [keyof typeof KNOWLEDGE_MODULES, ...Array<keyof typeof KNOWLEDGE_MODULES>]),
-  title: z.string().trim().min(2, "TiÃªu Ä‘á» Knowledge Candidate lÃ  báº¯t buá»™c."),
-  extractedText: z.string().trim().min(5, "Ná»™i dung tráº£i nghiá»‡m/nguá»“n cáº§n tá»‘i thiá»ƒu 5 kÃ½ tá»±."),
+  title: z.string().trim().min(2, "Tiêu đề Knowledge Candidate là bắt buộc."),
+  extractedText: z.string().trim().min(5, "Nội dung trải nghiệm/nguồn cần tối thiểu 5 ký tự."),
   notes: optionalText
 });
 

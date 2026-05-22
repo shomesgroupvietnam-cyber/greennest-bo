@@ -1,7 +1,20 @@
 import { ROLES, type Role } from "@/constants/roles";
-import { projectRepository, type ProjectRepository } from "@/modules/projects/services/project-repository";
-import { projectMembershipInputSchema, roleSchema, userInputSchema } from "@/modules/users/validation";
-import type { AuditLog, ProjectMembership, ProjectMembershipInput, User, UserInput } from "@/modules/users/types";
+import {
+  projectRepository,
+  type ProjectRepository,
+} from "@/modules/projects/services/project-repository";
+import {
+  projectMembershipInputSchema,
+  roleSchema,
+  userInputSchema,
+} from "@/modules/users/validation";
+import type {
+  AuditLog,
+  ProjectMembership,
+  ProjectMembershipInput,
+  User,
+  UserInput,
+} from "@/modules/users/types";
 
 import { userRepository, type UserRepository } from "./user-repository";
 
@@ -17,7 +30,7 @@ export function listRoles() {
   return Object.entries(ROLES).map(([key, value]) => ({
     key: key as Role,
     label: value.label,
-    description: value.description
+    description: value.description,
   }));
 }
 
@@ -25,15 +38,25 @@ export async function listUsers(repository: UserRepository = userRepository) {
   return repository.listUsers();
 }
 
-export async function getUser(userId: string, repository: UserRepository = userRepository) {
+export async function getUser(
+  userId: string,
+  repository: UserRepository = userRepository,
+) {
   return repository.getUser(userId);
 }
 
-export async function getUserByEmail(email: string, repository: UserRepository = userRepository) {
+export async function getUserByEmail(
+  email: string,
+  repository: UserRepository = userRepository,
+) {
   return repository.getUserByEmail(email);
 }
 
-export async function inviteUser(input: UserInput, actorId: string, repository: UserRepository = userRepository) {
+export async function inviteUser(
+  input: UserInput,
+  actorId: string,
+  repository: UserRepository = userRepository,
+) {
   const parsedInput = userInputSchema.parse(input);
   const timestamp = now();
   const user: User = {
@@ -41,8 +64,9 @@ export async function inviteUser(input: UserInput, actorId: string, repository: 
     fullName: parsedInput.fullName,
     email: parsedInput.email,
     role: parsedInput.role,
+    status: "active",
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
   };
 
   const createdUser = await repository.createUser(user);
@@ -52,9 +76,9 @@ export async function inviteUser(input: UserInput, actorId: string, repository: 
       entityType: "user",
       entityId: createdUser.id,
       action: "user.invite",
-      newValue: { email: createdUser.email, role: createdUser.role }
+      newValue: { email: createdUser.email, role: createdUser.role },
     },
-    repository
+    repository,
   );
 
   return createdUser;
@@ -64,7 +88,7 @@ export async function updateUserRole(
   userId: string,
   role: Role,
   actorId: string,
-  repository: UserRepository = userRepository
+  repository: UserRepository = userRepository,
 ) {
   const parsedRole = roleSchema.parse(role);
   const existingUser = await repository.getUser(userId);
@@ -75,7 +99,7 @@ export async function updateUserRole(
 
   const updatedUser = await repository.updateUser(userId, {
     role: parsedRole,
-    updatedAt: now()
+    updatedAt: now(),
   });
 
   await createAuditLog(
@@ -85,15 +109,18 @@ export async function updateUserRole(
       entityId: userId,
       action: "user.update_role",
       oldValue: { role: existingUser.role },
-      newValue: { role: updatedUser.role }
+      newValue: { role: updatedUser.role },
     },
-    repository
+    repository,
   );
 
   return updatedUser;
 }
 
-export async function listProjectMemberships(projectId?: string, repository: UserRepository = userRepository) {
+export async function listProjectMemberships(
+  projectId?: string,
+  repository: UserRepository = userRepository,
+) {
   return repository.listProjectMemberships(projectId);
 }
 
@@ -101,12 +128,12 @@ export async function upsertProjectMembership(
   input: ProjectMembershipInput,
   actorId: string,
   repository: UserRepository = userRepository,
-  projects: ProjectRepository = projectRepository
+  projects: ProjectRepository = projectRepository,
 ) {
   const parsedInput = projectMembershipInputSchema.parse(input);
   const [project, user] = await Promise.all([
     projects.getProject(parsedInput.projectId),
-    repository.getUser(parsedInput.userId)
+    repository.getUser(parsedInput.userId),
   ]);
 
   if (!project || project.archivedAt) {
@@ -124,7 +151,7 @@ export async function upsertProjectMembership(
     userId: parsedInput.userId,
     role: parsedInput.role,
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
   };
   const savedMembership = await repository.upsertProjectMembership(membership);
 
@@ -137,10 +164,10 @@ export async function upsertProjectMembership(
       newValue: {
         projectId: savedMembership.projectId,
         userId: savedMembership.userId,
-        role: savedMembership.role
-      }
+        role: savedMembership.role,
+      },
     },
-    repository
+    repository,
   );
 
   return savedMembership;
@@ -148,15 +175,17 @@ export async function upsertProjectMembership(
 
 export async function createAuditLog(
   input: Omit<AuditLog, "id" | "createdAt">,
-  repository: UserRepository = userRepository
+  repository: UserRepository = userRepository,
 ) {
   return repository.createAuditLog({
     id: createId(),
     createdAt: now(),
-    ...input
+    ...input,
   });
 }
 
-export async function listAuditLogs(repository: UserRepository = userRepository) {
+export async function listAuditLogs(
+  repository: UserRepository = userRepository,
+) {
   return repository.listAuditLogs();
 }

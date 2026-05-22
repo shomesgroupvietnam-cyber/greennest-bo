@@ -1,15 +1,11 @@
-import { getCurrentSession } from "@/lib/auth/session";
-import { canAccessWorkspaceRoute, type WorkspaceRoute } from "@/modules/workspaces/config";
+import { requireWorkspaceRoute } from "@/lib/permissions/guard";
+import type { WorkspaceRoute } from "@/modules/workspaces/config";
 import { getRoleWorkspaceData } from "@/modules/workspaces/services/workspace-service";
 
-import { RoleWorkspaceShell, UnauthorizedWorkspace } from "./role-workspace-shell";
+import { RoleWorkspaceShell } from "./role-workspace-shell";
 
 export async function WorkspaceRoutePage({ route }: { route: WorkspaceRoute }) {
-  const session = await getCurrentSession();
-
-  if (!canAccessWorkspaceRoute(session.user, route)) {
-    return <UnauthorizedWorkspace defaultHref={session.defaultScreen.href} />;
-  }
+  const session = await requireWorkspaceRoute(route);
 
   const data = await getRoleWorkspaceData(session.user, route);
 

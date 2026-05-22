@@ -5,7 +5,7 @@ create table if not exists public.proposals (
   code text not null unique,
   title text not null,
   type text not null check (type in ('investment', 'legal', 'document', 'finance', 'contract', 'procurement', 'design', 'construction', 'hr', 'quality', 'safety', 'general')),
-  project_id text references public.projects(id) on delete set null,
+  project_id uuid references public.projects(id) on delete set null,
   module text not null,
   requested_by uuid references public.users(id) on delete set null,
   owner_id uuid references public.users(id) on delete set null,

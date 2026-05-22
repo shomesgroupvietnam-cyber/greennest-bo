@@ -1,7 +1,5 @@
 import { PageShell } from "@/components/shared/page-shell";
-import { UnauthorizedState } from "@/components/shared/unauthorized-state";
-import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { ProviderHealthPanel } from "@/modules/settings/components/provider-health-panel";
 import { SourceRegistrySettingsPanel } from "@/modules/settings/components/source-registry-settings-panel";
 import { checkAllProviderHealth } from "@/modules/settings/services/provider-health-service";
@@ -16,18 +14,17 @@ function readParam(value: string | string[] | undefined) {
 }
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
-  const currentUser = await getCurrentUser();
-  const canManageSettings = can(currentUser, "settings.manage");
+  await requirePermission("settings.manage", { route: "/settings" });
   const params = searchParams ? await searchParams : {};
   const shouldCheckProviders = readParam(params.checkProviders) === "1";
-  const [entries, providerHealth] = canManageSettings
-    ? await Promise.all([listSourceRegistryEntries(), checkAllProviderHealth({ runLiveChecks: shouldCheckProviders })])
-    : [[], []];
+  const [entries, providerHealth] = await Promise.all([
+    listSourceRegistryEntries(),
+    checkAllProviderHealth({ runLiveChecks: shouldCheckProviders }),
+  ]);
 
   return (
     <PageShell title="Cài đặt BO" description="Cấu hình hệ thống, nguồn tri thức, AI và chính sách quản trị.">
-      {canManageSettings ? (
-        <div className="space-y-6">
+      <div className="space-y-6">
           <ProviderHealthPanel results={providerHealth} checked={shouldCheckProviders} />
           <section className="rounded-lg border bg-white p-5 shadow-sm">
             <h2 className="text-base font-semibold text-slate-950">Cấu hình AI/Web Search</h2>
@@ -53,11 +50,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               API key và provider runtime vẫn đặt qua environment variables. BO UI hiện quản lý nguồn được phép intake để bảo toàn review gate trước khi vào RAG.
             </p>
           </section>
-          <SourceRegistrySettingsPanel entries={entries} />
-        </div>
-      ) : (
-        <UnauthorizedState title="Bạn không có quyền quản lý cài đặt" description="Module này chỉ hiển thị cho vai trò có quyền settings.manage." />
-      )}
+        <SourceRegistrySettingsPanel entries={entries} />
+      </div>
     </PageShell>
   );
 }

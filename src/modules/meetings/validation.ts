@@ -13,17 +13,17 @@ const optionalText = z
   .transform((value) => (value.length > 0 ? value : undefined))
   .optional();
 
-const dateTimeString = z.string().trim().min(1, "Thá»i gian há»p lÃ  báº¯t buá»™c.").refine((value) => !Number.isNaN(Date.parse(value)), {
-  message: "Thá»i gian há»p khÃ´ng há»£p lá»‡."
+const dateTimeString = z.string().trim().min(1, "Thời gian họp là bắt buộc.").refine((value) => !Number.isNaN(Date.parse(value)), {
+  message: "Thời gian họp không hợp lệ."
 });
 
 const optionalDate = optionalText.refine((value) => !value || !Number.isNaN(Date.parse(value)), {
-  message: "Háº¡n xá»­ lÃ½ khÃ´ng há»£p lá»‡."
+  message: "Hạn xử lý không hợp lệ."
 });
 
 export const meetingInputSchema = z.object({
-  projectId: z.string().trim().min(1, "Dá»± Ã¡n lÃ  báº¯t buá»™c."),
-  title: z.string().trim().min(1, "TiÃªu Ä‘á» cuá»™c há»p lÃ  báº¯t buá»™c."),
+  projectId: z.string().trim().min(1, "Dự án là bắt buộc."),
+  title: z.string().trim().min(1, "Tiêu đề cuộc họp là bắt buộc."),
   meetingDate: dateTimeString,
   summary: optionalText
 });
@@ -31,8 +31,8 @@ export const meetingInputSchema = z.object({
 export const meetingUpdateSchema = meetingInputSchema.omit({ projectId: true });
 
 export const decisionInputSchema = z.object({
-  meetingId: z.string().trim().min(1, "Cuá»™c há»p lÃ  báº¯t buá»™c."),
-  decisionText: z.string().trim().min(1, "Ná»™i dung quyáº¿t Ä‘á»‹nh/action item lÃ  báº¯t buá»™c."),
+  meetingId: z.string().trim().min(1, "Cuộc họp là bắt buộc."),
+  decisionText: z.string().trim().min(1, "Nội dung quyết định/action item là bắt buộc."),
   ownerId: optionalText,
   dueDate: optionalDate,
   status: z.enum(decisionStatusKeys)

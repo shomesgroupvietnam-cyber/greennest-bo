@@ -335,9 +335,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <section className="rounded-lg border bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-950">Há»p vÃ  quyáº¿t Ä‘á»‹nh</h2>
+                <h2 className="text-base font-semibold text-slate-950">Họp và quyết định</h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {projectMeetings.length} cuá»™c há»p, {projectDecisions.filter((decision) => decision.status !== "done").length} action item chÆ°a xong.
+                  {projectMeetings.length} cuộc họp, {projectDecisions.filter((decision) => decision.status !== "done").length} action item chưa xong.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -345,21 +345,21 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                   <Button asChild variant="outline">
                     <Link href={`/meetings/new?projectId=${project.id}`}>
                       <Plus className="h-4 w-4" aria-hidden="true" />
-                      Táº¡o biÃªn báº£n
+                      Tạo biên bản
                     </Link>
                   </Button>
                 ) : null}
                 <Button asChild variant="outline">
                   <Link href={`/meetings?projectId=${project.id}`}>
                     <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                    Xem táº¥t cáº£
+                    Xem tất cả
                   </Link>
                 </Button>
               </div>
             </div>
             {projectMeetings.length === 0 ? (
               <div className="mt-4 rounded-md border border-dashed p-4 text-sm text-slate-600">
-                ChÆ°a cÃ³ biÃªn báº£n há»p nÃ o cho dá»± Ã¡n nÃ y.
+                Chưa có biên bản họp nào cho dự án này.
               </div>
             ) : (
               <div className="mt-4 divide-y divide-slate-100">

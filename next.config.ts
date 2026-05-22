@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true
+  experimental: {
+    authInterrupts: true,
+  },
+  reactStrictMode: true,
 };
 
 export default nextConfig;

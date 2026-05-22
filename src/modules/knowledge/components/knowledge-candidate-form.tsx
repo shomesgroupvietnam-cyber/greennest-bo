@@ -11,21 +11,21 @@ export function KnowledgeCandidateForm({ action }: { action: (formData: FormData
   return (
     <form action={action} className="space-y-5 rounded-lg border bg-white p-5 shadow-sm">
       <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-        Candidate chá»‰ lÃ  Ä‘á» xuáº¥t tri thá»©c. Ná»™i dung nÃ y khÃ´ng Ä‘Æ°á»£c Ä‘Æ°a vÃ o RAG cho Ä‘áº¿n khi Ä‘Æ°á»£c promote thÃ nh Knowledge Item,
-        review, duyá»‡t vÃ  index.
+        Candidate chỉ là đề xuất tri thức. Nội dung này không được đưa vào RAG cho đến khi được promote thành Knowledge Item,
+        review, duyệt và index.
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="title">
-            TiÃªu Ä‘á» candidate <span className="text-red-600">*</span>
+            Tiêu đề candidate <span className="text-red-600">*</span>
           </label>
           <input className={fieldClass} id="title" name="title" required />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="sourceType">
-            Nguá»“n phÃ¡t sinh <span className="text-red-600">*</span>
+            Nguồn phát sinh <span className="text-red-600">*</span>
           </label>
           <select className={fieldClass} defaultValue="manual" id="sourceType" name="sourceType" required>
             {Object.entries(KNOWLEDGE_CANDIDATE_SOURCE_TYPES).map(([value, label]) => (
@@ -51,27 +51,27 @@ export function KnowledgeCandidateForm({ action }: { action: (formData: FormData
 
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="sourceRefId">
-            MÃ£ tham chiáº¿u nguá»“n
+            Mã tham chiếu nguồn
           </label>
-          <input className={fieldClass} id="sourceRefId" name="sourceRefId" placeholder="ID chat, meeting, report, document hoáº·c upload náº¿u cÃ³" />
+          <input className={fieldClass} id="sourceRefId" name="sourceRefId" placeholder="ID chat, meeting, report, document hoặc upload nếu có" />
         </div>
 
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="extractedText">
-            Ná»™i dung trÃ­ch xuáº¥t <span className="text-red-600">*</span>
+            Nội dung trích xuất <span className="text-red-600">*</span>
           </label>
           <textarea className={`${fieldClass} min-h-36`} id="extractedText" name="extractedText" required />
         </div>
 
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-slate-800" htmlFor="notes">
-            Ghi chÃº
+            Ghi chú
           </label>
           <textarea className={`${fieldClass} min-h-20`} id="notes" name="notes" />
         </div>
       </div>
 
-      <Button type="submit">Táº¡o Knowledge Candidate</Button>
+      <Button type="submit">Tạo Knowledge Candidate</Button>
     </form>
   );
 }

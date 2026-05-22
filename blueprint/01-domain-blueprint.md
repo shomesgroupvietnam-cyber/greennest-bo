@@ -41,14 +41,30 @@ Key data:
 - Start/end target.
 - Tags or classification.
 
-## 2.2 Legal, Planning and Investment
+## 2.2 Axis 1 - Investment Formation BuildFlow
 
 Purpose:
 
-- Track readiness from land review to construction permit.
-- Make legal blockers visible to executives.
+- Manage the project formation stage from strategic investment direction to internal approvals, land/legal/design readiness and construction permit readiness.
+- Replace the old standalone legal-step menu with five business groups that can expand independently without making users navigate a long flat checklist.
+- Keep legacy legal/planning/design steps auditable as workflow/checklist items inside the five groups.
+- Make blockers, approvals, budget exposure and decision history visible to executives.
 
-Entities:
+Axis 1 groups:
+
+1. Executive Leadership.
+2. Project Search and Development.
+3. Legal.
+4. Design - Planning - Technical - BIM.
+5. Internal Proposal - Meeting - Approval.
+
+Current implementation priority:
+
+- Implement Executive Leadership first.
+- Do not implement Project Search and Development, Legal V2, Design/Planning/Technical/BIM V2 or Internal Proposal/Meeting/Approval as new Axis 1 routes until explicitly scheduled.
+- Existing legal checklist code remains valid and should not be deleted during this restructuring.
+
+Core entities:
 
 - LegalStep.
 - LegalChecklistTemplate.
@@ -56,27 +72,50 @@ Entities:
 - LegalSubmission.
 - AuthorityResponse.
 - LegalRisk.
+- Meeting.
+- Decision.
+- Proposal.
+- ProposalStep.
+- ProposalDecision.
+- AuditLog.
 
-Default legal flow:
+Executive Leadership scope:
 
-1. Land/site survey.
-2. Planning analysis.
-3. Investment proposal.
-4. Investment policy approval.
-5. 1/500 planning.
-6. Basic design.
-7. Feasibility study.
-8. Environmental approval.
-9. Fire safety approval.
-10. Land allocation/lease.
-11. Investor recognition.
-12. Construction permit.
+- Strategic investment plan.
+- Area/segment direction.
+- Investment budget.
+- Executive directives.
+- Executive dashboard.
+- Leadership meetings.
+- Internal investment-principle approval.
+- Decision log.
+- Mock AI leadership support until production AI workflows are approved.
+
+Legacy 12-step workflow:
+
+The old flow is fixed at 12 steps, not 13. These steps must not become independent top-level menus. They remain configurable checklist/workflow items and are classified into the five Axis 1 groups.
+
+| Legacy step | Primary Axis 1 group | Notes |
+| --- | --- | --- |
+| Land/site survey | Project Search and Development | Land bank and early project sourcing workflow. |
+| Planning analysis | Design - Planning - Technical - BIM | Planning indicators and technical feasibility; legal submission tracking can link from Legal. |
+| Investment proposal | Project Search and Development | Internal proposal route and approval history link through Internal Proposal - Meeting - Approval. |
+| Investment policy approval | Legal | External/legal procedure; internal principle approval belongs to Executive Leadership and Internal Proposal - Meeting - Approval. |
+| 1/500 planning | Design - Planning - Technical - BIM | Technical drawings and planning package; authority submission tracking can link from Legal. |
+| Basic design | Design - Planning - Technical - BIM | Technical design package. |
+| Feasibility study | Design - Planning - Technical - BIM | Technical part; investment efficiency assumptions can link from Project Search and Development. |
+| Environmental approval | Legal | Legal submission and authority response workflow. |
+| Fire safety approval | Legal | Legal procedure; MEP/design evidence can link from Design - Planning - Technical - BIM. |
+| Land allocation/lease | Legal | Land procedure and authority response workflow. |
+| Investor recognition | Legal | Investor acceptance/appointment procedure. |
+| Construction permit | Legal | Permit procedure and required document readiness. |
 
 Scalable direction:
 
 - Legal templates must be configurable by project type and province.
 - Steps can have dependencies.
-- Each step can link to required documents, submissions, authority responses and risks.
+- Each step can link to required documents, submissions, authority responses, proposals, meetings, decisions and risks.
+- Executive approval gates should reference the underlying workflow records instead of duplicating them.
 
 ## 2.3 Task and Work Management
 

@@ -64,7 +64,7 @@ export class JsonKnowledgeCandidateRepository implements KnowledgeCandidateRepos
     const existingCandidate = store.candidates.find((candidate) => candidate.id === candidateId);
 
     if (!existingCandidate) {
-      throw new Error("KhÃ´ng tÃ¬m tháº¥y Knowledge Candidate.");
+      throw new Error("Không tìm thấy Knowledge Candidate.");
     }
 
     const updatedCandidate = {

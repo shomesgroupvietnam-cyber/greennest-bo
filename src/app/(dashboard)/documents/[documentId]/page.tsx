@@ -13,7 +13,11 @@ import {
   rejectDocumentAction,
   submitDocumentForReviewAction
 } from "@/modules/documents/actions";
-import { DOCUMENT_TYPES } from "@/modules/documents/constants";
+import {
+  DEFAULT_DOCUMENT_CLASSIFICATION,
+  DOCUMENT_CLASSIFICATION_LABELS,
+  DOCUMENT_TYPES,
+} from "@/modules/documents/constants";
 import { DocumentApprovalStatusBadge, DocumentStatusBadge } from "@/modules/documents/components/document-badges";
 import { getDocument, listDocumentVersions } from "@/modules/documents/services/document-service";
 import { getProject } from "@/modules/projects/services/project-service";
@@ -35,6 +39,12 @@ function formatDateTime(value?: string) {
 
 function documentTypeLabel(value: string) {
   return DOCUMENT_TYPES[value as keyof typeof DOCUMENT_TYPES] ?? value;
+}
+
+function documentClassificationLabel(
+  value?: keyof typeof DOCUMENT_CLASSIFICATION_LABELS,
+) {
+  return DOCUMENT_CLASSIFICATION_LABELS[value ?? DEFAULT_DOCUMENT_CLASSIFICATION];
 }
 
 export default async function DocumentDetailPage({ params }: DocumentDetailPageProps) {
@@ -150,6 +160,12 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
               <div>
                 <dt className="text-sm text-slate-500">Người phụ trách</dt>
                 <dd className="mt-1 text-sm font-medium text-slate-950">{document.ownerId ?? "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-slate-500">Phân loại bảo mật</dt>
+                <dd className="mt-1 text-sm font-medium text-slate-950">
+                  {documentClassificationLabel(document.classification)}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-slate-500">Người duyệt</dt>

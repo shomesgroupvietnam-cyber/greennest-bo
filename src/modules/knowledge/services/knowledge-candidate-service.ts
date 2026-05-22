@@ -28,7 +28,7 @@ function now() {
 
 function assertCandidateExists(candidate: KnowledgeCandidate | undefined) {
   if (!candidate) {
-    throw new Error("KhÃ´ng tÃ¬m tháº¥y Knowledge Candidate.");
+    throw new Error("Không tìm thấy Knowledge Candidate.");
   }
 
   return candidate;
@@ -36,25 +36,25 @@ function assertCandidateExists(candidate: KnowledgeCandidate | undefined) {
 
 function assertCanCreateCandidate(user: PermissionUser) {
   if (!can(user, "knowledge.create_candidate")) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n táº¡o Knowledge Candidate.");
+    throw new Error("Bạn không có quyền tạo Knowledge Candidate.");
   }
 }
 
 function assertCanPromoteCandidate(user: PermissionUser) {
   if (!can(user, "knowledge.promote")) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n promote Knowledge Candidate.");
+    throw new Error("Bạn không có quyền promote Knowledge Candidate.");
   }
 }
 
 function assertCanReviewCandidate(user: PermissionUser) {
   if (!can(user, "knowledge.review")) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n review Knowledge Candidate.");
+    throw new Error("Bạn không có quyền review Knowledge Candidate.");
   }
 }
 
 function assertCanApproveCandidate(user: PermissionUser) {
   if (!can(user, "knowledge.approve")) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n duyá»‡t Knowledge Candidate.");
+    throw new Error("Bạn không có quyền duyệt Knowledge Candidate.");
   }
 }
 
@@ -114,7 +114,7 @@ export async function submitKnowledgeCandidateForReview(
   const candidate = assertCandidateExists(await repository.getKnowledgeCandidate(candidateId));
 
   if (candidate.status !== "candidate") {
-    throw new Error("Chá»‰ candidate má»›i cÃ³ thá»ƒ gá»­i review.");
+    throw new Error("Chỉ candidate mới có thể gửi review.");
   }
 
   return repository.updateKnowledgeCandidate(candidateId, {
@@ -135,7 +135,7 @@ export async function approveKnowledgeCandidateIntoKnowledgeItem(
   const candidate = assertCandidateExists(await candidateRepository.getKnowledgeCandidate(candidateId));
 
   if (candidate.status !== "pending_review") {
-    throw new Error("Chá»‰ candidate Ä‘ang chá» review má»›i cÃ³ thá»ƒ promote vÃ o Knowledge Center.");
+    throw new Error("Chỉ candidate đang chờ review mới có thể promote vào Knowledge Center.");
   }
 
   const item = await createKnowledgeItem(
@@ -183,7 +183,7 @@ export async function rejectKnowledgeCandidate(
   const candidate = assertCandidateExists(await repository.getKnowledgeCandidate(candidateId));
 
   if (candidate.status !== "candidate" && candidate.status !== "pending_review") {
-    throw new Error("Candidate nÃ y khÃ´ng cÃ²n á»Ÿ tráº¡ng thÃ¡i cÃ³ thá»ƒ tá»« chá»‘i.");
+    throw new Error("Candidate này không còn ở trạng thái có thể từ chối.");
   }
 
   const timestamp = now();

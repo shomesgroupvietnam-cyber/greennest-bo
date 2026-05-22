@@ -49,7 +49,7 @@ export async function createMeetingAction(formData: FormData) {
   const input = formDataToMeetingInput(formData);
 
   if (!(await getScopedProject(currentUser, input.projectId))) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n táº¡o biÃªn báº£n há»p cho dá»± Ã¡n nÃ y.");
+    throw new Error("Bạn không có quyền tạo biên bản họp cho dự án này.");
   }
 
   const meeting = await createMeeting(input, currentUser.id);
@@ -65,7 +65,7 @@ export async function updateMeetingAction(meetingId: string, formData: FormData)
   assertCan(currentUser, "meeting.update", existingMeeting);
 
   if (!(await getScopedMeeting(currentUser, meetingId))) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n cáº­p nháº­t cuá»™c há»p nÃ y.");
+    throw new Error("Bạn không có quyền cập nhật cuộc họp này.");
   }
 
   const meeting = await updateMeeting(meetingId, formDataToMeetingUpdateInput(formData));
@@ -81,7 +81,7 @@ export async function createDecisionAction(meetingId: string, formData: FormData
   assertCan(currentUser, "decision.create");
 
   if (!(await getScopedMeeting(currentUser, meetingId))) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n táº¡o quyáº¿t Ä‘á»‹nh cho cuá»™c há»p nÃ y.");
+    throw new Error("Bạn không có quyền tạo quyết định cho cuộc họp này.");
   }
 
   const decision = await createDecision(formDataToDecisionInput(meetingId, formData));
@@ -97,7 +97,7 @@ export async function convertDecisionToTaskAction(decisionId: string) {
   assertCan(currentUser, "task.create");
 
   if (!decision || !(await getScopedDecision(currentUser, decisionId)) || !(await getScopedProject(currentUser, decision.projectId))) {
-    throw new Error("Báº¡n khÃ´ng cÃ³ quyá»n chuyá»ƒn action item nÃ y thÃ nh cÃ´ng viá»‡c.");
+    throw new Error("Bạn không có quyền chuyển action item này thành công việc.");
   }
 
   const task = await convertDecisionToTask(decisionId);

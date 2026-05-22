@@ -1,20 +1,12 @@
 import { PageShell } from "@/components/shared/page-shell";
-import { UnauthorizedState } from "@/components/shared/unauthorized-state";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listScopedProjects } from "@/lib/permissions/scoped-resources";
 import { AiAskForm } from "@/modules/ai/components/ai-ask-form";
 
 export default async function AiAssistantPage() {
-  const currentUser = await getCurrentUser();
-
-  if (!can(currentUser, "ai.ask")) {
-    return (
-      <PageShell title="Trợ lý AI">
-        <UnauthorizedState description="Vai trò hiện tại không có quyền gửi câu hỏi AI." />
-      </PageShell>
-    );
-  }
+  const session = await requirePermission("ai.ask", { route: "/ai" });
+  const currentUser = session.user;
 
   const projects = can(currentUser, "project.view") ? await listScopedProjects(currentUser) : [];
 

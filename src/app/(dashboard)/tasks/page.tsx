@@ -4,8 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/shared/page-shell";
 import { Button } from "@/components/ui/button";
 import { TASK_PRIORITIES, TASK_STATUSES, type TaskPriority, type TaskStatus } from "@/constants/statuses";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listScopedProjects, listScopedTasks } from "@/lib/permissions/scoped-resources";
 import { TaskListTable } from "@/modules/tasks/components/task-list-table";
 import { DEFAULT_UPCOMING_WINDOW_DAYS } from "@/modules/tasks/constants";
@@ -25,7 +25,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const status = (readParam(params.status) ?? "all") as TaskStatus | "all";
   const priority = (readParam(params.priority) ?? "all") as TaskPriority | "all";
   const scope = (readParam(params.scope) ?? "all") as TaskScope;
-  const currentUser = await getCurrentUser();
+  const session = await requirePermission("task.view", { route: "/tasks" });
+  const currentUser = session.user;
   const canCreateTask = can(currentUser, "task.create");
   const canUpdateTask = can(currentUser, "task.update");
   const [projects, tasks] = await Promise.all([

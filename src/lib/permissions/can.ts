@@ -1,6 +1,7 @@
 import type { Role } from "@/constants/roles";
 
 export const PERMISSIONS = [
+  "axis1.view",
   "project.view",
   "project.create",
   "project.update",
@@ -97,10 +98,13 @@ export const PERMISSIONS = [
   "ai.create_draft",
   "ai.propose_action",
   "ai.confirm_action",
-  "ai.configure"
+  "ai.configure",
 ] as const;
 
 export type PermissionAction = (typeof PERMISSIONS)[number];
+export type PermissionAlias =
+  `${string}:${"view" | "create" | "update" | "delete" | "approve"}`;
+export type PermissionInput = PermissionAction | PermissionAlias;
 
 export type PermissionUser = {
   id: string;
@@ -170,48 +174,24 @@ const portfolioReadPermissions = [
   "internal_audit.view",
   "audit.view",
   "ai.use",
-  "ai.view_insight"
+  "ai.view_insight",
+  "axis1.view",
 ] satisfies PermissionAction[];
 
 export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
   super_admin: allPermissions,
-  admin: allPermissions.filter((permission) => !["finance.create", "finance.update", "finance.approve", "payment.approve"].includes(permission)),
-  tong_giam_doc: [
-    "project.view",
-    "project.create",
-    "project.update",
-    "project.archive",
-    "project.assign_member",
-    "task.view",
-    "task.create",
-    "task.update",
-    "task.archive",
-    "document.view",
-    "legal.view",
-    "legal.approve",
-    "meeting.view",
-    "meeting.create",
-    "meeting.update",
-    "decision.create",
-    "decision.approve",
-    "knowledge.view",
-    "knowledge.create",
-    "knowledge.review",
-    "knowledge.approve",
-    "report.view",
-    "report.create",
-    "design.view",
-    "construction.view",
-    "finance.view",
-    "finance.approve",
-    "payment.approve",
-    "user.view",
-    "audit.view",
-    "ai.use",
-    "ai.view_insight",
-    "ai.confirm_action"
-  ],
+  admin: allPermissions.filter(
+    (permission) =>
+      ![
+        "finance.create",
+        "finance.update",
+        "finance.approve",
+        "payment.approve",
+      ].includes(permission),
+  ),
+  tong_giam_doc: allPermissions,
   pho_tong_giam_doc: [
+    "axis1.view",
     "project.view",
     "project.create",
     "project.update",
@@ -227,6 +207,10 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "meeting.update",
     "decision.create",
     "decision.approve",
+    "proposal.view",
+    "proposal.approve",
+    "proposal.reject",
+    "proposal.request_change",
     "knowledge.view",
     "knowledge.create",
     "knowledge.review",
@@ -239,9 +223,10 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "audit.view",
     "ai.use",
     "ai.view_insight",
-    "ai.confirm_action"
+    "ai.confirm_action",
   ],
   giam_doc_du_an: [
+    "axis1.view",
     "project.view",
     "project.create",
     "project.update",
@@ -276,9 +261,10 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "audit.view",
     "ai.use",
     "ai.view_insight",
-    "ai.confirm_action"
+    "ai.confirm_action",
   ],
   quan_ly_du_an: [
+    "axis1.view",
     "project.view",
     "project.create",
     "project.update",
@@ -308,7 +294,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "finance.view",
     "audit.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   to_truong: [
     "project.view",
@@ -324,7 +310,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "construction.update",
     "site_diary.create",
     "quality.update",
-    "ai.use"
+    "ai.use",
   ],
   phap_ly: [
     "project.view",
@@ -345,7 +331,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "knowledge.approve",
     "report.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   ke_toan: [
     "project.view",
@@ -366,7 +352,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "knowledge.approve",
     "report.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   thiet_ke: [
     "project.view",
@@ -390,7 +376,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "audit.view",
     "report.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   ky_thuat: [
     "project.view",
@@ -411,7 +397,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "quality.update",
     "audit.view",
     "report.view",
-    "ai.use"
+    "ai.use",
   ],
   thi_cong: [
     "project.view",
@@ -432,7 +418,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "quality.update",
     "audit.view",
     "report.view",
-    "ai.use"
+    "ai.use",
   ],
   mua_hang: [
     "project.view",
@@ -450,9 +436,10 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "finance.view",
     "audit.view",
     "report.view",
-    "ai.use"
+    "ai.use",
   ],
   dau_tu_phat_trien: [
+    "axis1.view",
     "project.view",
     "document.view",
     "task.view",
@@ -470,7 +457,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "finance.view",
     "contract.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   quan_ly_tai_chinh: [
     "project.view",
@@ -498,7 +485,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "audit.view",
     "ai.use",
     "ai.view_insight",
-    "ai.confirm_action"
+    "ai.confirm_action",
   ],
   hanh_chinh_nhan_su: [
     "task.view",
@@ -517,7 +504,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "hr.update",
     "hr.review",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   qa_qc_chat_luong: [
     "project.view",
@@ -539,7 +526,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "knowledge.view",
     "report.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   an_toan_lao_dong: [
     "project.view",
@@ -559,7 +546,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "knowledge.view",
     "report.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   kiem_toan_noi_bo: [
     "project.view",
@@ -581,7 +568,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "internal_audit.view",
     "internal_audit.review",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   quan_ly_hop_dong: [
     "project.view",
@@ -609,7 +596,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "payment.request",
     "audit.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   thu_ky_tro_ly: [
     "project.view",
@@ -632,7 +619,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "design.view",
     "construction.view",
     "ai.use",
-    "ai.view_insight"
+    "ai.view_insight",
   ],
   kiem_soat_noi_bo: [...portfolioReadPermissions],
   nha_thau: [
@@ -647,7 +634,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "design.view",
     "construction.view",
     "construction.update",
-    "site_diary.create"
+    "site_diary.create",
   ],
   tu_van: [
     "project.view",
@@ -661,7 +648,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "knowledge.view",
     "report.view",
     "design.view",
-    "design.review"
+    "design.review",
   ],
   viewer: [
     "project.view",
@@ -673,30 +660,68 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "report.view",
     "design.view",
     "construction.view",
-    "finance.view"
-  ]
+    "finance.view",
+  ],
+  pending: [],
 };
 
 export function getRolePermissions(role: Role) {
   return resolveEffectivePermissions(ROLE_PERMISSIONS[role]);
 }
 
-export function can(userOrRole: PermissionUser | Role, action: PermissionAction, resource?: PermissionResource) {
-  const user = typeof userOrRole === "string" ? { id: "", role: userOrRole } : userOrRole;
-  const permissions = new Set(resolveEffectivePermissions([...(ROLE_PERMISSIONS[user.role] ?? []), ...(user.permissions ?? [])]));
+function normalizePermission(
+  action: PermissionInput,
+): PermissionAction | undefined {
+  const normalized = action.replace(":", ".");
 
-  if (permissions.has(action)) {
+  return PERMISSIONS.includes(normalized as PermissionAction)
+    ? (normalized as PermissionAction)
+    : undefined;
+}
+
+export function can(
+  userOrRole: PermissionUser | Role,
+  action: PermissionInput,
+  resource?: PermissionResource,
+) {
+  const normalizedAction = normalizePermission(action);
+
+  if (!normalizedAction) {
+    return false;
+  }
+
+  const user =
+    typeof userOrRole === "string" ? { id: "", role: userOrRole } : userOrRole;
+  const permissions = new Set(
+    resolveEffectivePermissions([
+      ...(ROLE_PERMISSIONS[user.role] ?? []),
+      ...(user.permissions ?? []),
+    ]),
+  );
+
+  if (permissions.has(normalizedAction)) {
     return true;
   }
 
-  if (action === "task.update" && permissions.has("task.update_own")) {
-    return Boolean(resource && user.id && (resource.assigneeId === user.id || resource.ownerId === user.id));
+  if (
+    normalizedAction === "task.update" &&
+    permissions.has("task.update_own")
+  ) {
+    return Boolean(
+      resource &&
+      user.id &&
+      (resource.assigneeId === user.id || resource.ownerId === user.id),
+    );
   }
 
   return false;
 }
 
-export function assertCan(user: PermissionUser, action: PermissionAction, resource?: PermissionResource) {
+export function assertCan(
+  user: PermissionUser,
+  action: PermissionInput,
+  resource?: PermissionResource,
+) {
   if (!can(user, action, resource)) {
     throw new Error("Bạn không có quyền thực hiện thao tác này.");
   }

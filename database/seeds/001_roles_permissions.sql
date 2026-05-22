@@ -20,7 +20,8 @@ values
   ('kiem_soat_noi_bo', 'Kiểm soát nội bộ', 'Audit, compliance and read/review access', 'system'),
   ('nha_thau', 'Nhà thầu', 'External contractor limited project/package access', 'external'),
   ('tu_van', 'Tư vấn', 'External consultant limited document/review access', 'external'),
-  ('viewer', 'Chỉ xem', 'Read-only access to allowed data', 'system')
+  ('viewer', 'Chỉ xem', 'Read-only access to allowed data', 'system'),
+  ('pending', 'Chờ cấp quyền', 'Authenticated user waiting for admin-provisioned role or workspace access', 'system')
 on conflict (key) do update
 set label_vi = excluded.label_vi,
     description = excluded.description,

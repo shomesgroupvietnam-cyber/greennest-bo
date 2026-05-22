@@ -4,8 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/shared/page-shell";
 import { Button } from "@/components/ui/button";
 import { PROJECT_STATUSES, type ProjectStatus } from "@/constants/statuses";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listScopedProjects } from "@/lib/permissions/scoped-resources";
 import { ProjectListTable } from "@/modules/projects/components/project-list-table";
 
@@ -22,7 +22,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const query = readParam(params.q) ?? "";
   const status = (readParam(params.status) ?? "all") as ProjectStatus | "all";
   const includeArchived = readParam(params.archived) === "1";
-  const currentUser = await getCurrentUser();
+  const session = await requirePermission("project.view", { route: "/projects" });
+  const currentUser = session.user;
   const canCreateProject = can(currentUser, "project.create");
   const canUpdateProject = can(currentUser, "project.update");
   const projects = await listScopedProjects(currentUser, {

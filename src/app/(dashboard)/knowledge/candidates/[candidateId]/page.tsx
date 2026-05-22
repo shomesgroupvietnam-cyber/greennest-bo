@@ -20,8 +20,8 @@ export default async function KnowledgeCandidateDetailPage({ params }: Knowledge
 
   if (!can(currentUser, "knowledge.view")) {
     return (
-      <PageShell title="KhÃ´ng cÃ³ quyá»n truy cáº­p" description="Báº¡n cáº§n quyá»n xem Knowledge Center Ä‘á»ƒ má»Ÿ candidate.">
-        <UnauthorizedState backHref="/knowledge" backLabel="Vá» Knowledge Center" title="Báº¡n khÃ´ng cÃ³ quyá»n xem Knowledge Candidate" />
+      <PageShell title="Không có quyền truy cập" description="Bạn cần quyền xem Knowledge Center để mở candidate.">
+        <UnauthorizedState backHref="/knowledge" backLabel="Về Knowledge Center" title="Bạn không có quyền xem Knowledge Candidate" />
       </PageShell>
     );
   }
@@ -33,7 +33,7 @@ export default async function KnowledgeCandidateDetailPage({ params }: Knowledge
   }
 
   return (
-    <PageShell title="Chi tiáº¿t Knowledge Candidate" description="Review candidate trÆ°á»›c khi promote thÃ nh Knowledge Item. Candidate khÃ´ng Ä‘Æ°á»£c Ä‘Æ°a vÃ o RAG tá»± Ä‘á»™ng.">
+    <PageShell title="Chi tiết Knowledge Candidate" description="Review candidate trước khi promote thành Knowledge Item. Candidate không được đưa vào RAG tự động.">
       <Button asChild variant="ghost">
         <Link href="/knowledge/candidates">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />

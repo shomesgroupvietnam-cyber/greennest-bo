@@ -36,8 +36,8 @@ export function KnowledgeCandidateListTable({ candidates }: { candidates: Knowle
   if (candidates.length === 0) {
     return (
       <div className="rounded-lg border border-dashed bg-white p-8 text-center">
-        <h2 className="text-base font-semibold text-slate-950">ChÆ°a cÃ³ Knowledge Candidate phÃ¹ há»£p</h2>
-        <p className="mt-2 text-sm text-slate-600">Táº¡o candidate tá»« chat, search, upload, meeting, report, document hoáº·c nháº­p thá»§ cÃ´ng.</p>
+        <h2 className="text-base font-semibold text-slate-950">Chưa có Knowledge Candidate phù hợp</h2>
+        <p className="mt-2 text-sm text-slate-600">Tạo candidate từ chat, search, upload, meeting, report, document hoặc nhập thủ công.</p>
       </div>
     );
   }
@@ -50,10 +50,10 @@ export function KnowledgeCandidateListTable({ candidates }: { candidates: Knowle
             <tr>
               <th className="px-4 py-3">Candidate</th>
               <th className="px-4 py-3">Module</th>
-              <th className="px-4 py-3">Nguá»“n</th>
-              <th className="px-4 py-3">Tráº¡ng thÃ¡i</th>
-              <th className="px-4 py-3">Cáº­p nháº­t</th>
-              <th className="px-4 py-3 text-right">Thao tÃ¡c</th>
+              <th className="px-4 py-3">Nguồn</th>
+              <th className="px-4 py-3">Trạng thái</th>
+              <th className="px-4 py-3">Cập nhật</th>
+              <th className="px-4 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

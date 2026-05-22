@@ -37,8 +37,8 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
 
   if (!meeting) {
     return (
-      <PageShell title="KhÃ´ng cÃ³ quyá»n truy cáº­p" description="Cuá»™c há»p nÃ y khÃ´ng náº±m trong pháº¡m vi Ä‘Æ°á»£c giao cá»§a báº¡n.">
-        <UnauthorizedState backHref="/meetings" backLabel="Vá» danh sÃ¡ch há»p" title="Báº¡n khÃ´ng cÃ³ quyá»n xem cuá»™c há»p nÃ y" />
+      <PageShell title="Không có quyền truy cập" description="Cuộc họp này không nằm trong phạm vi được giao của bạn.">
+        <UnauthorizedState backHref="/meetings" backLabel="Về danh sách họp" title="Bạn không có quyền xem cuộc họp này" />
       </PageShell>
     );
   }
@@ -53,19 +53,19 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
   const decisionAction = createDecisionAction.bind(null, meeting.id);
 
   return (
-    <PageShell title={meeting.title} description="Chi tiáº¿t biÃªn báº£n há»p, quyáº¿t Ä‘á»‹nh vÃ  action item.">
+    <PageShell title={meeting.title} description="Chi tiết biên bản họp, quyết định và action item.">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="ghost">
           <Link href="/meetings">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Danh sÃ¡ch há»p
+            Danh sách họp
           </Link>
         </Button>
         {canUpdateMeeting ? (
           <Button asChild variant="outline">
             <Link href={`/meetings/${meeting.id}/edit`}>
               <Pencil className="h-4 w-4" aria-hidden="true" />
-              Sá»­a biÃªn báº£n
+              Sửa biên bản
             </Link>
           </Button>
         ) : null}
@@ -73,7 +73,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Dá»± Ã¡n</p>
+          <p className="text-sm text-slate-500">Dự án</p>
           <p className="mt-2 text-sm font-medium text-slate-950">
             {project ? (
               <Link className="text-emerald-700 hover:text-emerald-800" href={`/projects/${project.id}`}>
@@ -85,7 +85,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
           </p>
         </div>
         <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Thá»i gian</p>
+          <p className="text-sm text-slate-500">Thời gian</p>
           <p className="mt-2 text-sm font-medium text-slate-950">{formatDateTime(meeting.meetingDate)}</p>
         </div>
         <div className="rounded-lg border bg-white p-5 shadow-sm">
@@ -97,12 +97,12 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-6">
           <section className="rounded-lg border bg-white p-5 shadow-sm">
-            <h2 className="text-base font-semibold text-slate-950">BiÃªn báº£n/tá»‘m táº¯t</h2>
-            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{meeting.summary ?? "ChÆ°a cÃ³ ná»™i dung tá»‘m táº¯t."}</p>
+            <h2 className="text-base font-semibold text-slate-950">Biên bản/tốm tắt</h2>
+            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{meeting.summary ?? "Chưa có nội dung tốm tắt."}</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-base font-semibold text-slate-950">Quyáº¿t Ä‘á»‹nh vÃ  action item</h2>
+            <h2 className="text-base font-semibold text-slate-950">Quyết định và action item</h2>
             <DecisionList canConvertToTask={canCreateTask} decisions={decisions} />
           </section>
         </div>

@@ -7,7 +7,7 @@ import {
   LEGAL_STATUSES,
   PROJECT_STATUSES,
   TASK_PRIORITIES,
-  TASK_STATUSES
+  TASK_STATUSES,
 } from "@/constants/statuses";
 
 const expectedRoleKeys = [
@@ -35,7 +35,8 @@ const expectedRoleKeys = [
   "kiem_soat_noi_bo",
   "nha_thau",
   "tu_van",
-  "viewer"
+  "viewer",
+  "pending",
 ];
 
 describe("foundation constants", () => {

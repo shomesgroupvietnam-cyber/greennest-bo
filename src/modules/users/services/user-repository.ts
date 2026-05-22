@@ -25,44 +25,49 @@ function defaultStore(): UserStore {
         fullName: "Người dùng mô phỏng",
         email: "mock.user@greennest.vn",
         role: "admin",
+        status: "active",
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
         id: "legal-manager",
         fullName: "Phụ trách pháp lý",
         email: "legal@greennest.vn",
         role: "phap_ly",
+        status: "active",
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
         id: "designer",
         fullName: "Quản lý thiết kế",
         email: "design@greennest.vn",
         role: "thiet_ke",
+        status: "active",
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
         id: "accountant",
         fullName: "Kế toán dự án",
         email: "accounting@greennest.vn",
         role: "ke_toan",
+        status: "active",
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
         id: "viewer",
         fullName: "Người xem",
         email: "viewer@greennest.vn",
         role: "viewer",
+        status: "active",
         createdAt,
-        updatedAt: createdAt
-      }
+        updatedAt: createdAt,
+      },
     ],
     projectMemberships: [],
-    auditLogs: []
+    auditLogs: [],
   };
 }
 
@@ -73,13 +78,21 @@ export type UserRepository = {
   createUser(user: User): Promise<User>;
   updateUser(userId: string, patch: Partial<User>): Promise<User>;
   listProjectMemberships(projectId?: string): Promise<ProjectMembership[]>;
-  upsertProjectMembership(membership: ProjectMembership): Promise<ProjectMembership>;
+  upsertProjectMembership(
+    membership: ProjectMembership,
+  ): Promise<ProjectMembership>;
   createAuditLog(auditLog: AuditLog): Promise<AuditLog>;
   listAuditLogs(): Promise<AuditLog[]>;
 };
 
 export class JsonUserRepository implements UserRepository {
-  constructor(private readonly filePath = path.join(process.cwd(), ".mock-data", "users.json")) {}
+  constructor(
+    private readonly filePath = path.join(
+      process.cwd(),
+      ".mock-data",
+      "users.json",
+    ),
+  ) {}
 
   async listUsers() {
     const store = await this.readStore();
@@ -97,19 +110,26 @@ export class JsonUserRepository implements UserRepository {
     const store = await this.readStore();
     const normalizedEmail = email.trim().toLowerCase();
 
-    return store.users.find((user) => user.email.toLowerCase() === normalizedEmail);
+    return store.users.find(
+      (user) => user.email.toLowerCase() === normalizedEmail,
+    );
   }
 
   async createUser(user: User) {
     const store = await this.readStore();
 
-    if (store.users.some((existingUser) => existingUser.email.toLowerCase() === user.email.toLowerCase())) {
+    if (
+      store.users.some(
+        (existingUser) =>
+          existingUser.email.toLowerCase() === user.email.toLowerCase(),
+      )
+    ) {
       throw new Error("Email người dùng đã tồn tại.");
     }
 
     await this.writeStore({
       ...store,
-      users: [user, ...store.users]
+      users: [user, ...store.users],
     });
 
     return user;
@@ -128,12 +148,14 @@ export class JsonUserRepository implements UserRepository {
       ...patch,
       id: existingUser.id,
       email: existingUser.email,
-      createdAt: existingUser.createdAt
+      createdAt: existingUser.createdAt,
     };
 
     await this.writeStore({
       ...store,
-      users: store.users.map((user) => (user.id === userId ? updatedUser : user))
+      users: store.users.map((user) =>
+        user.id === userId ? updatedUser : user,
+      ),
     });
 
     return updatedUser;
@@ -142,23 +164,33 @@ export class JsonUserRepository implements UserRepository {
   async listProjectMemberships(projectId?: string) {
     const store = await this.readStore();
 
-    return store.projectMemberships.filter((membership) => !projectId || membership.projectId === projectId);
+    return store.projectMemberships.filter(
+      (membership) => !projectId || membership.projectId === projectId,
+    );
   }
 
   async upsertProjectMembership(membership: ProjectMembership) {
     const store = await this.readStore();
     const existingMembership = store.projectMemberships.find(
-      (item) => item.projectId === membership.projectId && item.userId === membership.userId
+      (item) =>
+        item.projectId === membership.projectId &&
+        item.userId === membership.userId,
     );
     const nextMembership = existingMembership
-      ? { ...existingMembership, role: membership.role, updatedAt: membership.updatedAt }
+      ? {
+          ...existingMembership,
+          role: membership.role,
+          updatedAt: membership.updatedAt,
+        }
       : membership;
 
     await this.writeStore({
       ...store,
       projectMemberships: existingMembership
-        ? store.projectMemberships.map((item) => (item.id === existingMembership.id ? nextMembership : item))
-        : [membership, ...store.projectMemberships]
+        ? store.projectMemberships.map((item) =>
+            item.id === existingMembership.id ? nextMembership : item,
+          )
+        : [membership, ...store.projectMemberships],
     });
 
     return nextMembership;
@@ -169,7 +201,7 @@ export class JsonUserRepository implements UserRepository {
 
     await this.writeStore({
       ...store,
-      auditLogs: [auditLog, ...store.auditLogs]
+      auditLogs: [auditLog, ...store.auditLogs],
     });
 
     return auditLog;
@@ -178,7 +210,9 @@ export class JsonUserRepository implements UserRepository {
   async listAuditLogs() {
     const store = await this.readStore();
 
-    return store.auditLogs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return store.auditLogs.sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
   }
 
   private async readStore(): Promise<UserStore> {
@@ -189,7 +223,7 @@ export class JsonUserRepository implements UserRepository {
       return {
         users: parsed.users ?? defaultStore().users,
         projectMemberships: parsed.projectMemberships ?? [],
-        auditLogs: parsed.auditLogs ?? []
+        auditLogs: parsed.auditLogs ?? [],
       };
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
@@ -204,7 +238,11 @@ export class JsonUserRepository implements UserRepository {
 
   private async writeStore(store: UserStore) {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+    await writeFile(
+      this.filePath,
+      `${JSON.stringify(store, null, 2)}\n`,
+      "utf8",
+    );
   }
 }
 
@@ -214,6 +252,7 @@ type UserRow = {
   email: string;
   avatar_url: string | null;
   role: User["role"];
+  status: User["status"];
   created_at: string;
   updated_at: string;
 };
@@ -245,8 +284,9 @@ function toUser(row: UserRow): User {
     email: row.email,
     avatarUrl: row.avatar_url ?? undefined,
     role: row.role,
+    status: row.status,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   };
 }
 
@@ -257,17 +297,21 @@ function userToRow(user: User) {
     email: user.email,
     avatar_url: user.avatarUrl ?? null,
     role: user.role,
+    status: user.status,
     created_at: user.createdAt,
-    updated_at: user.updatedAt
+    updated_at: user.updatedAt,
   };
 }
 
 function userPatchToRow(patch: Partial<User>) {
   return {
     ...(patch.fullName !== undefined ? { full_name: patch.fullName } : {}),
-    ...(patch.avatarUrl !== undefined ? { avatar_url: patch.avatarUrl ?? null } : {}),
+    ...(patch.avatarUrl !== undefined
+      ? { avatar_url: patch.avatarUrl ?? null }
+      : {}),
     ...(patch.role !== undefined ? { role: patch.role } : {}),
-    ...(patch.updatedAt !== undefined ? { updated_at: patch.updatedAt } : {})
+    ...(patch.status !== undefined ? { status: patch.status } : {}),
+    ...(patch.updatedAt !== undefined ? { updated_at: patch.updatedAt } : {}),
   };
 }
 
@@ -278,7 +322,7 @@ function toProjectMembership(row: ProjectMemberRow): ProjectMembership {
     userId: row.user_id,
     role: row.role,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   };
 }
 
@@ -289,7 +333,7 @@ function projectMembershipToRow(membership: ProjectMembership) {
     user_id: membership.userId,
     role: membership.role,
     created_at: membership.createdAt,
-    updated_at: membership.updatedAt
+    updated_at: membership.updatedAt,
   };
 }
 
@@ -302,7 +346,7 @@ function toAuditLog(row: AuditLogRow): AuditLog {
     action: row.action,
     oldValue: row.old_value ?? undefined,
     newValue: row.new_value ?? undefined,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   };
 }
 
@@ -315,14 +359,17 @@ function auditLogToRow(auditLog: AuditLog) {
     action: auditLog.action,
     old_value: auditLog.oldValue ?? null,
     new_value: auditLog.newValue ?? null,
-    created_at: auditLog.createdAt
+    created_at: auditLog.createdAt,
   };
 }
 
 export class SupabaseUserRepository implements UserRepository {
   async listUsers() {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("users").select("*").order("full_name", { ascending: true });
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("full_name", { ascending: true });
 
     if (error) {
       throw new Error(error.message);
@@ -333,7 +380,11 @@ export class SupabaseUserRepository implements UserRepository {
 
   async getUser(userId: string) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
@@ -344,7 +395,11 @@ export class SupabaseUserRepository implements UserRepository {
 
   async getUserByEmail(email: string) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("users").select("*").eq("email", email.trim().toLowerCase()).maybeSingle();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
@@ -355,7 +410,11 @@ export class SupabaseUserRepository implements UserRepository {
 
   async createUser(user: User) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("users").insert(userToRow(user)).select("*").single();
+    const { data, error } = await supabase
+      .from("users")
+      .insert(userToRow(user))
+      .select("*")
+      .single();
 
     if (error) {
       throw new Error(error.message);
@@ -366,7 +425,12 @@ export class SupabaseUserRepository implements UserRepository {
 
   async updateUser(userId: string, patch: Partial<User>) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("users").update(userPatchToRow(patch)).eq("id", userId).select("*").single();
+    const { data, error } = await supabase
+      .from("users")
+      .update(userPatchToRow(patch))
+      .eq("id", userId)
+      .select("*")
+      .single();
 
     if (error) {
       throw new Error(error.message);
@@ -377,7 +441,10 @@ export class SupabaseUserRepository implements UserRepository {
 
   async listProjectMemberships(projectId?: string) {
     const supabase = await createSupabaseServerClient();
-    let query = supabase.from("project_members").select("*").order("created_at", { ascending: false });
+    let query = supabase
+      .from("project_members")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (projectId) {
       query = query.eq("project_id", projectId);
@@ -396,7 +463,9 @@ export class SupabaseUserRepository implements UserRepository {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("project_members")
-      .upsert(projectMembershipToRow(membership), { onConflict: "project_id,user_id" })
+      .upsert(projectMembershipToRow(membership), {
+        onConflict: "project_id,user_id",
+      })
       .select("*")
       .single();
 
@@ -409,7 +478,11 @@ export class SupabaseUserRepository implements UserRepository {
 
   async createAuditLog(auditLog: AuditLog) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("audit_logs").insert(auditLogToRow(auditLog)).select("*").single();
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .insert(auditLogToRow(auditLog))
+      .select("*")
+      .single();
 
     if (error) {
       throw new Error(error.message);
@@ -420,7 +493,10 @@ export class SupabaseUserRepository implements UserRepository {
 
   async listAuditLogs() {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("audit_logs").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(error.message);
@@ -434,5 +510,5 @@ export const jsonUserRepository = new JsonUserRepository();
 export const supabaseUserRepository = new SupabaseUserRepository();
 export const userRepository = selectRepository<UserRepository>({
   mock: jsonUserRepository,
-  supabase: supabaseUserRepository
+  supabase: supabaseUserRepository,
 });

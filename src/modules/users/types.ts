@@ -7,6 +7,7 @@ export type User = TimestampFields & {
   email: string;
   avatarUrl?: string;
   role: Role;
+  status: "pending" | "active" | "suspended";
 };
 
 export type UserInput = {

@@ -27,7 +27,7 @@ Không mở rộng sang module ngoài MVP nếu sprint hiện tại chưa đạt
 | Sprint 1 | Project Core | CRUD project, project detail, trạng thái dự án | Tạo/sửa/xem/archive dự án |
 | Sprint 2 | Task Management | CRUD task, filter theo dự án, trạng thái, deadline | Quản lý được việc và thấy việc quá hạn |
 | Sprint 3 | Document Center | Upload/link hồ sơ, phân loại, version, trạng thái | Biết hồ sơ thiếu/đủ theo dự án |
-| Sprint 4 | Legal Checklist Lite | Checklist Trục 1, cập nhật trạng thái, assignee, deadline | Theo dõi pháp lý cơ bản |
+| Sprint 4 | Legal Checklist Lite | Checklist 12 bước cũ của Trục 1, cập nhật trạng thái, assignee, deadline | Theo dõi pháp lý cơ bản mà không tạo menu riêng cho từng bước |
 | Sprint 5 | Dashboard | KPI cards, việc chậm, hồ sơ thiếu, pháp lý vướng | Founder xem được toàn cảnh dự án |
 | Sprint 6 | Auth, Users & Roles Basic | Đăng nhập, mời người dùng, role công ty/dự án, guard route, role dashboards | Làm việc nhóm an toàn theo quyền |
 | Sprint 7 | QA & Polish | Kiểm thử, responsive, seed data, sửa lỗi UI | MVP dùng thử thực tế |
@@ -167,11 +167,13 @@ Quản lý hồ sơ dự án bằng link hoặc file upload.
 
 ### Goal
 
-Theo dõi 12 bước pháp lý Trục 1 cho từng dự án.
+Theo dõi đúng 12 bước cũ của Trục 1 cho từng dự án như workflow/checklist bên trong 5 mục chính: Ban lãnh đạo; Tìm kiếm & phát triển dự án; Pháp lý; Thiết kế - Quy hoạch - Kỹ thuật - BIM; Đề xuất - Họp - Phê duyệt nội bộ.
 
 ### Scope
 
 - Constants cho 12 legal steps mặc định.
+- Không dùng 13 bước.
+- Không tạo menu độc lập cho từng bước cũ.
 - LegalStep type/interface.
 - Legal service/repository.
 - Checklist view theo project.

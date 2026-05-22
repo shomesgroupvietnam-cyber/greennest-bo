@@ -1,6 +1,12 @@
 import { ROLE_DEFAULT_SCREENS, type Role } from "@/constants/roles";
-import { getMockResolvedSession, resolveMockRole } from "@/lib/auth/mock-session";
-import { createSupabaseServerClient, isSupabaseAuthConfigured } from "@/lib/auth/supabase-server";
+import {
+  getMockResolvedSession,
+  resolveMockRole,
+} from "@/lib/auth/mock-session";
+import {
+  createSupabaseServerClient,
+  isSupabaseAuthConfigured,
+} from "@/lib/auth/supabase-server";
 import { getRolePermissions } from "@/lib/permissions/can";
 import { getUserByEmail } from "@/modules/users/services/user-service";
 import { cookies } from "next/headers";
@@ -12,6 +18,7 @@ export type AppSessionUser = {
   fullName: string;
   email: string;
   role: Role;
+  status: "pending" | "active" | "suspended";
   avatarUrl?: string;
 };
 
@@ -30,14 +37,18 @@ export function getAuthMode(): AuthMode {
 
 function fromMockSession(mode: AuthMode = "mock", role?: Role): AppSession {
   const session = getMockResolvedSession(role);
+  const status = session.user.role === "pending" ? "pending" : "active";
 
   return {
     mode,
-    user: session.user,
-    permissions: session.permissions,
+    user: {
+      ...session.user,
+      status,
+    },
+    permissions: status === "active" ? session.permissions : [],
     defaultScreen: session.defaultScreen,
     isAuthenticated: true,
-    isFallback: true
+    isFallback: true,
   };
 }
 
@@ -52,7 +63,7 @@ async function getMockRoleCookie() {
 }
 
 function anonymousSupabaseSession(): AppSession {
-  const role: Role = "viewer";
+  const role: Role = "pending";
 
   return {
     mode: "supabase",
@@ -60,12 +71,13 @@ function anonymousSupabaseSession(): AppSession {
       id: "anonymous",
       fullName: "Chưa đăng nhập",
       email: "",
-      role
+      role,
+      status: "pending",
     },
-    permissions: getRolePermissions(role),
+    permissions: [],
     defaultScreen: ROLE_DEFAULT_SCREENS[role],
     isAuthenticated: false,
-    isFallback: false
+    isFallback: false,
   };
 }
 
@@ -73,12 +85,15 @@ export async function getCurrentSession(): Promise<AppSession> {
   if (!isSupabaseAuthConfigured()) {
     const cookieRole = await getMockRoleCookie();
 
-    return fromMockSession("mock", cookieRole ? resolveMockRole(cookieRole) : undefined);
+    return fromMockSession(
+      "mock",
+      cookieRole ? resolveMockRole(cookieRole) : undefined,
+    );
   }
 
   const supabase = await createSupabaseServerClient();
   const {
-    data: { user }
+    data: { user },
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
@@ -86,22 +101,25 @@ export async function getCurrentSession(): Promise<AppSession> {
   }
 
   const appUser = await getUserByEmail(user.email);
-  const role = appUser?.role ?? resolveMockRole(String(user.user_metadata?.role ?? user.app_metadata?.role ?? "viewer"));
+  const role = appUser?.role ?? "pending";
+  const status = appUser?.status ?? "pending";
   const sessionUser: AppSessionUser = {
     id: appUser?.id ?? user.id,
-    fullName: appUser?.fullName ?? String(user.user_metadata?.full_name ?? user.email),
+    fullName:
+      appUser?.fullName ?? String(user.user_metadata?.full_name ?? user.email),
     email: user.email,
     role,
-    avatarUrl: appUser?.avatarUrl
+    status,
+    avatarUrl: appUser?.avatarUrl,
   };
 
   return {
     mode: "supabase",
     user: sessionUser,
-    permissions: getRolePermissions(role),
+    permissions: status === "active" ? getRolePermissions(role) : [],
     defaultScreen: ROLE_DEFAULT_SCREENS[role],
     isAuthenticated: true,
-    isFallback: false
+    isFallback: false,
   };
 }
 

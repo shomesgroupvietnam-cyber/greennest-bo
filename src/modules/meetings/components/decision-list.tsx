@@ -26,7 +26,7 @@ export function DecisionList({ canConvertToTask = true, decisions }: DecisionLis
   if (decisions.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-5 text-sm text-slate-600">
-        ChÆ°a cÃ³ quyáº¿t Ä‘á»‹nh hoáº·c action item nÃ o Ä‘Æ°á»£c ghi nháº­n cho cuá»™c há»p nÃ y.
+        Chưa có quyết định hoặc action item nào được ghi nhận cho cuộc họp này.
       </div>
     );
   }
@@ -41,11 +41,11 @@ export function DecisionList({ canConvertToTask = true, decisions }: DecisionLis
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-slate-950">{decision.decisionText}</p>
               <p className="mt-1 text-xs text-slate-500">
-                Phá»¥ trÃ¡ch: {decision.ownerId ?? "-"} Â· Háº¡n: {formatDate(decision.dueDate)}
+                Phụ trách: {decision.ownerId ?? "-"} · Hạn: {formatDate(decision.dueDate)}
               </p>
               {decision.taskId ? (
                 <Link className="mt-2 inline-flex text-xs font-medium text-emerald-700 hover:text-emerald-800" href={`/tasks/${decision.taskId}`}>
-                  ÄÃ£ chuyá»ƒn thÃ nh cÃ´ng viá»‡c
+                  Đã chuyển thành công việc
                 </Link>
               ) : null}
             </div>
@@ -55,7 +55,7 @@ export function DecisionList({ canConvertToTask = true, decisions }: DecisionLis
                 <form action={convertAction}>
                   <Button size="sm" type="submit" variant="outline">
                     <CheckSquare className="h-4 w-4" aria-hidden="true" />
-                    Táº¡o task
+                    Tạo task
                   </Button>
                 </form>
               ) : null}

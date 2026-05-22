@@ -3,29 +3,18 @@ import { Shield, UserPlus } from "lucide-react";
 import { PageShell } from "@/components/shared/page-shell";
 import { Button } from "@/components/ui/button";
 import { ROLES } from "@/constants/roles";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listProjects } from "@/modules/projects/services/project-service";
 import { inviteUserAction, updateUserRoleAction, upsertProjectMembershipAction } from "@/modules/users/actions";
 import { listAuditLogs, listProjectMemberships, listRoles, listUsers } from "@/modules/users/services/user-service";
 
 export default async function UsersPage() {
-  const currentUser = await getCurrentUser();
-  const canViewUsers = can(currentUser, "user.view");
+  const session = await requirePermission("user.view", { route: "/users" });
+  const currentUser = session.user;
   const canInviteUser = can(currentUser, "user.invite");
   const canUpdateRole = can(currentUser, "user.update_role");
   const canAssignMember = can(currentUser, "project.assign_member");
-
-  if (!canViewUsers) {
-    return (
-      <PageShell title="Người dùng" description="Quản lý người dùng, vai trò và thành viên dự án.">
-        <div className="rounded-lg border border-dashed bg-white p-8 text-center">
-          <h2 className="text-base font-semibold text-slate-950">Bạn không có quyền xem người dùng</h2>
-          <p className="mt-2 text-sm text-slate-600">Sidebar cũng sẽ ẩn module này với vai trò hiện tại.</p>
-        </div>
-      </PageShell>
-    );
-  }
 
   const [users, roles, projects, memberships, auditLogs] = await Promise.all([
     listUsers(),

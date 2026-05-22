@@ -29,4 +29,19 @@ describe("auth session", () => {
 
     vi.unstubAllEnvs();
   });
+
+  it("keeps pending mock users unauthorised until admin grants access", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("MOCK_CURRENT_ROLE", "pending");
+
+    const session = await getCurrentSession();
+
+    expect(session.user.role).toBe("pending");
+    expect(session.user.status).toBe("pending");
+    expect(session.permissions).toEqual([]);
+    expect(session.defaultScreen.href).toBe("/pending-access");
+
+    vi.unstubAllEnvs();
+  });
 });

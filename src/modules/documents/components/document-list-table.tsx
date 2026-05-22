@@ -2,7 +2,11 @@ import { ExternalLink, Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { DOCUMENT_TYPES } from "@/modules/documents/constants";
+import {
+  DEFAULT_DOCUMENT_CLASSIFICATION,
+  DOCUMENT_CLASSIFICATION_LABELS,
+  DOCUMENT_TYPES,
+} from "@/modules/documents/constants";
 import type { Document } from "@/modules/documents/types";
 import type { Project } from "@/modules/projects/types";
 
@@ -23,6 +27,10 @@ function formatDate(value: string) {
 
 function documentTypeLabel(value: string) {
   return DOCUMENT_TYPES[value as keyof typeof DOCUMENT_TYPES] ?? value;
+}
+
+function documentClassificationLabel(value: Document["classification"]) {
+  return DOCUMENT_CLASSIFICATION_LABELS[value ?? DEFAULT_DOCUMENT_CLASSIFICATION];
 }
 
 export function DocumentListTable({ documents, projects, canUpdate = true, canCreate = true }: DocumentListTableProps) {
@@ -51,6 +59,7 @@ export function DocumentListTable({ documents, projects, canUpdate = true, canCr
               <th className="px-4 py-3">Hồ sơ</th>
               <th className="px-4 py-3">Dự án</th>
               <th className="px-4 py-3">Loại</th>
+              <th className="px-4 py-3">Phân loại</th>
               <th className="px-4 py-3">Phiên bản</th>
               <th className="px-4 py-3">Trạng thái</th>
               <th className="px-4 py-3">Phê duyệt</th>
@@ -95,6 +104,7 @@ export function DocumentListTable({ documents, projects, canUpdate = true, canCr
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{documentTypeLabel(document.docType)}</td>
+                  <td className="px-4 py-3 text-slate-600">{documentClassificationLabel(document.classification)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">{document.version}</td>
                   <td className="px-4 py-3">
                     <DocumentStatusBadge status={document.status} />

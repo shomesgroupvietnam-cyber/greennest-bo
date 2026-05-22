@@ -2,10 +2,9 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 
 import { PageShell } from "@/components/shared/page-shell";
-import { UnauthorizedState } from "@/components/shared/unauthorized-state";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { listScopedProjects } from "@/lib/permissions/scoped-resources";
 import { ReportListTable } from "@/modules/reports/components/report-list-table";
 import { listReports } from "@/modules/reports/services/report-service";
@@ -23,15 +22,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const params = searchParams ? await searchParams : {};
   const projectId = readParam(params.projectId) ?? "all";
   const reportType = (readParam(params.reportType) ?? "all") as ReportType | "all";
-  const currentUser = await getCurrentUser();
-
-  if (!can(currentUser, "report.view")) {
-    return (
-      <PageShell title="Không có quyền truy cập" description="Bạn cần quyền xem báo cáo để mở khu vực này.">
-        <UnauthorizedState backHref="/dashboard" backLabel="Về dashboard" title="Bạn không có quyền xem báo cáo" />
-      </PageShell>
-    );
-  }
+  const session = await requirePermission("report.view", { route: "/reports" });
+  const currentUser = session.user;
 
   const [projects, allReports] = await Promise.all([
     listScopedProjects(currentUser),

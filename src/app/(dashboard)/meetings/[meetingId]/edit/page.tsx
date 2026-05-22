@@ -26,23 +26,23 @@ export default async function EditMeetingPage({ params }: EditMeetingPageProps) 
 
   if (!meeting) {
     return (
-      <PageShell title="KhÃ´ng cÃ³ quyá»n truy cáº­p" description="Cuá»™c há»p nÃ y khÃ´ng náº±m trong pháº¡m vi Ä‘Æ°á»£c giao cá»§a báº¡n.">
-        <UnauthorizedState backHref="/meetings" backLabel="Vá» danh sÃ¡ch há»p" title="Báº¡n khÃ´ng cÃ³ quyá»n sá»­a cuá»™c há»p nÃ y" />
+      <PageShell title="Không có quyền truy cập" description="Cuộc họp này không nằm trong phạm vi được giao của bạn.">
+        <UnauthorizedState backHref="/meetings" backLabel="Về danh sách họp" title="Bạn không có quyền sửa cuộc họp này" />
       </PageShell>
     );
   }
 
   if (!can(currentUser, "meeting.update", meeting)) {
     return (
-      <PageShell title="Sá»­a biÃªn báº£n há»p" description={meeting.title}>
-        <UnauthorizedState backHref={`/meetings/${meeting.id}`} backLabel="Vá» chi tiáº¿t há»p" title="Báº¡n khÃ´ng cÃ³ quyá»n sá»­a biÃªn báº£n" />
+      <PageShell title="Sửa biên bản họp" description={meeting.title}>
+        <UnauthorizedState backHref={`/meetings/${meeting.id}`} backLabel="Về chi tiết họp" title="Bạn không có quyền sửa biên bản" />
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Sá»­a biÃªn báº£n há»p" description={meeting.title}>
-      <MeetingForm action={updateMeetingAction.bind(null, meeting.id)} meeting={meeting} projects={projects} submitLabel="LÆ°u biÃªn báº£n" />
+    <PageShell title="Sửa biên bản họp" description={meeting.title}>
+      <MeetingForm action={updateMeetingAction.bind(null, meeting.id)} meeting={meeting} projects={projects} submitLabel="Lưu biên bản" />
     </PageShell>
   );
 }

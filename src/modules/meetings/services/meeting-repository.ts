@@ -55,7 +55,7 @@ export class JsonMeetingRepository implements MeetingRepository {
     const existingMeeting = store.meetings.find((meeting) => meeting.id === meetingId);
 
     if (!existingMeeting) {
-      throw new Error("KhÃ´ng tÃ¬m tháº¥y cuá»™c há»p.");
+      throw new Error("Không tìm thấy cuộc họp.");
     }
 
     const updatedMeeting = {
@@ -103,7 +103,7 @@ export class JsonMeetingRepository implements MeetingRepository {
     const existingDecision = store.decisions.find((decision) => decision.id === decisionId);
 
     if (!existingDecision) {
-      throw new Error("KhÃ´ng tÃ¬m tháº¥y quyáº¿t Ä‘á»‹nh/action item.");
+      throw new Error("Không tìm thấy quyết định/action item.");
     }
 
     const updatedDecision = {

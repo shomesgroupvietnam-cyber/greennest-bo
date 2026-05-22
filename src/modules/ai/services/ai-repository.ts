@@ -226,6 +226,7 @@ type AiInteractionRow = {
   model_name: string;
   usage: AiInteraction["usage"] | null;
   response_validation: AiInteraction["responseValidation"] | null;
+  workflow_status: AiInteraction["workflowStatus"] | null;
   status: AiInteraction["status"];
   scope_snapshot: AiInteraction["scopeSnapshot"];
   completed_at: string | null;
@@ -289,6 +290,7 @@ type AiActionProposalRow = {
   proposed_payload: Record<string, unknown>;
   rationale: string | null;
   required_permission: AiActionProposal["requiredPermission"];
+  workflow_status: AiActionProposal["workflowStatus"] | null;
   status: AiActionProposal["status"];
   decided_by: string | null;
   decided_at: string | null;
@@ -313,6 +315,7 @@ function toInteraction(row: AiInteractionRow): AiInteraction {
     modelName: row.model_name,
     usage: row.usage ?? undefined,
     responseValidation: row.response_validation ?? undefined,
+    workflowStatus: row.workflow_status ?? undefined,
     status: row.status,
     scopeSnapshot: row.scope_snapshot,
     completedAt: row.completed_at ?? undefined,
@@ -336,6 +339,7 @@ function interactionToRow(interaction: AiInteraction) {
     model_name: interaction.modelName,
     usage: interaction.usage ?? null,
     response_validation: interaction.responseValidation ?? null,
+    workflow_status: interaction.workflowStatus ?? "DRAFT",
     status: interaction.status,
     scope_snapshot: interaction.scopeSnapshot,
     completed_at: interaction.completedAt ?? null,
@@ -452,6 +456,7 @@ function toActionProposal(row: AiActionProposalRow): AiActionProposal {
     proposedPayload: row.proposed_payload,
     rationale: row.rationale ?? undefined,
     requiredPermission: row.required_permission,
+    workflowStatus: row.workflow_status ?? undefined,
     status: row.status,
     decidedBy: row.decided_by ?? undefined,
     decidedAt: row.decided_at ?? undefined,
@@ -476,6 +481,7 @@ function actionProposalToRow(proposal: AiActionProposal) {
     proposed_payload: proposal.proposedPayload,
     rationale: proposal.rationale ?? null,
     required_permission: proposal.requiredPermission,
+    workflow_status: proposal.workflowStatus ?? "REVIEWING",
     status: proposal.status,
     decided_by: proposal.decidedBy ?? null,
     decided_at: proposal.decidedAt ?? null,
@@ -566,6 +572,7 @@ export class SupabaseAiRepository implements AiRepository {
       modelName: "model_name",
       usage: "usage",
       responseValidation: "response_validation",
+      workflowStatus: "workflow_status",
       status: "status",
       scopeSnapshot: "scope_snapshot",
       completedAt: "completed_at",
@@ -741,6 +748,7 @@ export class SupabaseAiRepository implements AiRepository {
       proposedPayload: "proposed_payload",
       rationale: "rationale",
       requiredPermission: "required_permission",
+      workflowStatus: "workflow_status",
       status: "status",
       decidedBy: "decided_by",
       decidedAt: "decided_at",

@@ -2,10 +2,9 @@ import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { PageShell } from "@/components/shared/page-shell";
-import { UnauthorizedState } from "@/components/shared/unauthorized-state";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/can";
+import { requirePermission } from "@/lib/permissions/guard";
 import { KnowledgeListTable } from "@/modules/knowledge/components/knowledge-list-table";
 import { listKnowledgeItems } from "@/modules/knowledge/services/knowledge-service";
 import {
@@ -29,15 +28,8 @@ function readParam(value: string | string[] | undefined) {
 
 export default async function KnowledgePage({ searchParams }: KnowledgePageProps) {
   const params = searchParams ? await searchParams : {};
-  const currentUser = await getCurrentUser();
-
-  if (!can(currentUser, "knowledge.view")) {
-    return (
-      <PageShell title="Không có quyền truy cập" description="Bạn cần quyền xem Knowledge Center để mở khu vực này.">
-        <UnauthorizedState backHref="/dashboard" backLabel="Về dashboard" title="Bạn không có quyền xem Knowledge Center" />
-      </PageShell>
-    );
-  }
+  const session = await requirePermission("knowledge.view", { route: "/knowledge" });
+  const currentUser = session.user;
 
   const selectedModule = (readParam(params.module) ?? "all") as KnowledgeModule | "all";
   const sourceType = (readParam(params.sourceType) ?? "all") as KnowledgeSourceType | "all";

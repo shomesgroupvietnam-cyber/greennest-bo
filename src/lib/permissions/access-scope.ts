@@ -8,7 +8,11 @@ import type { ProjectMembership } from "@/modules/users/types";
 
 import type { PermissionUser } from "./can";
 
-export type AccessScopeKind = "internal_full" | "internal_assigned" | "external_limited" | "read_only_allowed";
+export type AccessScopeKind =
+  | "internal_full"
+  | "internal_assigned"
+  | "external_limited"
+  | "read_only_allowed";
 
 export type AccessScopeInput = {
   memberships?: ProjectMembership[];
@@ -37,7 +41,7 @@ const internalAssignedRoles: Role[] = [
   "ky_thuat",
   "thi_cong",
   "mua_hang",
-  "thu_ky_tro_ly"
+  "thu_ky_tro_ly",
 ];
 
 export function isExternalRole(role: Role) {
@@ -49,7 +53,7 @@ function resolveScopeKind(role: Role): AccessScopeKind {
     return "external_limited";
   }
 
-  if (role === "viewer") {
+  if (role === "viewer" || role === "pending") {
     return "read_only_allowed";
   }
 
@@ -60,7 +64,10 @@ function resolveScopeKind(role: Role): AccessScopeKind {
   return "internal_full";
 }
 
-export function resolveAccessScope(user: PermissionUser, input: AccessScopeInput = {}): AccessScope {
+export function resolveAccessScope(
+  user: PermissionUser,
+  input: AccessScopeInput = {},
+): AccessScope {
   const memberships = input.memberships ?? [];
   const tasks = input.tasks ?? [];
   const documents = input.documents ?? [];
@@ -94,15 +101,20 @@ export function resolveAccessScope(user: PermissionUser, input: AccessScopeInput
     role: user.role,
     assignedProjectIds,
     assignedTaskIds,
-    assignedDocumentIds
+    assignedDocumentIds,
   };
 }
 
 function hasLimitedScope(scope: AccessScope) {
-  return scope.kind === "external_limited" || scope.kind === "read_only_allowed";
+  return (
+    scope.kind === "external_limited" || scope.kind === "read_only_allowed"
+  );
 }
 
-export function canReadProjectInScope(project: Pick<Project, "id">, scope: AccessScope) {
+export function canReadProjectInScope(
+  project: Pick<Project, "id">,
+  scope: AccessScope,
+) {
   if (!hasLimitedScope(scope)) {
     return true;
   }
@@ -110,7 +122,10 @@ export function canReadProjectInScope(project: Pick<Project, "id">, scope: Acces
   return scope.assignedProjectIds.has(project.id);
 }
 
-export function canReadTaskInScope(task: Pick<Task, "id" | "projectId" | "assigneeId">, scope: AccessScope) {
+export function canReadTaskInScope(
+  task: Pick<Task, "id" | "projectId" | "assigneeId">,
+  scope: AccessScope,
+) {
   if (!hasLimitedScope(scope)) {
     return true;
   }
@@ -122,7 +137,10 @@ export function canReadTaskInScope(task: Pick<Task, "id" | "projectId" | "assign
   return scope.assignedProjectIds.has(task.projectId);
 }
 
-export function canReadDocumentInScope(document: Pick<Document, "id" | "projectId" | "ownerId">, scope: AccessScope) {
+export function canReadDocumentInScope(
+  document: Pick<Document, "id" | "projectId" | "ownerId">,
+  scope: AccessScope,
+) {
   if (!hasLimitedScope(scope)) {
     return true;
   }
@@ -134,7 +152,10 @@ export function canReadDocumentInScope(document: Pick<Document, "id" | "projectI
   return scope.assignedProjectIds.has(document.projectId);
 }
 
-export function canReadLegalStepInScope(step: Pick<LegalStep, "projectId">, scope: AccessScope) {
+export function canReadLegalStepInScope(
+  step: Pick<LegalStep, "projectId">,
+  scope: AccessScope,
+) {
   if (!hasLimitedScope(scope)) {
     return true;
   }
@@ -146,7 +167,10 @@ export function canReadLegalStepInScope(step: Pick<LegalStep, "projectId">, scop
   return scope.assignedProjectIds.has(step.projectId);
 }
 
-export function canReadMeetingInScope(meeting: Pick<Meeting, "projectId">, scope: AccessScope) {
+export function canReadMeetingInScope(
+  meeting: Pick<Meeting, "projectId">,
+  scope: AccessScope,
+) {
   if (!hasLimitedScope(scope)) {
     return true;
   }
@@ -154,11 +178,17 @@ export function canReadMeetingInScope(meeting: Pick<Meeting, "projectId">, scope
   return scope.assignedProjectIds.has(meeting.projectId);
 }
 
-export function canReadDecisionInScope(decision: Pick<Decision, "projectId">, scope: AccessScope) {
+export function canReadDecisionInScope(
+  decision: Pick<Decision, "projectId">,
+  scope: AccessScope,
+) {
   return canReadMeetingInScope(decision, scope);
 }
 
-export function filterProjectsForScope(projects: Project[], scope: AccessScope) {
+export function filterProjectsForScope(
+  projects: Project[],
+  scope: AccessScope,
+) {
   return projects.filter((project) => canReadProjectInScope(project, scope));
 }
 
@@ -166,18 +196,34 @@ export function filterTasksForScope(tasks: Task[], scope: AccessScope) {
   return tasks.filter((task) => canReadTaskInScope(task, scope));
 }
 
-export function filterDocumentsForScope(documents: Document[], scope: AccessScope) {
-  return documents.filter((document) => canReadDocumentInScope(document, scope));
+export function filterDocumentsForScope(
+  documents: Document[],
+  scope: AccessScope,
+) {
+  return documents.filter((document) =>
+    canReadDocumentInScope(document, scope),
+  );
 }
 
-export function filterLegalStepsForScope(steps: LegalStep[], scope: AccessScope) {
+export function filterLegalStepsForScope(
+  steps: LegalStep[],
+  scope: AccessScope,
+) {
   return steps.filter((step) => canReadLegalStepInScope(step, scope));
 }
 
-export function filterMeetingsForScope(meetings: Meeting[], scope: AccessScope) {
+export function filterMeetingsForScope(
+  meetings: Meeting[],
+  scope: AccessScope,
+) {
   return meetings.filter((meeting) => canReadMeetingInScope(meeting, scope));
 }
 
-export function filterDecisionsForScope(decisions: Decision[], scope: AccessScope) {
-  return decisions.filter((decision) => canReadDecisionInScope(decision, scope));
+export function filterDecisionsForScope(
+  decisions: Decision[],
+  scope: AccessScope,
+) {
+  return decisions.filter((decision) =>
+    canReadDecisionInScope(decision, scope),
+  );
 }

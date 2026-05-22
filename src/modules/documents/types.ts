@@ -1,11 +1,18 @@
 import type { DocumentApprovalStatus, DocumentStatus } from "@/constants/statuses";
 import type { EntityId, TimestampFields } from "@/types/common";
 
+export type DocumentClassification =
+  | "PUBLIC"
+  | "INTERNAL"
+  | "CONFIDENTIAL"
+  | "RESTRICTED";
+
 export type Document = TimestampFields & {
   id: EntityId;
   projectId: EntityId;
   title: string;
   docType: string;
+  classification?: DocumentClassification;
   fileUrl?: string;
   externalUrl?: string;
   version: string;
@@ -21,6 +28,7 @@ export type DocumentInput = {
   projectId: EntityId;
   title: string;
   docType: string;
+  classification?: DocumentClassification;
   fileUrl?: string;
   externalUrl?: string;
   version: string;
@@ -55,6 +63,7 @@ export type DocumentListFilters = {
   docType?: string | "all";
   status?: DocumentStatus | "all";
   ownerId?: EntityId | "all";
+  classification?: DocumentClassification | "all";
 };
 
 export type DocumentRequirementTemplate = TimestampFields & {
