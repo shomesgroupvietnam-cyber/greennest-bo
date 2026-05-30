@@ -1,11 +1,9 @@
-import { redirect } from "next/navigation";
+import { ExecutiveDirectivesPage } from "@/modules/executive/pages";
 
-import { requireAnyRole } from "@/lib/permissions/guard";
-import { EXECUTIVE_ROUTE_ROLES } from "@/modules/executive/constants";
+import { renderExecutivePage } from "../_lib/render-executive-page";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExecutiveDirectivesRoute() {
-  await requireAnyRole(EXECUTIVE_ROUTE_ROLES, "/executive");
-  redirect("/command-center?view=executive-dashboard");
+  return renderExecutivePage(ExecutiveDirectivesPage);
 }

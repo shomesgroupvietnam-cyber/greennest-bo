@@ -8,21 +8,70 @@ const optionalText = z
   .optional()
   .transform((value) => (value ? value : undefined));
 
+const requiredText = (message: string) => z.string().trim().min(1, message);
+
 export const proposalInputSchema = z.object({
-  title: z.string().trim().min(2, "Tên đề xuất là bắt buộc."),
+  title: z.string().trim().min(2, "Ten de xuat la bat buoc."),
   type: z.enum(Object.keys(PROPOSAL_TYPES) as [keyof typeof PROPOSAL_TYPES, ...Array<keyof typeof PROPOSAL_TYPES>]),
   projectId: optionalText,
   module: optionalText,
   ownerId: optionalText,
+  onBehalfOf: optionalText,
+  delegationId: optionalText,
   priority: z
     .enum(Object.keys(PROPOSAL_PRIORITIES) as [keyof typeof PROPOSAL_PRIORITIES, ...Array<keyof typeof PROPOSAL_PRIORITIES>])
     .optional()
     .default("normal"),
   amount: z.coerce.number().nonnegative().optional().or(z.literal("").transform(() => undefined)),
   dueDate: optionalText,
-  summary: optionalText
+  summary: optionalText,
 });
 
 export const proposalDecisionSchema = z.object({
-  notes: optionalText
+  notes: optionalText,
 });
+
+export const proposalApprovalActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("approve"),
+    notes: optionalText,
+  }),
+  z.object({
+    action: z.literal("reject"),
+    reason: requiredText("Ly do tu choi la bat buoc."),
+  }),
+  z.object({
+    action: z.literal("request_change"),
+    reason: requiredText("Ly do tra lai la bat buoc."),
+  }),
+  z.object({
+    action: z.literal("forward"),
+    notes: optionalText,
+    targetLabel: requiredText("Nhan su hoac vai tro nhan chuyen cap la bat buoc."),
+    targetRole: optionalText,
+    targetUserId: optionalText,
+  }),
+  z.object({
+    action: z.literal("ask_meeting"),
+    agendaDraft: optionalText,
+    meetingType: optionalText,
+  }),
+  z.object({
+    action: z.literal("hold"),
+    notes: optionalText,
+  }),
+  z.object({
+    action: z.literal("cancel"),
+    reason: requiredText("Ly do huy approval la bat buoc."),
+  }),
+]).superRefine((value, context) => {
+  if (value.action === "ask_meeting" && !value.meetingType && !value.agendaDraft) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Can co loai hop hoac agenda du thao.",
+      path: ["meetingType"],
+    });
+  }
+});
+
+export type ProposalApprovalActionInput = z.infer<typeof proposalApprovalActionSchema>;

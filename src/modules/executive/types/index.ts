@@ -84,6 +84,8 @@ export type ExecutiveRiskCategory =
   | "compliance_risk"
   | "system_risk";
 
+export type ConfiguredRiskGroupKey = string;
+
 export type ExecutiveDashboardViewMode =
   | "system_overview"
   | "by_project"
@@ -168,7 +170,7 @@ export type ExecutiveAxisDefinition = {
 export type ExecutiveScopeRule = {
   id: string;
   description: string;
-  roles?: Role[];
+  roles?: string[];
   accessLevels?: ExecutiveAccessLevel[];
   userIdIncludes?: string;
   operatingRole: ExecutiveOperatingRole;
@@ -214,11 +216,26 @@ export type ExecutiveDashboardLayer = {
 
 export type ExecutiveEscalationRule = {
   id: string;
+  thresholdPolicyId?: string;
   approvalLevel: ExecutiveApprovalAuthorityLevel;
   thresholdLabel: string;
   amountMin?: number;
   amountMax?: number;
+  approverRole?: string;
+  requiredPermission?: string;
+  riskLevels?: ExecutiveRiskLevel[];
   autoEscalationSignals: string[];
+};
+
+export type ExecutiveRiskGroupMetadata = {
+  id: string;
+  key: ConfiguredRiskGroupKey;
+  label: string;
+  description?: string;
+  defaultSeverity: ExecutiveRiskLevel;
+  moduleId?: string;
+  sortOrder: number;
+  isDefault: boolean;
 };
 
 export type ExecutiveDashboardMetric = {
@@ -571,6 +588,251 @@ export type LeadershipApproval = ApprovalRequest & {
   version: string;
 };
 
+export type ApprovalCenterAxisKey = "axis_1" | "axis_2" | "axis_3";
+
+export type ApprovalCenterQueueCategory =
+  | "ho_so_van_ban"
+  | "tai_chinh_chi"
+  | "chien_luoc"
+  | "ky_thuat"
+  | "phap_ly"
+  | "hop";
+
+export type ApprovalCenterDueGroup =
+  | "overdue"
+  | "today"
+  | "this_week"
+  | "later"
+  | "none";
+
+export type ApprovalCenterPriority =
+  | "low"
+  | "normal"
+  | "high"
+  | "urgent"
+  | "critical";
+
+export type ApprovalOverdueSeverity =
+  | "none"
+  | "warning"
+  | "overdue"
+  | "critical";
+
+export type ApprovalEscalationTrigger =
+  | "none"
+  | "long_overdue"
+  | "risk_policy"
+  | "critical_overdue";
+
+export type ApprovalEscalationTargetKind =
+  | "current_approver"
+  | "proposer"
+  | "owner"
+  | "delegate"
+  | "policy_escalation";
+
+export type ApprovalEscalationTarget = {
+  kind: ApprovalEscalationTargetKind;
+  label: string;
+  userId?: string;
+  roleKey?: string;
+  delegationId?: string;
+  scopeMatched: boolean;
+};
+
+export type ApprovalOverdueState = {
+  isOverdue: boolean;
+  daysOverdue: number;
+  severity: ApprovalOverdueSeverity;
+  reason: string;
+  ownerLabel: string;
+  nextAction: string;
+};
+
+export type ApprovalEscalationState = {
+  required: boolean;
+  trigger: ApprovalEscalationTrigger;
+  policyId?: string;
+  policyLabel?: string;
+  thresholdDays?: number;
+  targets: ApprovalEscalationTarget[];
+  notificationId?: string;
+  status: "none" | "queued" | "updated" | "acknowledged" | "hidden";
+  reason?: string;
+};
+
+export type ApprovalCenterFinancialAccess =
+  | "allowed"
+  | "no_permission"
+  | "not_applicable";
+
+export type ApprovalCenterSourceType = "proposal" | "leadership_approval";
+
+export type ApprovalCenterQueueItem = {
+  id: string;
+  sourceType: ApprovalCenterSourceType;
+  sourceId: string;
+  code: string;
+  title: string;
+  axisKey: ApprovalCenterAxisKey;
+  category: ApprovalCenterQueueCategory;
+  categoryLabel: string;
+  projectId?: string;
+  projectName?: string;
+  scopeLabel: string;
+  requester: string;
+  ownerName?: string;
+  reviewerLabel?: string;
+  status: string;
+  statusLabel: string;
+  priority: ApprovalCenterPriority;
+  riskLevel?: ExecutiveRiskLevel;
+  dueDate?: string;
+  dueGroup: ApprovalCenterDueGroup;
+  dueLabel: string;
+  overdue?: ApprovalOverdueState;
+  escalation?: ApprovalEscalationState;
+  reason?: string;
+  policyLabel?: string;
+  amountLabel?: string;
+  financialAccess: ApprovalCenterFinancialAccess;
+  href?: string;
+};
+
+export type ApprovalCenterCategorySummary = {
+  key: ApprovalCenterQueueCategory;
+  label: string;
+  total: number;
+};
+
+export type ApprovalCenterAxisTab = {
+  key: ApprovalCenterAxisKey;
+  label: string;
+  state: "available" | "placeholder";
+  helper: string;
+  total: number;
+  categories: ApprovalCenterCategorySummary[];
+  items: ApprovalCenterQueueItem[];
+};
+
+export type ApprovalCenterData = {
+  generatedAt: string;
+  scopeLabel: string;
+  permissions: {
+    canView: boolean;
+    canViewFinance: boolean;
+  };
+  tabs: ApprovalCenterAxisTab[];
+};
+
+export type ApprovalCenterDetailSourceState =
+  | "linked"
+  | "placeholder"
+  | "no_permission";
+
+export type ApprovalCenterDetailSource = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  relationType: string;
+  label: string;
+  helper: string;
+  state: ApprovalCenterDetailSourceState;
+  href?: string;
+};
+
+export type ApprovalCenterDetailPolicy = {
+  currentStepId?: string;
+  stepOrder?: number;
+  thresholdPolicyId?: string;
+  thresholdLabel?: string;
+  requiredPermission?: string;
+  approverRole?: string;
+  approvalLevel?: string;
+  status?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+};
+
+export type ApprovalCenterDetailHistoryItem = {
+  id: string;
+  kind: "audit" | "decision" | "link" | "step" | "version";
+  label: string;
+  actorId?: string;
+  occurredAt: string;
+  status?: string;
+  notes?: string;
+  version?: number;
+  previousStatus?: string;
+  nextStatus?: string;
+  previousStepStatus?: string;
+  nextStepStatus?: string;
+  auditAction?: string;
+  auditLogId?: string;
+};
+
+export type ApprovalCenterDetailActionKey =
+  | "approve"
+  | "reject"
+  | "request_change"
+  | "forward"
+  | "ask_meeting"
+  | "hold"
+  | "cancel";
+
+export type ApprovalCenterDetailAction = {
+  action: ApprovalCenterDetailActionKey;
+  label: string;
+  enabled: boolean;
+  helper?: string;
+  disabledReason?: string;
+  destructive?: boolean;
+  requiresConfirmation?: boolean;
+  requiresReason?: boolean;
+};
+
+export type ApprovalCenterDetailData = {
+  generatedAt: string;
+  backHref: string;
+  selectedScopeId?: string;
+  source: {
+    sourceType: "proposal";
+    sourceId: string;
+    code: string;
+    title: string;
+    axisKey: "axis_1";
+    category: ApprovalCenterQueueCategory;
+    categoryLabel: string;
+    status: string;
+    statusLabel: string;
+  };
+  permissions: {
+    canView: true;
+    canViewAudit: boolean;
+    canViewFinance: boolean;
+    availableActions: ApprovalCenterDetailAction[];
+  };
+  requestSummary: {
+    summary?: string;
+    scopeLabel: string;
+    proposer: string;
+    submittedBy?: string;
+    ownerName?: string;
+    projectId?: string;
+    projectName?: string;
+    module: string;
+    priority: string;
+    dueDate?: string;
+    financialAccess: ApprovalCenterFinancialAccess;
+    amountLabel?: string;
+  };
+  policy: ApprovalCenterDetailPolicy | null;
+  overdue?: ApprovalOverdueState;
+  escalation?: ApprovalEscalationState;
+  linkedSources: ApprovalCenterDetailSource[];
+  history: ApprovalCenterDetailHistoryItem[];
+};
+
 export type DecisionEntityType =
   | "investment_plan"
   | "directive"
@@ -667,6 +929,7 @@ export type ExecutiveLeadershipData = {
   axisDefinitions: ExecutiveAxisDefinition[];
   dashboardLayers: ExecutiveDashboardLayer[];
   escalationRules: ExecutiveEscalationRule[];
+  riskGroups: ExecutiveRiskGroupMetadata[];
   globalStatusItems: ExecutiveGlobalStatusItem[];
   workspaceSwitchItems: ExecutiveWorkspaceSwitchItem[];
   metrics: ExecutiveDashboardMetric[];

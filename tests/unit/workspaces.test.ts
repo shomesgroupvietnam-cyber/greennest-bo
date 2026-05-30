@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { ROLE_DEFAULT_SCREENS, type Role } from "@/constants/roles";
 import { getPermittedNavItems } from "@/lib/permissions/navigation";
+import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import type { PermissionUser } from "@/lib/permissions/can";
 import {
   canAccessWorkspaceRoute,
   WORKSPACE_DEFINITIONS,
   type WorkspaceRoute,
 } from "@/modules/workspaces/config";
-import { applyWorkspaceScope } from "@/modules/workspaces/services/workspace-service";
+import { applyWorkspaceScope, buildDelegationSummary } from "@/modules/workspaces/services/workspace-service";
 import type { WorkspaceScopedData } from "@/modules/workspaces/types";
+import type { LeadershipDelegation, ScopeAssignment } from "@/modules/settings/types";
 
 function user(role: Role, id = `${role}-user`): PermissionUser {
   return { id, role };
@@ -18,9 +20,9 @@ function user(role: Role, id = `${role}-user`): PermissionUser {
 describe("role workspaces", () => {
   it("maps every role to a concrete workspace route", () => {
     const expectedRoutes: Record<Role, string> = {
-      super_admin: "/admin",
+      super_admin: "/command-center",
       admin: "/admin",
-      tong_giam_doc: "/command-center",
+      tong_giam_doc: "/command-center?view=executive-dashboard",
       pho_tong_giam_doc: "/command-center?view=executive-dashboard",
       giam_doc_du_an: "/project-workbench",
       quan_ly_du_an: "/project-workbench",
@@ -39,7 +41,7 @@ describe("role workspaces", () => {
       kiem_toan_noi_bo: "/audit-workspace",
       quan_ly_hop_dong: "/contract-workspace",
       thu_ky_tro_ly: "/assistant-workspace",
-      kiem_soat_noi_bo: "/admin",
+      kiem_soat_noi_bo: "/audit-workspace",
       nha_thau: "/contractor",
       tu_van: "/consultant",
       viewer: "/viewer",
@@ -121,6 +123,63 @@ describe("role workspaces", () => {
     expect(viewerNav).not.toContain("/executive");
     expect(viewerNav).not.toContain("/documents/new");
     expect(viewerNav).not.toContain("/users");
+  });
+
+  it("uses distinct navigation labels for command center, leadership and BO settings", () => {
+    const adminNav = getPermittedNavItems(user("super_admin"));
+    const labelsByHref = new Map(adminNav.map((item) => [item.href, item.label]));
+    const labels = [...labelsByHref.values()];
+
+    expect(labelsByHref.get("/command-center")).toBe("Tong quan Truc 1");
+    expect(labelsByHref.get("/command-center?view=executive-dashboard")).toBe(
+      "Lanh dao",
+    );
+    expect(labelsByHref.get("/admin")).toBe("Quan tri Chu tich");
+    expect(labels).not.toContain("Tong quan");
+    expect(labels).not.toContain("Quan tri");
+  });
+
+  it("allows scoped grants to reveal matching navigation without static role-wide access", () => {
+    const scopedNav = getPermittedNavItems(user("viewer", "scoped-user"), {
+      scopedPermissions: ["axis1.view"],
+    }).map((item) => item.href);
+
+    expect(scopedNav).toContain("/command-center");
+    expect(scopedNav).toContain("/axis-1");
+    expect(scopedNav).not.toContain("/settings");
+    expect(scopedNav).not.toContain("/project-workbench");
+  });
+
+  it("keeps all-scope assignment selection scoped to the current user", () => {
+    const assignments: ScopeAssignment[] = [
+      {
+        id: "current-user-scope",
+        userId: "scoped-user",
+        roleKey: "giam_doc_du_an",
+        permissionKeys: ["project.view"],
+        active: true,
+        scopeType: "scoped",
+        createdAt: "",
+        updatedAt: "",
+      },
+      {
+        id: "other-user-scope",
+        userId: "other-user",
+        roleKey: "admin",
+        permissionKeys: ["settings.manage"],
+        active: true,
+        scopeType: "global",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+
+    expect(
+      selectScopeAssignmentsForUser(
+        { id: "scoped-user", role: "viewer" },
+        assignments,
+      ).map((assignment) => assignment.id),
+    ).toEqual(["current-user-scope"]);
   });
 
   it("blocks unauthorized direct workspace route access", () => {
@@ -286,9 +345,27 @@ describe("role workspaces", () => {
       meetings: [
         {
           id: "meeting-a",
+          organizationId: "org-a",
           projectId: "project-a",
+          projectIds: ["project-a"],
+          axisId: "axis-1",
+          departmentId: "project",
           title: "Assigned meeting",
+          meetingType: "PROJECT_MEETING",
+          visibility: "project",
+          participantScope: "project_team",
+          status: "COMPLETED",
           meetingDate: "",
+          startTime: "",
+          participants: [],
+          externalParticipants: [],
+          attachments: [],
+          aiSummary: { status: "DRAFT" },
+          decisions: [],
+          followUpActions: [],
+          relatedApprovals: [],
+          relatedTasks: [],
+          auditLog: [],
           createdAt: "",
           updatedAt: "",
         },
@@ -322,5 +399,175 @@ describe("role workspaces", () => {
     expect(scoped.tasks.map((task) => task.id)).toEqual(["task-a"]);
     expect(scoped.documents.map((document) => document.id)).toEqual(["doc-a"]);
     expect(scoped.legalSteps).toEqual([]);
+  });
+
+  it("filters workspace DTOs by explicit scope assignments before UI render", () => {
+    const assignments: ScopeAssignment[] = [
+      {
+        id: "assignment-a",
+        userId: "operator",
+        roleKey: "viewer",
+        permissionKeys: ["project.view", "task.view", "document.view", "legal.view", "meeting.view"],
+        projectId: "project-a",
+        active: true,
+        scopeType: "scoped",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+    const scoped = applyWorkspaceScope(user("admin", "operator"), {
+      projects: [
+        { id: "project-a", code: "A", name: "A", status: "active", createdAt: "", updatedAt: "" },
+        { id: "project-b", code: "B", name: "B", status: "active", createdAt: "", updatedAt: "" },
+      ],
+      tasks: [
+        { id: "task-a", projectId: "project-a", title: "Allowed", status: "todo", priority: "high", createdAt: "", updatedAt: "" },
+        { id: "task-b", projectId: "project-b", title: "Denied", status: "todo", priority: "high", createdAt: "", updatedAt: "" },
+      ],
+      documents: [
+        {
+          id: "doc-a",
+          projectId: "project-a",
+          title: "Allowed doc",
+          docType: "internal",
+          version: "v1",
+          status: "complete",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "doc-b",
+          projectId: "project-b",
+          title: "Denied doc",
+          docType: "internal",
+          version: "v1",
+          status: "complete",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      legalSteps: [
+        {
+          id: "legal-a",
+          projectId: "project-a",
+          stepCode: "land_survey",
+          stepName: "Allowed legal",
+          status: "done",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "legal-b",
+          projectId: "project-b",
+          stepCode: "planning_analysis",
+          stepName: "Denied legal",
+          status: "done",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      meetings: [
+        {
+          id: "meeting-a",
+          organizationId: "org-a",
+          projectId: "project-a",
+          projectIds: ["project-a"],
+          axisId: "axis-1",
+          departmentId: "project",
+          title: "Allowed meeting",
+          meetingType: "PROJECT_MEETING",
+          visibility: "project",
+          participantScope: "project_team",
+          status: "COMPLETED",
+          meetingDate: "",
+          startTime: "",
+          participants: [],
+          externalParticipants: [],
+          attachments: [],
+          aiSummary: { status: "DRAFT" },
+          decisions: [],
+          followUpActions: [],
+          relatedApprovals: [],
+          relatedTasks: [],
+          auditLog: [],
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "meeting-b",
+          organizationId: "org-a",
+          projectId: "project-b",
+          projectIds: ["project-b"],
+          axisId: "axis-1",
+          departmentId: "project",
+          title: "Denied meeting",
+          meetingType: "PROJECT_MEETING",
+          visibility: "project",
+          participantScope: "project_team",
+          status: "COMPLETED",
+          meetingDate: "",
+          startTime: "",
+          participants: [],
+          externalParticipants: [],
+          attachments: [],
+          aiSummary: { status: "DRAFT" },
+          decisions: [],
+          followUpActions: [],
+          relatedApprovals: [],
+          relatedTasks: [],
+          auditLog: [],
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      decisions: [
+        { id: "decision-a", projectId: "project-a", decisionText: "Allowed", status: "open", createdAt: "", updatedAt: "" },
+        { id: "decision-b", projectId: "project-b", decisionText: "Denied", status: "open", createdAt: "", updatedAt: "" },
+      ],
+      users: [],
+      auditLogs: [],
+      memberships: [],
+      scopeAssignments: assignments,
+    } satisfies WorkspaceScopedData);
+
+    expect(scoped.projects.map((project) => project.id)).toEqual(["project-a"]);
+    expect(scoped.tasks.map((task) => task.id)).toEqual(["task-a"]);
+    expect(scoped.documents.map((document) => document.id)).toEqual(["doc-a"]);
+    expect(scoped.legalSteps.map((step) => step.id)).toEqual(["legal-a"]);
+    expect(scoped.meetings.map((meeting) => meeting.id)).toEqual(["meeting-a"]);
+    expect(scoped.decisions.map((decision) => decision.id)).toEqual(["decision-a"]);
+  });
+
+  it("summarizes active delegation metadata for assistant workspaces", () => {
+    const delegations: LeadershipDelegation[] = [
+      {
+        id: "delegation-a",
+        principalUserId: "mock-founder",
+        delegateUserId: "assistant",
+        actionKeys: ["proposal.create"],
+        projectId: "project-a",
+        moduleId: "proposal",
+        active: true,
+        createdAt: "",
+        updatedAt: "",
+      },
+      {
+        id: "delegation-b",
+        principalUserId: "mock-founder",
+        delegateUserId: "assistant",
+        actionKeys: ["proposal.create", "meeting.create"],
+        projectId: "project-b",
+        moduleId: "meeting",
+        active: true,
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+
+    expect(buildDelegationSummary(delegations)).toEqual({
+      activeCount: 2,
+      principalUserIds: ["mock-founder"],
+      actionKeys: ["proposal.create", "meeting.create"],
+    });
   });
 });

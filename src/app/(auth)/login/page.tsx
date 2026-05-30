@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
+import { ROLES, type Role } from "@/constants/roles";
 import { loginAction } from "@/lib/auth/actions";
 import { getCurrentSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_MOCK_LOGIN_ROLE: Role = "admin";
+const DEMO_LOGIN_ROLES = Object.keys(ROLES) as Role[];
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -27,7 +31,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <section className="w-full max-w-md rounded-lg border bg-white p-6 shadow-sm">
         <div>
-          <h1 className="text-xl font-semibold text-slate-950">GreenNest BuildFlow</h1>
+          <h1 className="text-xl font-semibold text-slate-950">
+            GreenNest BuildFlow
+          </h1>
           <p className="mt-2 text-sm text-slate-600">
             {isMockMode
               ? "Đang chạy bằng phiên mô phỏng cục bộ vì chưa có cấu hình Supabase Auth."
@@ -48,41 +54,83 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <form action={loginAction} className="mt-6 space-y-4">
           <input name="next" type="hidden" value={params?.next ?? ""} />
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-800" htmlFor="email">
-              Email
-            </label>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              defaultValue={isMockMode ? session.user.email : ""}
-              id="email"
-              name="email"
-              placeholder="founder@greennest.vn"
-              readOnly={isMockMode}
-              type="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-800" htmlFor="password">
-              Mật khẩu
-            </label>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              id="password"
-              name="password"
-              placeholder="••••••••"
-              readOnly={isMockMode}
-              type="password"
-            />
-          </div>
+          {isMockMode ? (
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-slate-800"
+                htmlFor="mockRole"
+              >
+                Vai trò demo
+              </label>
+              <select
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                defaultValue={DEFAULT_MOCK_LOGIN_ROLE}
+                id="mockRole"
+                name="mockRole"
+              >
+                {DEMO_LOGIN_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {ROLES[role].label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs leading-5 text-slate-500">
+                Chọn rõ vai trò cần kiểm tra. Sau khi đăng xuất, hệ thống sẽ
+                không tự giữ lại vai trò demo cũ.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label
+                  className="text-sm font-medium text-slate-800"
+                  htmlFor="email"
+                >
+                  Email
+                </label>
+                <input
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  id="email"
+                  name="email"
+                  placeholder="founder@greennest.vn"
+                  type="email"
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  className="text-sm font-medium text-slate-800"
+                  htmlFor="password"
+                >
+                  Mật khẩu
+                </label>
+                <input
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  id="password"
+                  name="password"
+                  placeholder="••••••••"
+                  type="password"
+                />
+              </div>
+            </>
+          )}
           <Button className="w-full" type="submit">
-            {isMockMode ? "Tiếp tục với phiên mô phỏng" : "Đăng nhập"}
+            {isMockMode ? "Tiếp tục với vai trò demo" : "Đăng nhập"}
           </Button>
         </form>
 
         <div className="mt-5 rounded-md bg-slate-50 p-3 text-xs text-slate-600">
-          <p>Chế độ: {session.mode === "supabase" && !session.isFallback ? "Supabase Auth" : "Mock fallback"}</p>
-          <p>Vai trò hiện tại: {session.user.role}</p>
+          <p>
+            Chế độ:{" "}
+            {session.mode === "supabase" && !session.isFallback
+              ? "Supabase Auth"
+              : "Mock fallback"}
+          </p>
+          {isMockMode ? (
+            <p>
+              Vai trò mặc định khi mở form:{" "}
+              {ROLES[DEFAULT_MOCK_LOGIN_ROLE].label}
+            </p>
+          ) : null}
         </div>
       </section>
     </main>

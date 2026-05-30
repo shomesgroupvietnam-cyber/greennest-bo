@@ -12,12 +12,12 @@ import { ProposalStatusBadge } from "./proposal-status-badge";
 export function ProposalDetail({
   detail,
   canSubmit,
-  canReview,
+  canRequestChange,
   canApprove
 }: {
   detail: ProposalDetailType;
   canSubmit: boolean;
-  canReview: boolean;
+  canRequestChange: boolean;
   canApprove: boolean;
 }) {
   const { proposal, steps, decisions } = detail;
@@ -49,6 +49,18 @@ export function ProposalDetail({
             <dt className="text-slate-500">Dự án</dt>
             <dd className="font-medium text-slate-950">{proposal.projectId ?? "-"}</dd>
           </div>
+          {proposal.onBehalfOf ? (
+            <>
+              <div>
+                <dt className="text-slate-500">Thay lanh dao</dt>
+                <dd className="font-medium text-slate-950">{proposal.onBehalfOf}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Nguoi thao tac</dt>
+                <dd className="font-medium text-slate-950">{proposal.submittedBy ?? "-"}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
         {proposal.summary ? <p className="mt-5 whitespace-pre-wrap rounded-md bg-slate-50 p-4 text-sm text-slate-700">{proposal.summary}</p> : null}
         <div className="mt-5 flex flex-wrap gap-3">
@@ -63,12 +75,12 @@ export function ProposalDetail({
 
       {proposal.status === "in_review" ? (
         <section className="grid gap-4 md:grid-cols-3">
-          {canReview ? (
+          {canRequestChange ? (
             <form action={requestProposalChangeAction} className="space-y-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
               <input type="hidden" name="proposalId" value={proposal.id} />
               <label className="block text-sm font-medium text-orange-950">
                 Nội dung cần chỉnh
-                <textarea className="mt-2 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="notes" />
+                <textarea className="mt-2 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="notes" required />
               </label>
               <Button type="submit" variant="outline">Yêu cầu chỉnh sửa</Button>
             </form>
@@ -88,7 +100,7 @@ export function ProposalDetail({
               <input type="hidden" name="proposalId" value={proposal.id} />
               <label className="block text-sm font-medium text-red-950">
                 Lý do từ chối
-                <textarea className="mt-2 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="notes" />
+                <textarea className="mt-2 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="notes" required />
               </label>
               <Button type="submit" variant="outline">Từ chối</Button>
             </form>

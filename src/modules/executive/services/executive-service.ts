@@ -1,4 +1,9 @@
 import type { PermissionUser } from "@/lib/permissions/can";
+import { can } from "@/lib/permissions/can";
+import {
+  canAccessScopedAction,
+  hasAnyScopedActionGrant,
+} from "@/lib/permissions/access-scope";
 import { resolveExecutiveAccess } from "@/modules/executive/constants";
 import {
   aiLeadershipSummary,
@@ -13,7 +18,6 @@ import {
   executiveAxisDefinitions,
   executiveRoleDefinitions,
   executiveScopeRules,
-  escalationRules,
   globalStatusItems,
   leadershipActionItems,
   leadershipTeam,
@@ -43,9 +47,22 @@ import type {
   ExecutiveOperatingRole,
   ExecutiveOverviewCard,
   ExecutiveProjectRow,
+  ExecutiveRiskGroupMetadata,
+  ExecutiveEscalationRule,
   ExecutiveRoleDefinition,
   ExecutiveScopeRule,
 } from "@/modules/executive/types";
+import {
+  listActiveApprovalThresholds,
+  listActiveRiskGroups,
+} from "@/modules/settings/services/policy-settings-service";
+import type { PolicySettingsRepository } from "@/modules/settings/services/policy-settings-repository";
+import type {
+  ApprovalThresholdPolicy,
+  RolePermissionCatalog,
+  RiskGroupConfig,
+  ScopeAssignment,
+} from "@/modules/settings/types";
 
 type ScopableExecutiveItem = {
   id: string;
@@ -57,6 +74,25 @@ type ScopableExecutiveItem = {
   moduleId?: string;
   scope?: ExecutiveDataScope;
 };
+
+type ExecutiveServiceOptions = {
+  policyRepository?: PolicySettingsRepository;
+  rolePermissionCatalog?: RolePermissionCatalog;
+  selectedScopeId?: string;
+  scopeAssignments?: ScopeAssignment[];
+};
+
+const scopedExecutivePermissions = [
+  "project.view",
+  "task.view",
+  "document.view",
+  "legal.view",
+  "finance.view",
+  "meeting.view",
+  "decision.approve",
+  "proposal.view",
+  "proposal.approve",
+] as const;
 
 const ALL_AXIS_IDS = executiveAxisDefinitions.map(
   (axis) => axis.id,
@@ -160,10 +196,61 @@ function expandModuleIds(resource: ExecutiveConfigResource) {
   return resource;
 }
 
+function normalizeExecutiveAxisId(axisId: string) {
+  return axisId === "axis-1" || axisId === "axis1"
+    ? "project_management"
+    : axisId;
+}
+
+function applyAssignmentScope(
+  scope: ExecutiveAccessibleScope,
+  assignment?: ScopeAssignment,
+): ExecutiveAccessibleScope {
+  if (!assignment) {
+    return scope;
+  }
+
+  const organizationIds =
+    assignment.organizationId && assignment.organizationId !== "*"
+      ? [assignment.organizationId]
+      : scope.organizationIds;
+  const projectIds =
+    assignment.projectId && assignment.projectId !== "*"
+      ? [assignment.projectId]
+      : scope.projectIds;
+  const axisIds =
+    assignment.axisId && assignment.axisId !== "*"
+      ? [normalizeExecutiveAxisId(assignment.axisId) as ExecutiveCommandCenterAxisKey]
+      : scope.axisIds;
+  const moduleIds =
+    assignment.moduleId && assignment.moduleId !== "*"
+      ? [assignment.moduleId]
+      : scope.moduleIds;
+
+  return {
+    ...scope,
+    axisIds,
+    canViewAllOrganizations:
+      !assignment.organizationId || assignment.organizationId === "*"
+        ? scope.canViewAllOrganizations
+        : false,
+    canViewAllProjects:
+      !assignment.projectId || assignment.projectId === "*"
+        ? scope.canViewAllProjects
+        : false,
+    moduleIds,
+    organizationIds,
+    projectIds,
+  };
+}
+
 function resolveAccessibleScope(
   user: PermissionUser,
+  effectiveRole = user.role,
+  assignment?: ScopeAssignment,
 ): ExecutiveAccessibleScope {
-  const access = resolveExecutiveAccess(user.role);
+  const effectiveUser = { ...user, role: effectiveRole };
+  const access = resolveExecutiveAccess(effectiveRole);
 
   if (!access) {
     return {
@@ -180,7 +267,7 @@ function resolveAccessibleScope(
   }
 
   const scopeRule = executiveScopeRules.find((rule) =>
-    matchesScopeRule(rule, user, access),
+    matchesScopeRule(rule, effectiveUser, access),
   );
 
   if (!scopeRule) {
@@ -199,7 +286,7 @@ function resolveAccessibleScope(
 
   const organizationIds = expandOrganizationIds(scopeRule.organizationIds);
 
-  return {
+  return applyAssignmentScope({
     operatingRole: scopeRule.operatingRole,
     scopeType: scopeRule.scopeType,
     organizationIds,
@@ -212,7 +299,7 @@ function resolveAccessibleScope(
       (scopeRule.organizationIds === "all"),
     canViewAllProjects:
       scopeRule.canViewAllProjects ?? (scopeRule.projectIds === "all"),
-  };
+  }, assignment);
 }
 
 function resolveItemOrganizationId(item: ScopableExecutiveItem) {
@@ -468,17 +555,209 @@ function buildScopeLabel(scope: ExecutiveAccessibleScope) {
   return "Toan danh muc cong ty duoc cap quyen";
 }
 
-export async function getExecutiveLeadershipData(
-  user: PermissionUser,
-): Promise<ExecutiveLeadershipData> {
-  const viewerAccess = resolveExecutiveAccess("viewer");
-  const access = resolveExecutiveAccess(user.role) ?? viewerAccess;
+function buildEscalationRulesFromPolicies(
+  policies: ApprovalThresholdPolicy[],
+): ExecutiveEscalationRule[] {
+  return policies.map((policy) => ({
+    id: policy.policyKey,
+    thresholdPolicyId: policy.id,
+    approvalLevel: policy.approvalLevel,
+    thresholdLabel: policy.labelVi,
+    amountMin: policy.amountMin,
+    amountMax: policy.amountMax,
+    approverRole: policy.approverRoleKey,
+    requiredPermission: policy.requiredPermissionKey,
+    riskLevels: policy.escalateOnRiskLevels ?? [],
+    autoEscalationSignals:
+      policy.escalateOnRiskLevels && policy.escalateOnRiskLevels.length > 0
+        ? policy.escalateOnRiskLevels.map((riskLevel) => `Risk ${riskLevel.toUpperCase()}`)
+        : ["Theo amount range"],
+  }));
+}
 
-  if (!access) {
-    throw new Error("Executive viewer access policy is not configured.");
+function buildRiskGroupMetadata(
+  riskGroups: RiskGroupConfig[],
+): ExecutiveRiskGroupMetadata[] {
+  return riskGroups.map((riskGroup) => ({
+    id: riskGroup.id,
+    key: riskGroup.riskKey,
+    label: riskGroup.labelVi,
+    description: riskGroup.description,
+    defaultSeverity: riskGroup.defaultSeverity,
+    moduleId: riskGroup.moduleId,
+    sortOrder: riskGroup.sortOrder,
+    isDefault: riskGroup.isDefault,
+  }));
+}
+
+function resolveExecutiveAccessContext(
+  user: PermissionUser,
+  options: ExecutiveServiceOptions,
+) {
+  const directAccess = resolveExecutiveAccess(user.role);
+  const selectedAssignment =
+    options.selectedScopeId && options.selectedScopeId !== "all"
+      ? options.scopeAssignments?.find(
+          (assignment) => assignment.id === options.selectedScopeId,
+        ) ?? options.scopeAssignments?.[0]
+      : undefined;
+
+  if (directAccess) {
+    return {
+      access: directAccess,
+      assignment: selectedAssignment,
+      effectiveRole: user.role,
+    };
   }
 
-  const accessibleScope = resolveAccessibleScope(user);
+  const assignment = options.scopeAssignments?.find((candidate) => {
+    const assignmentAccess = resolveExecutiveAccess(candidate.roleKey);
+
+    if (!assignmentAccess) {
+      return false;
+    }
+
+    return scopedExecutivePermissions.some((permission) =>
+      hasAnyScopedActionGrant(user, permission, {
+        rolePermissionCatalog: options.rolePermissionCatalog,
+        scopeAssignments: [candidate],
+      }),
+    );
+  });
+
+  return {
+    access: assignment ? resolveExecutiveAccess(assignment.roleKey) : null,
+    assignment,
+    effectiveRole: assignment?.roleKey ?? user.role,
+  };
+}
+
+function canViewFinanceForTarget(
+  user: PermissionUser,
+  options: ExecutiveServiceOptions,
+  target: { id?: string; projectId?: string },
+) {
+  if (can(user, "finance.view")) {
+    return true;
+  }
+
+  return canAccessScopedAction(
+    user,
+    "finance.view",
+    {
+      projectId: target.projectId,
+      recordId: target.id,
+    },
+    {
+      rolePermissionCatalog: options.rolePermissionCatalog,
+      scopeAssignments: options.scopeAssignments,
+    },
+  );
+}
+
+function canViewGlobalFinance(user: PermissionUser, options: ExecutiveServiceOptions) {
+  if (can(user, "finance.view")) {
+    return true;
+  }
+
+  return canAccessScopedAction(user, "finance.view", {}, {
+    rolePermissionCatalog: options.rolePermissionCatalog,
+    scopeAssignments: options.scopeAssignments,
+  });
+}
+
+function withoutFinanceFields<T extends Record<string, unknown>>(item: T): T {
+  const clone = { ...item };
+
+  delete clone.amount;
+  delete clone.amountLabel;
+  delete clone.cashFlowLabel;
+  delete clone.budgetRange;
+  delete clone.budgetLabel;
+  delete clone.allocatedBudget;
+  delete clone.committedBudget;
+  delete clone.amountMin;
+  delete clone.amountMax;
+
+  return clone as T;
+}
+
+function isFinanceCopy(value: string) {
+  const normalized = value.toLowerCase();
+
+  return (
+    normalized.includes("dong tien") ||
+    normalized.includes("ngan sach") ||
+    normalized.includes("xin chi") ||
+    normalized.includes("cash") ||
+    normalized.includes("budget")
+  );
+}
+
+function sanitizeExecutiveFinance(
+  data: ExecutiveLeadershipData,
+  user: PermissionUser,
+  options: ExecutiveServiceOptions,
+): ExecutiveLeadershipData {
+  const globalFinanceAllowed = canViewGlobalFinance(user, options);
+  const canViewRecord = (target: { id?: string; projectId?: string }) =>
+    canViewFinanceForTarget(user, options, target);
+
+  return {
+    ...data,
+    dashboardLayers: data.dashboardLayers.map((layer) => ({
+      ...layer,
+      kpis: globalFinanceAllowed
+        ? layer.kpis
+        : layer.kpis.filter((kpi) => !isFinanceCopy(kpi.label) && !isFinanceCopy(kpi.helper)),
+    })),
+    escalationRules: globalFinanceAllowed
+      ? data.escalationRules
+      : data.escalationRules.map((rule) => withoutFinanceFields(rule)),
+    metrics: globalFinanceAllowed
+      ? data.metrics
+      : data.metrics.filter(
+          (metric) => !isFinanceCopy(metric.label) && !isFinanceCopy(metric.helper),
+        ),
+    commandCenterSnapshot: {
+      ...data.commandCenterSnapshot,
+      quickReports: globalFinanceAllowed
+        ? data.commandCenterSnapshot.quickReports
+        : data.commandCenterSnapshot.quickReports.filter(
+            (report) => !isFinanceCopy(report.title) && !isFinanceCopy(report.helper),
+          ),
+    },
+    leadershipActionItems: data.leadershipActionItems.map((item) =>
+      canViewRecord(item) ? item : withoutFinanceFields(item),
+    ),
+    projects: data.projects.map((project) =>
+      canViewRecord({ id: project.id, projectId: project.projectId })
+        ? project
+        : withoutFinanceFields(project),
+    ),
+    strategicPlans: data.strategicPlans.map((plan) =>
+      canViewRecord(plan) ? plan : withoutFinanceFields(plan),
+    ),
+    approvals: data.approvals.map((approval) =>
+      canViewRecord(approval) ? approval : withoutFinanceFields(approval),
+    ),
+  };
+}
+
+export async function getExecutiveLeadershipData(
+  user: PermissionUser,
+  options: ExecutiveServiceOptions = {},
+): Promise<ExecutiveLeadershipData> {
+  const { access, assignment, effectiveRole } = resolveExecutiveAccessContext(
+    user,
+    options,
+  );
+
+  if (!access) {
+    throw new Error("Executive access policy is not configured.");
+  }
+
+  const accessibleScope = resolveAccessibleScope(user, effectiveRole, assignment);
   const scopedProjects = forExecutiveScope(projects, accessibleScope);
   const scopedLeadershipActionItems = forLeadershipDecisionScope(
     leadershipActionItems,
@@ -489,8 +768,17 @@ export async function getExecutiveLeadershipData(
   const scopedApprovals = forExecutiveScope(approvals, accessibleScope);
   const scopedMeetings = forExecutiveScope(meetings, accessibleScope);
   const scopedDecisionLog = forExecutiveScope(decisionLog, accessibleScope);
+  const [policyThresholds, configuredRiskGroups] = options.policyRepository
+    ? await Promise.all([
+        listActiveApprovalThresholds(options.policyRepository),
+        listActiveRiskGroups(options.policyRepository),
+      ])
+    : await Promise.all([
+        listActiveApprovalThresholds(),
+        listActiveRiskGroups(),
+      ]);
 
-  return {
+  const data: ExecutiveLeadershipData = {
     scopeLabel: buildScopeLabel(accessibleScope),
     generatedAt: new Date().toISOString(),
     access,
@@ -499,7 +787,8 @@ export async function getExecutiveLeadershipData(
     roleDefinitions: executiveRoleDefinitions,
     axisDefinitions: executiveAxisDefinitions,
     dashboardLayers: scopeDashboardLayers(dashboardLayers, accessibleScope),
-    escalationRules,
+    escalationRules: buildEscalationRulesFromPolicies(policyThresholds),
+    riskGroups: buildRiskGroupMetadata(configuredRiskGroups),
     globalStatusItems,
     workspaceSwitchItems,
     metrics: buildMetrics(scopedProjects, scopedLeadershipActionItems),
@@ -532,4 +821,6 @@ export async function getExecutiveLeadershipData(
       accessibleScope,
     ),
   };
+
+  return sanitizeExecutiveFinance(data, user, options);
 }

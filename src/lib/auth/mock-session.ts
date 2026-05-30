@@ -10,9 +10,9 @@ export type MockCurrentUser = {
 
 const MOCK_ROLE_USERS: Record<Role, Omit<MockCurrentUser, "role">> = {
   super_admin: {
-    id: "mock-founder",
-    fullName: "Người quản trị hệ thống",
-    email: "super.admin@greennest.vn",
+    id: "chairman-01",
+    fullName: "Nguyen Thanh Binh",
+    email: "chairman@greennest.vn",
   },
   admin: {
     id: "mock-founder",
@@ -40,9 +40,9 @@ const MOCK_ROLE_USERS: Record<Role, Omit<MockCurrentUser, "role">> = {
     email: "pm@greennest.vn",
   },
   to_truong: {
-    id: "lead-01",
+    id: "department-head-01",
     fullName: "Lê Quang Huy",
-    email: "to.truong@greennest.vn",
+    email: "department.head@greennest.vn",
   },
   phap_ly: {
     id: "legal-manager",
@@ -130,7 +130,7 @@ const MOCK_ROLE_USERS: Record<Role, Omit<MockCurrentUser, "role">> = {
     email: "consultant@greennest.vn",
   },
   viewer: {
-    id: "viewer",
+    id: "viewer-01",
     fullName: "Người xem demo",
     email: "viewer@greennest.vn",
   },

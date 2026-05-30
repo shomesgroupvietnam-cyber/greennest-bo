@@ -76,6 +76,31 @@ as $$
   select public.current_app_role() = 'viewer'
 $$;
 
+create or replace function public.is_business_approval_permission(permission_key text)
+returns boolean
+language sql
+immutable
+as $$
+  select permission_key = any(array[
+    'document.approve',
+    'legal.approve',
+    'decision.approve',
+    'knowledge.approve',
+    'design.approve_change',
+    'acceptance.approve',
+    'finance.approve',
+    'payment.approve',
+    'proposal.approve',
+    'proposal.reject',
+    'proposal.request_change',
+    'investment.approve',
+    'contract.approve',
+    'hr.approve',
+    'qa.approve',
+    'safety.approve'
+  ])
+$$;
+
 create or replace function public.current_user_has_permission(permission_key text)
 returns boolean
 language sql
@@ -240,6 +265,63 @@ as $$
     )
 $$;
 
+create or replace function public.current_user_can_access_decision_scope(
+  decision_project_id uuid,
+  decision_project_ids uuid[],
+  decision_source_type text,
+  decision_source_id text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    (
+      decision_project_id is not null
+      and public.current_user_can_read_project(decision_project_id)
+    )
+    or exists (
+      select 1
+      from unnest(coalesce(decision_project_ids, '{}'::uuid[])) as scoped_project(project_id)
+      where public.current_user_can_read_project(scoped_project.project_id)
+    )
+    or (
+      decision_source_type = 'meeting'
+      and decision_source_id is not null
+      and exists (
+        select 1
+        from public.meetings meeting
+        where meeting.id::text = decision_source_id
+          and public.current_user_has_permission('meeting.view')
+          and (
+            public.current_user_has_internal_permission('meeting.view')
+            or meeting.host_id = public.current_app_user_id()
+            or public.current_app_user_id() = any(meeting.participants)
+            or (
+              meeting.project_id is not null
+              and public.current_user_can_read_project(meeting.project_id)
+            )
+            or exists (
+              select 1
+              from unnest(coalesce(meeting.project_ids, '{}'::uuid[])) as meeting_project(project_id)
+              where public.current_user_can_read_project(meeting_project.project_id)
+            )
+          )
+      )
+    )
+    or (
+      decision_project_id is null
+      and cardinality(coalesce(decision_project_ids, '{}'::uuid[])) = 0
+      and (
+        public.current_user_has_internal_permission('meeting.view')
+        or public.current_user_has_internal_permission('decision.create')
+        or public.current_user_has_internal_permission('decision.approve')
+      )
+    )
+$$;
+
 create or replace function public.current_user_can_create_document(project_uuid uuid, owner_uuid uuid)
 returns boolean
 language sql
@@ -368,20 +450,124 @@ create policy "roles are readable by authenticated users" on public.roles
   for select to authenticated
   using (true);
 
+drop policy if exists "roles insertable by settings managers" on public.roles;
+create policy "roles insertable by settings managers" on public.roles
+  for insert to authenticated
+  with check (public.current_user_has_internal_permission('settings.manage'));
+
+drop policy if exists "roles updatable by settings managers" on public.roles;
+create policy "roles updatable by settings managers" on public.roles
+  for update to authenticated
+  using (public.current_user_has_internal_permission('settings.manage'))
+  with check (public.current_user_has_internal_permission('settings.manage'));
+
 drop policy if exists "permissions are readable by authenticated users" on public.permissions;
 create policy "permissions are readable by authenticated users" on public.permissions
   for select to authenticated
   using (true);
+
+drop policy if exists "permissions insertable by settings managers" on public.permissions;
+create policy "permissions insertable by settings managers" on public.permissions
+  for insert to authenticated
+  with check (public.current_user_has_internal_permission('settings.manage'));
+
+drop policy if exists "permissions updatable by settings managers" on public.permissions;
+create policy "permissions updatable by settings managers" on public.permissions
+  for update to authenticated
+  using (public.current_user_has_internal_permission('settings.manage'))
+  with check (public.current_user_has_internal_permission('settings.manage'));
 
 drop policy if exists "role permissions are readable by authenticated users" on public.role_permissions;
 create policy "role permissions are readable by authenticated users" on public.role_permissions
   for select to authenticated
   using (true);
 
+drop policy if exists "role permissions manageable by settings managers" on public.role_permissions;
+drop policy if exists "role permissions insertable by settings managers" on public.role_permissions;
+create policy "role permissions insertable by settings managers" on public.role_permissions
+  for insert to authenticated
+  with check (
+    public.current_user_has_internal_permission('settings.manage')
+    and not exists (
+      select 1
+      from public.roles r
+      join public.permissions p on p.id = permission_id
+      where r.id = role_id
+        and r.key = 'admin'
+        and public.is_business_approval_permission(p.key)
+    )
+    and (
+      public.current_app_role() = 'super_admin'
+      or not exists (
+        select 1
+        from public.permissions p
+        where p.id = permission_id
+          and public.is_business_approval_permission(p.key)
+      )
+    )
+  );
+
+drop policy if exists "role permissions updatable by settings managers" on public.role_permissions;
+create policy "role permissions updatable by settings managers" on public.role_permissions
+  for update to authenticated
+  using (
+    public.current_user_has_internal_permission('settings.manage')
+    and (
+      public.current_app_role() = 'super_admin'
+      or not exists (
+        select 1
+        from public.permissions p
+        where p.id = permission_id
+          and public.is_business_approval_permission(p.key)
+      )
+    )
+  )
+  with check (
+    public.current_user_has_internal_permission('settings.manage')
+    and not exists (
+      select 1
+      from public.roles r
+      join public.permissions p on p.id = permission_id
+      where r.id = role_id
+        and r.key = 'admin'
+        and public.is_business_approval_permission(p.key)
+    )
+    and (
+      public.current_app_role() = 'super_admin'
+      or not exists (
+        select 1
+        from public.permissions p
+        where p.id = permission_id
+          and public.is_business_approval_permission(p.key)
+      )
+    )
+  );
+
+drop policy if exists "role permissions deletable by settings managers" on public.role_permissions;
+create policy "role permissions deletable by settings managers" on public.role_permissions
+  for delete to authenticated
+  using (
+    public.current_user_has_internal_permission('settings.manage')
+    and (
+      public.current_app_role() = 'super_admin'
+      or not exists (
+        select 1
+        from public.permissions p
+        where p.id = permission_id
+          and public.is_business_approval_permission(p.key)
+      )
+    )
+  );
+
 drop policy if exists "users can view self or permitted user list" on public.users;
 create policy "users can view self or permitted user list" on public.users
   for select to authenticated
-  using (id = public.current_app_user_id() or public.current_user_has_internal_permission('user.view'));
+  using (
+    id = public.current_app_user_id()
+    or public.current_user_has_internal_permission('user.view')
+    or public.current_user_has_internal_permission('settings.manage')
+    or public.current_user_has_internal_permission('delegation.manage')
+  );
 
 drop policy if exists "permitted users can create invited profiles" on public.users;
 create policy "permitted users can create invited profiles" on public.users
@@ -672,7 +858,15 @@ create policy "meetings readable by scoped permitted users" on public.meetings
   for select to authenticated
   using (
     public.current_user_has_permission('meeting.view')
-    and public.current_user_can_read_project(project_id)
+    and (
+      public.current_user_has_internal_permission('meeting.view')
+      or host_id = public.current_app_user_id()
+      or public.current_app_user_id() = any(participants)
+      or (
+        project_id is not null
+        and public.current_user_can_read_project(project_id)
+      )
+    )
   );
 
 drop policy if exists "meetings readable by scoped permitted users" on public.meetings;
@@ -680,7 +874,15 @@ create policy "meetings readable by scoped permitted users" on public.meetings
   for select to authenticated
   using (
     public.current_user_has_permission('meeting.view')
-    and public.current_user_can_read_project(project_id)
+    and (
+      public.current_user_has_internal_permission('meeting.view')
+      or host_id = public.current_app_user_id()
+      or public.current_app_user_id() = any(participants)
+      or (
+        project_id is not null
+        and public.current_user_can_read_project(project_id)
+      )
+    )
   );
 
 drop policy if exists "meetings creatable by permitted users" on public.meetings;
@@ -690,7 +892,11 @@ create policy "meetings creatable by scoped permitted users" on public.meetings
     public.current_user_has_permission('meeting.create')
     and (
       public.current_user_has_internal_permission('meeting.create')
-      or public.current_user_can_read_project(project_id)
+      or host_id = public.current_app_user_id()
+      or (
+        project_id is not null
+        and public.current_user_can_read_project(project_id)
+      )
     )
   );
 
@@ -701,7 +907,11 @@ create policy "meetings creatable by scoped permitted users" on public.meetings
     public.current_user_has_permission('meeting.create')
     and (
       public.current_user_has_internal_permission('meeting.create')
-      or public.current_user_can_read_project(project_id)
+      or host_id = public.current_app_user_id()
+      or (
+        project_id is not null
+        and public.current_user_can_read_project(project_id)
+      )
     )
   );
 
@@ -722,7 +932,7 @@ create policy "decisions readable through scoped project permission" on public.d
   for select to authenticated
   using (
     public.current_user_has_permission('meeting.view')
-    and public.current_user_can_read_project(project_id)
+    and public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
   );
 
 drop policy if exists "decisions readable through scoped project permission" on public.decisions;
@@ -730,7 +940,7 @@ create policy "decisions readable through scoped project permission" on public.d
   for select to authenticated
   using (
     public.current_user_has_permission('meeting.view')
-    and public.current_user_can_read_project(project_id)
+    and public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
   );
 
 drop policy if exists "decisions creatable by scoped permitted users" on public.decisions;
@@ -738,24 +948,25 @@ create policy "decisions creatable by scoped permitted users" on public.decision
   for insert to authenticated
   with check (
     public.current_user_has_permission('decision.create')
-    and public.current_user_can_read_project(project_id)
+    and public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    and created_by = public.current_app_user_id()
   );
 
 drop policy if exists "decisions updatable by scoped meeting/task users" on public.decisions;
 create policy "decisions updatable by scoped meeting/task users" on public.decisions
   for update to authenticated
   using (
-    public.current_user_has_internal_permission('meeting.update')
-    or (
-      public.current_user_has_permission('task.create')
-      and public.current_user_can_read_project(project_id)
+    public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    and (
+      public.current_user_has_internal_permission('meeting.update')
+      or public.current_user_has_permission('task.create')
     )
   )
   with check (
-    public.current_user_has_internal_permission('meeting.update')
-    or (
-      public.current_user_has_permission('task.create')
-      and public.current_user_can_read_project(project_id)
+    public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    and (
+      public.current_user_has_internal_permission('meeting.update')
+      or public.current_user_has_permission('task.create')
     )
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { getStaticRoleLabel } from "@/constants/roles";
 import { logoutAction } from "@/lib/auth/actions";
 import type { AppSessionUser } from "@/lib/auth/session";
 import { AxisOneDashboard } from "@/modules/axis-1/components/axis-one-dashboard";
@@ -34,6 +35,23 @@ import type {
 import { DashboardKpiGrid } from "@/modules/dashboard/components/dashboard-kpi-grid";
 import { DashboardPriorityAlerts } from "@/modules/dashboard/components/dashboard-priority-alerts";
 import { DashboardQuickLists } from "@/modules/dashboard/components/dashboard-quick-lists";
+import {
+  ExecutiveCommonCenter,
+  ExecutiveCommonCenterNoAccessState,
+} from "@/modules/dashboard/components/executive-common-center";
+import {
+  ExecutiveDashboardNoAccessState,
+  ExecutiveDashboardOverview,
+} from "@/modules/dashboard/components/executive-dashboard-overview";
+import {
+  ExecutiveMorningBriefing,
+  ExecutiveMorningBriefingNoAccessState,
+} from "@/modules/dashboard/components/executive-morning-briefing";
+import { ApprovalCenter } from "@/modules/executive/components/approval-center";
+import {
+  ExecutivePrivateWorkspace,
+  ExecutivePrivateWorkspaceNoAccessState,
+} from "@/modules/workspaces/components/executive-private-workspace";
 
 type CommandCenterApprovalStatus =
   CommandCenterData["executiveWorkspace"]["approvals"][number]["status"];
@@ -429,6 +447,10 @@ function AxisMenuItem({
   item: CommandCenterMenuItem;
   onSelect: (viewKey: CommandCenterViewKey) => void;
 }) {
+  const hasActiveChild = Boolean(
+    item.children?.some((child) => child.viewKey === activeView),
+  );
+  const [isChildGroupOpen, setIsChildGroupOpen] = useState(hasActiveChild);
   const codeBadge = (
     <span
       className={`flex h-6 w-6 items-center justify-center rounded-md ${toneClasses[axis.tone].bg} text-xs font-semibold ${toneClasses[axis.tone].text}`}
@@ -437,9 +459,19 @@ function AxisMenuItem({
     </span>
   );
 
+  useEffect(() => {
+    if (hasActiveChild) {
+      setIsChildGroupOpen(true);
+    }
+  }, [hasActiveChild]);
+
   if (item.children?.length) {
     return (
-      <details className="group rounded-md">
+      <details
+        className="group rounded-md"
+        onToggle={(event) => setIsChildGroupOpen(event.currentTarget.open)}
+        open={isChildGroupOpen}
+      >
         <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-slate-100 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
           {codeBadge}
           <span className="min-w-0 flex-1">{item.label}</span>
@@ -614,6 +646,19 @@ function collectCommandCenterViewKeys(data: CommandCenterData) {
   ]);
 }
 
+const knownExecutiveViewKeys = new Set([
+  "executive-dashboard",
+  "executive-morning-briefing",
+  "executive-common-center",
+  "executive-private-workspace",
+  "executive-investment-plans",
+  "executive-leadership-team",
+  "executive-directives",
+  "executive-meetings",
+  "executive-approvals",
+  "executive-decision-log",
+]);
+
 function resolveInitialCommandCenterView(
   data: CommandCenterData,
   initialView?: string,
@@ -624,7 +669,9 @@ function resolveInitialCommandCenterView(
 
   return collectCommandCenterViewKeys(data).has(initialView)
     ? initialView
-    : "overview";
+    : knownExecutiveViewKeys.has(initialView)
+      ? initialView
+      : "overview";
 }
 
 function CommandCenterContextBar({
@@ -808,7 +855,7 @@ function ExecutiveQuickReportsCard({
   );
 }
 
-function ExecutiveCommandCenterView({
+function LegacyExecutiveCommandCenterView({
   canAct,
   data,
 }: {
@@ -1744,16 +1791,51 @@ function ExecutiveCommandCenterView({
   );
 }
 
-function CommandCenterExecutivePanel({
-  activeView,
+function ExecutiveCommandCenterView({
   canAct,
   data,
+  executiveDashboard,
+}: {
+  canAct: boolean;
+  data: CommandCenterData["executiveWorkspace"];
+  executiveDashboard?: CommandCenterData["executiveDashboard"];
+}) {
+  if (executiveDashboard === undefined) {
+    return <LegacyExecutiveCommandCenterView canAct={canAct} data={data} />;
+  }
+
+  if (!executiveDashboard) {
+    return <ExecutiveDashboardNoAccessState />;
+  }
+
+  return (
+    <ExecutiveDashboardOverview
+      data={executiveDashboard}
+      legacyScopeLabel={data.scopeLabel}
+    />
+  );
+}
+
+function CommandCenterExecutivePanel({
+  activeView,
+  approvalCenter,
+  canAct,
+  data,
+  executiveCommonCenter,
+  executiveDashboard,
+  executiveMorningBriefing,
+  executivePrivateWorkspace,
   onApprovalAction,
   onDirectiveStatusChange,
 }: {
   activeView: CommandCenterViewKey;
+  approvalCenter: CommandCenterData["approvalCenter"];
   canAct: boolean;
   data: CommandCenterData["executiveWorkspace"];
+  executiveCommonCenter: CommandCenterData["executiveCommonCenter"];
+  executiveDashboard: CommandCenterData["executiveDashboard"];
+  executiveMorningBriefing: CommandCenterData["executiveMorningBriefing"];
+  executivePrivateWorkspace: CommandCenterData["executivePrivateWorkspace"];
   onApprovalAction: (
     approvalId: string,
     status: Exclude<CommandCenterApprovalStatus, "pending">,
@@ -1764,7 +1846,61 @@ function CommandCenterExecutivePanel({
   ) => void;
 }) {
   if (activeView === "executive-dashboard") {
-    return <ExecutiveCommandCenterView canAct={canAct} data={data} />;
+    return (
+      <ExecutiveCommandCenterView
+        canAct={canAct}
+        data={data}
+        executiveDashboard={executiveDashboard}
+      />
+    );
+  }
+
+  if (activeView === "executive-morning-briefing") {
+    if (!executiveMorningBriefing) {
+      return <ExecutiveMorningBriefingNoAccessState />;
+    }
+
+    return (
+      <ExecutiveMorningBriefing
+        data={executiveMorningBriefing}
+        legacyScopeLabel={data.scopeLabel}
+      />
+    );
+  }
+
+  if (activeView === "executive-common-center") {
+    if (!executiveCommonCenter) {
+      return <ExecutiveCommonCenterNoAccessState />;
+    }
+
+    return (
+      <ExecutiveCommonCenter
+        data={executiveCommonCenter}
+        legacyScopeLabel={data.scopeLabel}
+      />
+    );
+  }
+
+  if (activeView === "executive-private-workspace") {
+    if (!executivePrivateWorkspace) {
+      return <ExecutivePrivateWorkspaceNoAccessState />;
+    }
+
+    return (
+      <ExecutivePrivateWorkspace
+        data={executivePrivateWorkspace}
+        legacyScopeLabel={data.scopeLabel}
+      />
+    );
+  }
+
+  if (activeView === "executive-approvals") {
+    return (
+      <ApprovalCenter
+        data={approvalCenter}
+        legacyScopeLabel={data.scopeLabel}
+      />
+    );
   }
 
   if (activeView === "executive-investment-plans") {
@@ -2322,10 +2458,16 @@ export function CommandCenterDashboard({
     setActiveView(nextView);
 
     if (typeof window !== "undefined") {
-      const nextUrl =
-        nextView === "overview"
-          ? "/command-center"
-          : `/command-center?view=${encodeURIComponent(nextView)}`;
+      const params = new URLSearchParams(window.location.search);
+
+      if (nextView === "overview") {
+        params.delete("view");
+      } else {
+        params.set("view", nextView);
+      }
+
+      const query = params.toString();
+      const nextUrl = query ? `/command-center?${query}` : "/command-center";
       window.history.replaceState(null, "", nextUrl);
     }
   };
@@ -2456,13 +2598,14 @@ export function CommandCenterDashboard({
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
+    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="border-r border-emerald-950/10 bg-[#073c34] text-emerald-50 lg:min-h-screen">
         <div className="flex items-center gap-3 border-b border-white/10 p-5">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500 text-slate-950">
             <Home className="h-6 w-6" aria-hidden="true" />
           </div>
           <div>
+            <span className="sr-only">GreenNest BuildFlow</span>
             <p className="text-base font-bold">GREENNEST</p>
             <p className="text-xs font-semibold text-emerald-300">BUILDFLOW</p>
           </div>
@@ -2549,7 +2692,9 @@ export function CommandCenterDashboard({
                 <p className="text-sm font-semibold text-slate-950">
                   {user.fullName}
                 </p>
-                <p className="text-xs text-slate-500">Tổng giám đốc</p>
+                <p className="text-xs text-slate-500">
+                  {getStaticRoleLabel(user.role)}
+                </p>
               </div>
             </div>
             <form action={logoutAction}>
@@ -2932,8 +3077,13 @@ export function CommandCenterDashboard({
           ) : activeView.startsWith("executive-") ? (
             <CommandCenterExecutivePanel
               activeView={activeView}
+              approvalCenter={data.approvalCenter}
               canAct={canAct}
               data={executiveWorkspace}
+              executiveCommonCenter={data.executiveCommonCenter}
+              executiveDashboard={data.executiveDashboard}
+              executiveMorningBriefing={data.executiveMorningBriefing}
+              executivePrivateWorkspace={data.executivePrivateWorkspace}
               onApprovalAction={handleApprovalAction}
               onDirectiveStatusChange={handleDirectiveStatusChange}
             />
@@ -2946,6 +3096,6 @@ export function CommandCenterDashboard({
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

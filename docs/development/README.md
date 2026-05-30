@@ -30,7 +30,33 @@ Seed demo data:
 npm run seed:demo
 ```
 
-The seed command recreates `.mock-data/project-core.json`, `.mock-data/task-management.json`, `.mock-data/document-center.json`, `.mock-data/document-requirements.json`, `.mock-data/meetings-decisions.json`, `.mock-data/reports.json`, `.mock-data/knowledge-center.json`, `.mock-data/knowledge-candidates.json`, `.mock-data/source-registry-settings.json`, `.mock-data/external-search-logs.json`, `.mock-data/knowledge-discovery.json` and `.mock-data/users.json` with demo users, projects, tasks, documents, document requirement templates, legal steps, meetings, decisions, report snapshots, governed knowledge items, approved text chunks, Knowledge Candidates, BO-managed source registry settings, external search logs, discovery topics/run logs with retry metadata, memberships and audit placeholders.
+The seed command recreates `.mock-data/project-core.json`, `.mock-data/task-management.json`, `.mock-data/document-center.json`, `.mock-data/document-requirements.json`, `.mock-data/meetings-decisions.json`, `.mock-data/reports.json`, `.mock-data/knowledge-center.json`, `.mock-data/knowledge-candidates.json`, `.mock-data/source-registry-settings.json`, `.mock-data/external-search-logs.json`, `.mock-data/knowledge-discovery.json`, `.mock-data/role-permission-catalog.json`, `.mock-data/scope-assignments.json`, `.mock-data/policy-settings.json`, `.mock-data/leadership-delegations.json` and `.mock-data/users.json` with deterministic demo data.
+
+Module 1 acceptance demo personas:
+
+| Role | Mock role env | Stable user id | What to verify |
+| --- | --- | --- | --- |
+| Chu tich/Super Admin | `super_admin` | `chairman-01` | Global scope, sensitive finance, final approval threshold |
+| Admin smoke | `admin` | `mock-founder` | Settings and seed administration, no business approval permissions |
+| CEO | `tong_giam_doc` | `ceo-01` | Executive/company scope and delegated principal |
+| Giam doc du an | `giam_doc_du_an` | `project-director-01` | Riverside project scope and finance-visible data |
+| Truong bo phan | `to_truong` | `department-head-01` | Garden scoped read/workstream data without finance visibility |
+| Thu ky/Tro ly | `thu_ky_tro_ly` | `assistant-01` | Create/submit proposal on behalf through active delegation, cannot approve/reject/request-change |
+| Nguoi xem | `viewer` | `viewer-01` | Read-only scoped Garden data and mutation denial |
+
+Manual acceptance scenarios in mock/file-backed mode:
+
+- Run `npm run seed:demo`, then start the app with the target `MOCK_CURRENT_ROLE`.
+- Compare Riverside, Garden, Skyline and Axis 2/3 Lab data to verify project/scope differences.
+- Verify `finance.view` behavior using `giam_doc_du_an` or `super_admin` as finance-visible users and `thu_ky_tro_ly` or `to_truong` as finance-hidden users.
+- Verify negative permission cases: out-of-scope project access returns no data/no permission, viewer cannot mutate, and assistant cannot approve/reject/request-change on behalf.
+- Verify positive delegation: `assistant-01` has active `proposal.create` delegation for `ceo-01` on Riverside only.
+
+Supabase/local-staging equivalent seed:
+
+- Apply `database/seeds/003_module1_acceptance_demo.sql` only in local/staging/demo environments after baseline migrations and `001_roles_permissions.sql`.
+- Run `database/verification/006_module1_acceptance_seed.sql` to check personas, scope assignments, policy/risk settings, delegation, overdue approval, legal/missing document and Axis 2/3 placeholders.
+- The SQL seed uses deterministic `public.users` UUIDs with `auth_user_id = null`; map them to real Supabase Auth users only for live manual staging tests.
 
 ## Auth/RBAC
 

@@ -1,14 +1,14 @@
 export const ROLES = {
   super_admin: {
-    label: "Super Admin",
+    label: "Chủ tịch/Super Admin",
     description: "Chủ hệ thống kỹ thuật và quản trị khẩn cấp",
   },
   admin: {
-    label: "Admin",
+    label: "Quản trị",
     description: "Cấu hình hệ thống, người dùng, vai trò và dữ liệu nền",
   },
   tong_giam_doc: {
-    label: "Tổng giám đốc",
+    label: "CEO",
     description: "Điều hành danh mục dự án và phê duyệt cấp công ty",
   },
   pho_tong_giam_doc: {
@@ -24,7 +24,7 @@ export const ROLES = {
     description: "Điều phối công việc hằng ngày của dự án",
   },
   to_truong: {
-    label: "Tổ trưởng",
+    label: "Trưởng bộ phận",
     description: "Dẫn dắt nhóm hoặc gói công việc thực thi",
   },
   phap_ly: {
@@ -95,7 +95,7 @@ export const ROLES = {
     label: "Tư vấn",
     description: "Truy cập giới hạn cho hồ sơ và phần review được giao",
   },
-  viewer: { label: "Chỉ xem", description: "Chỉ đọc dữ liệu được cấp quyền" },
+  viewer: { label: "Người xem", description: "Chỉ đọc dữ liệu được cấp quyền" },
   pending: {
     label: "Chờ cấp quyền",
     description:
@@ -104,6 +104,11 @@ export const ROLES = {
 } as const;
 
 export type Role = keyof typeof ROLES;
+export type RoleKey = Role | (string & {});
+
+export function isKnownRole(role: string): role is Role {
+  return role in ROLES;
+}
 
 export const BASIC_ROLE_GROUPS = {
   SUPER_ADMIN: ["super_admin"],
@@ -120,11 +125,11 @@ export const ROLE_DEFAULT_SCREENS: Record<
   Role,
   { label: string; href: string }
 > = {
-  super_admin: { label: "Không gian quản trị hệ thống", href: "/admin" },
-  admin: { label: "Không gian quản trị hệ thống", href: "/admin" },
-  tong_giam_doc: { label: "Tổng quan điều hành", href: "/command-center" },
+  super_admin: { label: "Tong quan Truc 1", href: "/command-center" },
+  admin: { label: "Quan tri Chu tich", href: "/admin" },
+  tong_giam_doc: { label: "Lanh dao", href: "/command-center?view=executive-dashboard" },
   pho_tong_giam_doc: {
-    label: "Ban lãnh đạo - danh mục được giao",
+    label: "Lanh dao - danh muc duoc giao",
     href: "/command-center?view=executive-dashboard",
   },
   giam_doc_du_an: { label: "Bàn điều hành dự án", href: "/project-workbench" },
@@ -168,9 +173,22 @@ export const ROLE_DEFAULT_SCREENS: Record<
     href: "/contract-workspace",
   },
   thu_ky_tro_ly: { label: "Không gian trợ lý", href: "/assistant-workspace" },
-  kiem_soat_noi_bo: { label: "Không gian kiểm soát", href: "/admin" },
+  kiem_soat_noi_bo: { label: "Kiem toan noi bo", href: "/audit-workspace" },
   nha_thau: { label: "Cổng nhà thầu", href: "/contractor" },
   tu_van: { label: "Cổng tư vấn", href: "/consultant" },
   viewer: { label: "Dashboard chỉ xem", href: "/viewer" },
   pending: { label: "Chờ cấp quyền", href: "/pending-access" },
 };
+
+export const UNKNOWN_ROLE_DEFAULT_SCREEN = {
+  label: "Dashboard",
+  href: "/dashboard",
+};
+
+export function getDefaultScreenForRole(role: string) {
+  return isKnownRole(role) ? ROLE_DEFAULT_SCREENS[role] : UNKNOWN_ROLE_DEFAULT_SCREEN;
+}
+
+export function getStaticRoleLabel(role: string) {
+  return isKnownRole(role) ? ROLES[role].label : role;
+}

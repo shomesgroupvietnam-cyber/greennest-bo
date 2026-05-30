@@ -1,0 +1,14 @@
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad-output/planning-artifacts/index.md",
+  "file:{project-root}/_bmad-output/implementation-artifacts/index.md",
+  "file:{project-root}/docs/context/*.md",
+]
+
+activation_steps_append = [
+  "Prefer sharded planning artifacts and directory indexes before loading large source documents.",
+  "Use docs/context packs to identify relevant modules, risky files, tests and anti-patterns before scanning code broadly.",
+  "Treat _bmad-output/planning-artifacts/archive as archived originals; do not load archived originals unless active shards are missing or the user explicitly asks.",
+  "For internal product stories, rely on package.json and project-context.md before doing web research; browse only when an external library/API detail is unstable or story-critical.",
+]

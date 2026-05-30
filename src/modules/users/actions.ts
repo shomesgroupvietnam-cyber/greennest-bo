@@ -2,13 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { Role } from "@/constants/roles";
 import { getCurrentUser } from "@/lib/auth/session";
 import { assertCan } from "@/lib/permissions/can";
 import { inviteUser, updateUserRole, upsertProjectMembership } from "@/modules/users/services/user-service";
 
 function readRole(formData: FormData, key = "role") {
-  return String(formData.get(key) ?? "viewer") as Role;
+  return String(formData.get(key) ?? "viewer");
 }
 
 export async function inviteUserAction(formData: FormData) {

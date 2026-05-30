@@ -9,7 +9,7 @@ function user(role: Role, id = "mock-founder"): PermissionUser {
 }
 
 describe("permission behavior", () => {
-  it("allows admin to manage users, settings, projects and tasks", () => {
+  it("allows admin to manage system settings without business approval authority", () => {
     const admin = user("admin");
 
     expect(can(admin, "user.invite")).toBe(true);
@@ -19,7 +19,9 @@ describe("permission behavior", () => {
     expect(can(admin, "task.update")).toBe(true);
     expect(can(admin, "document.create")).toBe(true);
     expect(can(admin, "document.update")).toBe(true);
+    expect(can(admin, "document.approve")).toBe(false);
     expect(can(admin, "legal.update")).toBe(true);
+    expect(can(admin, "legal.approve")).toBe(false);
     expect(can(admin, "report.create")).toBe(true);
     expect(can(admin, "ai.ask")).toBe(true);
     expect(can(admin, "ai.use_rag")).toBe(true);
@@ -28,8 +30,20 @@ describe("permission behavior", () => {
     expect(can(admin, "ai.configure")).toBe(true);
     expect(can(admin, "knowledge.create_candidate")).toBe(true);
     expect(can(admin, "knowledge.promote")).toBe(true);
-    expect(can(admin, "knowledge.approve")).toBe(true);
+    expect(can(admin, "knowledge.approve")).toBe(false);
     expect(can(admin, "knowledge.manage_source_registry")).toBe(true);
+    expect(can(admin, "proposal.approve")).toBe(false);
+    expect(can(admin, "proposal.reject")).toBe(false);
+    expect(can(admin, "proposal.request_change")).toBe(false);
+    expect(can(admin, "decision.approve")).toBe(false);
+    expect(can(admin, "finance.approve")).toBe(false);
+    expect(can(admin, "payment.approve")).toBe(false);
+    expect(can(admin, "investment.approve")).toBe(false);
+    expect(can(admin, "contract.approve")).toBe(false);
+    expect(can(admin, "hr.approve")).toBe(false);
+    expect(can(admin, "qa.approve")).toBe(false);
+    expect(can(admin, "safety.approve")).toBe(false);
+    expect(can(admin, "acceptance.approve")).toBe(false);
     expect(ROLE_DEFAULT_SCREENS.admin.href).toBe("/admin");
   });
 
@@ -65,7 +79,9 @@ describe("permission behavior", () => {
   it("routes tong_giam_doc to command center with full system permissions", () => {
     const ceo = user("tong_giam_doc");
 
-    expect(ROLE_DEFAULT_SCREENS.tong_giam_doc.href).toBe("/command-center");
+    expect(ROLE_DEFAULT_SCREENS.tong_giam_doc.href).toBe(
+      "/command-center?view=executive-dashboard",
+    );
     expect(can(ceo, "project.create")).toBe(true);
     expect(can(ceo, "investment.approve")).toBe(true);
     expect(can(ceo, "contract.approve")).toBe(true);
@@ -221,7 +237,8 @@ describe("permission behavior", () => {
     const admin = user("admin");
 
     expect(can(admin, "project:view")).toBe(true);
-    expect(can(admin, "document:approve")).toBe(true);
+    expect(can("super_admin", "document:approve")).toBe(true);
+    expect(can(admin, "document:approve")).toBe(false);
     expect(can(admin, "unknown:view")).toBe(false);
   });
 });

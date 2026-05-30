@@ -158,14 +158,14 @@ export const EXECUTIVE_ROUTE_ROLES = Object.keys(
 ) as Role[];
 
 export function resolveExecutiveAccess(
-  role: Role,
+  role: string,
 ): ExecutiveAccessPolicy | null {
-  const level = EXECUTIVE_ACCESS_BY_ROLE[role];
+  const level = EXECUTIVE_ACCESS_BY_ROLE[role as Role];
 
   return level ? accessPolicies[level] : null;
 }
 
-export function canAccessExecutiveModule(role: Role) {
+export function canAccessExecutiveModule(role: string) {
   return Boolean(resolveExecutiveAccess(role)?.canView);
 }
 

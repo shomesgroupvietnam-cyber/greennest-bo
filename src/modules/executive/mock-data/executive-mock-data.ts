@@ -426,6 +426,7 @@ export const executiveScopeRules: ExecutiveScopeRule[] = [
   },
 ];
 
+// Fallback seed only. Active executive escalation rules are built from policy settings.
 export const escalationRules: ExecutiveEscalationRule[] = [
   {
     id: "approval-under-20m",

@@ -1,16 +1,23 @@
 import { redirect, forbidden } from "next/navigation";
 
 import type { AppSession } from "@/lib/auth/session";
-import type { Role } from "@/constants/roles";
 import { getCurrentSession } from "@/lib/auth/session";
 import {
   can,
+  normalizePermissionAction,
   type PermissionInput,
   type PermissionResource,
 } from "@/lib/permissions/can";
+import {
+  canAccessScopedAction,
+  hasAnyScopedActionGrant,
+} from "@/lib/permissions/access-scope";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
+import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
 import { createAuditLog } from "@/modules/users/services/user-service";
 import {
   canAccessWorkspaceRoute,
+  WORKSPACE_DEFINITIONS,
   type WorkspaceRoute,
 } from "@/modules/workspaces/config";
 
@@ -56,6 +63,65 @@ async function denyWithAudit(input: AuditAccessInput): Promise<never> {
   forbidden();
 }
 
+async function canAccessByScopeAssignment(
+  session: AppSession,
+  action: PermissionInput,
+  resource?: PermissionResource,
+) {
+  const normalizedAction = normalizePermissionAction(action);
+
+  if (!normalizedAction) {
+    return false;
+  }
+
+  const [scopeAssignments, rolePermissionCatalog] = await Promise.all([
+    listActiveScopeAssignments(),
+    listRolePermissionCatalog(),
+  ]);
+
+  if (!resource) {
+    return hasAnyScopedActionGrant(session.user, normalizedAction, {
+      rolePermissionCatalog,
+      scopeAssignments,
+    });
+  }
+
+  const target = {
+    projectId: resource?.projectId,
+    recordId: resource?.id,
+  };
+
+  return canAccessScopedAction(session.user, normalizedAction, target, {
+    rolePermissionCatalog,
+    scopeAssignments,
+  });
+}
+
+async function canAccessWorkspaceRouteByScope(
+  session: AppSession,
+  route: WorkspaceRoute,
+) {
+  const definition = WORKSPACE_DEFINITIONS[route];
+  const [scopeAssignments, rolePermissionCatalog] = await Promise.all([
+    listActiveScopeAssignments(),
+    listRolePermissionCatalog(),
+  ]);
+  const routeAssignments = scopeAssignments.filter(
+    (assignment) =>
+      assignment.userId === session.user.id &&
+      definition.roles.includes(assignment.roleKey),
+  );
+
+  return routeAssignments.some((assignment) =>
+    definition.permissions.some((permission) =>
+      hasAnyScopedActionGrant(session.user, permission, {
+        rolePermissionCatalog,
+        scopeAssignments: [assignment],
+      }),
+    ),
+  );
+}
+
 export async function requireAuthenticatedSession(
   options: {
     allowPending?: boolean;
@@ -89,7 +155,10 @@ export async function requirePermission(
 ) {
   const session = await requireAuthenticatedSession({ route: options.route });
 
-  if (!can(session.user, action, options.resource)) {
+  if (
+    !can(session.user, action, options.resource) &&
+    !(await canAccessByScopeAssignment(session, action, options.resource))
+  ) {
     await denyWithAudit({
       action: "access.denied",
       reason: `missing_permission:${action}`,
@@ -101,10 +170,39 @@ export async function requirePermission(
   return session;
 }
 
+export async function requireAnyPermission(
+  actions: readonly PermissionInput[],
+  options: {
+    resource?: PermissionResource;
+    route?: string;
+  } = {},
+) {
+  const session = await requireAuthenticatedSession({ route: options.route });
+
+  for (const action of actions) {
+    if (
+      can(session.user, action, options.resource) ||
+      (await canAccessByScopeAssignment(session, action, options.resource))
+    ) {
+      return session;
+    }
+  }
+
+  return denyWithAudit({
+    action: "access.denied",
+    reason: `missing_any_permission:${actions.join(",")}`,
+    route: options.route,
+    session,
+  });
+}
+
 export async function requireWorkspaceRoute(route: WorkspaceRoute) {
   const session = await requireAuthenticatedSession({ route });
 
-  if (!canAccessWorkspaceRoute(session.user, route)) {
+  if (
+    !canAccessWorkspaceRoute(session.user, route) &&
+    !(await canAccessWorkspaceRouteByScope(session, route))
+  ) {
     await denyWithAudit({
       action: "access.denied",
       reason: `workspace_forbidden:${route}`,
@@ -116,7 +214,7 @@ export async function requireWorkspaceRoute(route: WorkspaceRoute) {
   return session;
 }
 
-export async function requireAnyRole(roles: readonly Role[], route: string) {
+export async function requireAnyRole(roles: readonly string[], route: string) {
   const session = await requireAuthenticatedSession({ route });
 
   if (!roles.includes(session.user.role)) {

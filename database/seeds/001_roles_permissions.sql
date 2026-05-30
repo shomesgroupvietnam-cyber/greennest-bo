@@ -3,13 +3,13 @@
 
 insert into public.roles (key, label_vi, description, scope)
 values
-  ('super_admin', 'Super Admin', 'Technical/system owner, emergency administration', 'system'),
-  ('admin', 'Admin', 'System configuration, users, roles and master data', 'system'),
-  ('tong_giam_doc', 'Tổng giám đốc', 'Executive control across company/project portfolio', 'system'),
+  ('super_admin', 'Chủ tịch/Super Admin', 'Technical/system owner, emergency administration', 'system'),
+  ('admin', 'Quản trị', 'System configuration, users, roles and master data', 'system'),
+  ('tong_giam_doc', 'CEO', 'Executive control across company/project portfolio', 'system'),
   ('pho_tong_giam_doc', 'Phó tổng giám đốc', 'Executive oversight for assigned domains/projects', 'system'),
-  ('giam_doc_du_an', 'Giám đốc dự án', 'Full project delivery ownership', 'system'),
-  ('quan_ly_du_an', 'Quản lý dự án', 'Daily project management and coordination', 'system'),
-  ('to_truong', 'Tổ trưởng', 'Team/work package execution lead', 'project'),
+  ('giam_doc_du_an', 'Giám đốc dự án', 'Full project delivery ownership', 'project'),
+  ('quan_ly_du_an', 'Quản lý dự án', 'Daily project management and coordination', 'project'),
+  ('to_truong', 'Trưởng bộ phận', 'Team/work package execution lead', 'project'),
   ('phap_ly', 'Pháp lý', 'Legal checklist, submissions and authority responses', 'system'),
   ('ke_toan', 'Kế toán', 'Finance, payment, cost and contract financial records', 'system'),
   ('thiet_ke', 'Thiết kế', 'Design package, drawings, design review and changes', 'system'),
@@ -20,7 +20,7 @@ values
   ('kiem_soat_noi_bo', 'Kiểm soát nội bộ', 'Audit, compliance and read/review access', 'system'),
   ('nha_thau', 'Nhà thầu', 'External contractor limited project/package access', 'external'),
   ('tu_van', 'Tư vấn', 'External consultant limited document/review access', 'external'),
-  ('viewer', 'Chỉ xem', 'Read-only access to allowed data', 'system'),
+  ('viewer', 'Người xem', 'Read-only access to allowed data', 'system'),
   ('pending', 'Chờ cấp quyền', 'Authenticated user waiting for admin-provisioned role or workspace access', 'system')
 on conflict (key) do update
 set label_vi = excluded.label_vi,
@@ -83,6 +83,7 @@ values
   ('user.invite', 'admin', 'Invite users'),
   ('user.update_role', 'admin', 'Update user roles'),
   ('settings.manage', 'admin', 'Manage settings'),
+  ('delegation.manage', 'delegation', 'Manage leadership delegations'),
   ('audit.view', 'admin', 'View audit logs'),
   ('ai.use', 'ai', 'Use AI assistant'),
   ('ai.ask', 'ai', 'Ask AI questions within permitted scope'),
@@ -109,7 +110,7 @@ with role_permission_seed(role_key, permission_keys) as (
       'design.view','design.create','design.update','design.review','design.approve_change',
       'construction.view','construction.update','site_diary.create','quality.update','acceptance.approve',
       'finance.view','finance.create','finance.update','finance.approve','payment.request','payment.approve',
-      'user.view','user.invite','user.update_role','settings.manage','audit.view',
+      'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
       'ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('admin', array[
@@ -123,7 +124,7 @@ with role_permission_seed(role_key, permission_keys) as (
       'design.view','design.create','design.update','design.review','design.approve_change',
       'construction.view','construction.update','site_diary.create','quality.update','acceptance.approve',
       'finance.view','payment.request',
-      'user.view','user.invite','user.update_role','settings.manage','audit.view',
+      'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
       'ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('tong_giam_doc', array[
@@ -134,7 +135,7 @@ with role_permission_seed(role_key, permission_keys) as (
       'report.view','report.create',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
       'design.view','construction.view','finance.view','finance.approve','payment.approve',
-      'user.view','audit.view','ai.use','ai.view_insight','ai.confirm_action'
+      'user.view','delegation.manage','audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('pho_tong_giam_doc', array[
       'project.view','project.create','project.update',
@@ -143,7 +144,7 @@ with role_permission_seed(role_key, permission_keys) as (
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
       'report.view','report.create',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
-      'design.view','construction.view','finance.view','audit.view','ai.use','ai.view_insight','ai.confirm_action'
+      'design.view','construction.view','finance.view','delegation.manage','audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('giam_doc_du_an', array[
       'project.view','project.create','project.update','project.archive','project.assign_member',
@@ -390,3 +391,122 @@ join public.permissions source_permission on source_permission.id = existing.per
 join implied_permissions on implied_permissions.source_key = source_permission.key
 join public.permissions implied_permission on implied_permission.key = implied_permissions.implied_key
 on conflict (role_id, permission_id) do nothing;
+
+with admin_business_approval_denies(permission_key) as (
+  values
+    ('document.approve'),
+    ('legal.approve'),
+    ('decision.approve'),
+    ('knowledge.approve'),
+    ('design.approve_change'),
+    ('acceptance.approve'),
+    ('finance.approve'),
+    ('payment.approve'),
+    ('proposal.approve'),
+    ('proposal.reject'),
+    ('proposal.request_change'),
+    ('investment.approve'),
+    ('contract.approve'),
+    ('hr.approve'),
+    ('qa.approve'),
+    ('safety.approve')
+)
+delete from public.role_permissions rp
+using public.roles r, public.permissions p, admin_business_approval_denies denied
+where rp.role_id = r.id
+  and rp.permission_id = p.id
+  and r.key = 'admin'
+  and p.key = denied.permission_key;
+
+do $$
+begin
+  if to_regclass('public.approval_threshold_policies') is not null then
+    execute $policy_settings_seed$
+      insert into public.approval_threshold_policies (
+        id,
+        policy_key,
+        label_vi,
+        target_type,
+        amount_min,
+        amount_max,
+        currency,
+        approval_level,
+        approver_role_key,
+        required_permission_key,
+        escalate_on_risk_levels,
+        is_active,
+        priority
+      )
+      select
+        seed.id,
+        seed.policy_key,
+        seed.label_vi,
+        seed.target_type,
+        seed.amount_min,
+        seed.amount_max,
+        seed.currency,
+        seed.approval_level,
+        seed.approver_role_key,
+        seed.required_permission_key,
+        seed.escalate_on_risk_levels,
+        seed.is_active,
+        seed.priority
+      from (
+        values
+          ('policy-approval-under-20m', 'approval_under_20m', 'Duoi 20 trieu', 'general', 0::numeric(18, 2), 19999999.99::numeric(18, 2), 'VND', 'DEPARTMENT_HEAD', 'dau_tu_phat_trien', 'proposal.review', array['high', 'critical']::text[], true, 100),
+          ('policy-approval-20m-200m', 'approval_20m_200m', '20 trieu den 200 trieu', 'general', 20000000::numeric(18, 2), 199999999.99::numeric(18, 2), 'VND', 'PROJECT_DIRECTOR', 'quan_ly_tai_chinh', 'proposal.approve', array['high', 'critical']::text[], true, 110),
+          ('policy-approval-200m-2b', 'approval_200m_2b', '200 trieu den 2 ty', 'general', 200000000::numeric(18, 2), 1999999999.99::numeric(18, 2), 'VND', 'CEO', 'tong_giam_doc', 'proposal.approve', array['critical']::text[], true, 120),
+          ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty hoac quyet dinh chien luoc', 'general', 2000000000::numeric(18, 2), null::numeric(18, 2), 'VND', 'CHAIRMAN', 'super_admin', 'proposal.approve', array['high', 'critical']::text[], true, 130)
+      ) as seed(
+        id,
+        policy_key,
+        label_vi,
+        target_type,
+        amount_min,
+        amount_max,
+        currency,
+        approval_level,
+        approver_role_key,
+        required_permission_key,
+        escalate_on_risk_levels,
+        is_active,
+        priority
+      )
+      where exists (
+        select 1
+        from public.roles r
+        join public.role_permissions rp on rp.role_id = r.id
+        join public.permissions p on p.id = rp.permission_id
+        where r.key = seed.approver_role_key
+          and p.key = seed.required_permission_key
+          and r.is_active = true
+      )
+      on conflict (policy_key) do nothing
+    $policy_settings_seed$;
+  end if;
+
+  if to_regclass('public.risk_group_configs') is not null then
+    execute $risk_group_seed$
+      insert into public.risk_group_configs (
+        id,
+        risk_key,
+        label_vi,
+        description,
+        default_severity,
+        module_id,
+        sort_order,
+        is_default,
+        is_active
+      ) values
+        ('risk-group-legal', 'legal', 'Phap ly', 'Rui ro phap ly, ho so dat, chap thuan va tranh chap.', 'high', 'legal', 10, true, true),
+        ('risk-group-planning-technical', 'planning_technical', 'Quy hoach / ky thuat', 'Rui ro quy hoach, thiet ke, ky thuat va dieu kien trien khai.', 'medium', 'project', 20, true, true),
+        ('risk-group-approval', 'approval', 'Approval', 'Rui ro cham hoac vuot nguong phe duyet.', 'medium', 'proposal', 30, true, true),
+        ('risk-group-schedule', 'schedule', 'Tien do', 'Rui ro cham moc cong viec, ho so hoac thi cong.', 'medium', 'task', 40, true, true),
+        ('risk-group-finance', 'finance', 'Tai chinh', 'Rui ro dong tien, ngan sach, thanh toan hoac vuot chi phi.', 'high', 'finance', 50, true, true),
+        ('risk-group-missing-document', 'missing_document', 'Ho so thieu', 'Rui ro thieu ho so, tai lieu hoac bang chung bat buoc.', 'medium', 'document', 60, true, true),
+        ('risk-group-system-permission', 'system_permission', 'He thong / phan quyen', 'Rui ro cau hinh he thong, phan quyen hoac audit.', 'medium', 'settings', 70, true, true),
+        ('risk-group-operation', 'operation', 'Van hanh / phoi hop', 'Rui ro phoi hop, nguoi phu trach, quy trinh va handoff.', 'low', 'project', 80, true, true)
+      on conflict (risk_key) do nothing
+    $risk_group_seed$;
+  end if;
+end $$;

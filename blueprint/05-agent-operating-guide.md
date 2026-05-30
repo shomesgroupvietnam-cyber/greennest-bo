@@ -8,19 +8,34 @@ This guide tells Codex, Claude and other AI engineering agents how to work on Gr
 
 For high-level planning:
 
-1. `blueprint/README.md`.
-2. `blueprint/00-product-vision.md`.
-3. `blueprint/01-domain-blueprint.md`.
-4. `blueprint/02-scalable-architecture.md`.
+1. `docs/DOCS_INDEX.md`.
+2. `docs/BMAD_DOCUMENTATION_MAP.md`.
+3. `blueprint/README.md`.
+4. `blueprint/00-product-vision.md`.
+5. `blueprint/01-domain-blueprint.md`.
+6. `blueprint/02-scalable-architecture.md`.
+7. Existing BMad planning artifact, if the request is a customer change.
 
 For implementation:
 
 1. Current sprint request.
-2. `requirement.md`.
-3. `design.md`.
-4. `architecture.md`.
-5. `milestone.md`.
+2. Approved BMad artifact or implementation spec, if one exists.
+3. `docs/DOCS_INDEX.md`.
+4. `docs/BMAD_DOCUMENTATION_MAP.md`.
+5. `docs/product/PHASE_STATUS.md`.
 6. Relevant file in `blueprint/`.
+7. Relevant standard in `docs/`.
+8. Root MVP snapshot docs only when the task explicitly concerns MVP sprint history.
+
+## 2.1 Daily Requirement Change Intake
+
+When a customer updates or adds requirements:
+
+1. Capture the change as a BMad planning artifact or scoped implementation spec.
+2. Compare the change against the relevant canonical `blueprint/` and `docs/` files.
+3. Update canonical docs only when the change is accepted and affects long-term behavior, architecture, permissions, UX, data, roadmap or production operations.
+4. Implement from the accepted artifact or explicit user instruction.
+5. Report both the artifact and canonical docs that changed.
 
 ## 3. Non-negotiable Rules
 
@@ -120,8 +135,9 @@ When implementing AI features:
 ## 11. Recommended Startup Prompt
 
 ```text
-Read the GreenNest BuildFlow blueprint folder and the root MVP docs.
-Implement only the requested phase/sprint.
+Read docs/DOCS_INDEX.md, docs/BMAD_DOCUMENTATION_MAP.md, docs/product/PHASE_STATUS.md and the relevant GreenNest BuildFlow blueprint files.
+If there is an approved BMad artifact, use it as the working request and keep canonical docs aligned only when the accepted change affects product, architecture, UX, data, roadmap or operations.
+Implement only the requested phase/sprint/story.
 Keep TypeScript, Vietnamese UI, project-centric data, centralized constants and clean module boundaries.
 Do not hardcode dashboard metrics.
 After implementation, report changed files, how to run, verification, acceptance criteria and remaining gaps.

@@ -1,4 +1,9 @@
-import { requireAuthenticatedSession } from "@/lib/permissions/guard";
+import React from "react";
+
+import {
+  requireAuthenticatedSession,
+  requireWorkspaceRoute,
+} from "@/lib/permissions/guard";
 import { CommandCenterDashboard } from "@/modules/command-center/components/command-center-dashboard";
 import { getCommandCenterData } from "@/modules/command-center/services/command-center-service";
 
@@ -19,14 +24,22 @@ function resolveInitialView(
 export default async function CommandCenterPage({
   searchParams,
 }: CommandCenterPageProps) {
-  const session = await requireAuthenticatedSession({ route: "/command-center" });
   const params = searchParams ? await searchParams : {};
-  const data = await getCommandCenterData(session.user);
+  const requestedView = resolveInitialView(params);
+  const session =
+    requestedView?.startsWith("executive-") &&
+    requestedView !== "executive-private-workspace"
+      ? await requireWorkspaceRoute("/executive")
+      : await requireAuthenticatedSession({ route: "/command-center" });
+  const selectedScopeId = Array.isArray(params.scopeId)
+    ? params.scopeId[0]
+    : params.scopeId;
+  const data = await getCommandCenterData(session.user, { selectedScopeId });
 
   return (
     <CommandCenterDashboard
       data={data}
-      initialView={resolveInitialView(params)}
+      initialView={requestedView}
       user={session.user}
     />
   );

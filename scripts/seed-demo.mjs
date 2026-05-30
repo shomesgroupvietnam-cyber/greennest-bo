@@ -1,10 +1,13 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-const dataDir = path.join(root, ".mock-data");
+const dataDir = process.env.GREENNEST_MOCK_DATA_DIR ? path.resolve(process.env.GREENNEST_MOCK_DATA_DIR) : path.join(root, ".mock-data");
+const acceptanceFixture = JSON.parse(
+  await readFile(path.join(root, "tests", "fixtures", "module-one-acceptance.json"), "utf8")
+);
 
-const now = new Date();
+const now = new Date(acceptanceFixture.baseNow);
 const today = now.toISOString().slice(0, 10);
 
 function isoOffset(days) {
@@ -47,6 +50,20 @@ users.push(
   ].map((user) => ({ ...user, createdAt: isoOffset(-20), updatedAt: isoOffset(-1) }))
 );
 
+users.splice(
+  0,
+  users.length,
+  ...acceptanceFixture.personas.map((persona) => ({
+    id: persona.id,
+    fullName: persona.fullName,
+    email: persona.email,
+    role: persona.role,
+    status: "active",
+    createdAt: isoOffset(-20),
+    updatedAt: isoOffset(-1)
+  }))
+);
+
 const projects = [
   {
     id: "demo-project-riverside",
@@ -77,6 +94,25 @@ const projects = [
     updatedAt: isoOffset(-2)
   }
 ];
+
+projects.splice(
+  0,
+  projects.length,
+  ...acceptanceFixture.projectScenarios.map((project, index) => ({
+    id: project.id,
+    code: project.code,
+    name: project.name,
+    location: project.location,
+    area: project.area,
+    projectType: project.projectType,
+    investor: project.investor,
+    status: project.status,
+    ownerName: project.ownerName,
+    ownerId: project.ownerId,
+    createdAt: isoOffset(-28 + index * 3),
+    updatedAt: isoOffset(-1 - (index % 2))
+  }))
+);
 
 const legalSteps = [
   ["land_survey", "Khảo sát quỹ đất"],
@@ -142,7 +178,7 @@ const tasks = [
     projectId: "demo-project-garden",
     title: "Khảo sát hiện trạng khu đất",
     description: "Cập nhật ảnh hiện trạng, ranh đất và điểm đấu nối.",
-    assigneeId: "lead-01",
+    assigneeId: "department-head-01",
     dueDate: dateOffset(5),
     status: "todo",
     priority: "medium",
@@ -171,6 +207,35 @@ const tasks = [
     category: "Tư vấn"
   }
 ].map((task) => ({ ...task, createdAt: isoOffset(-7), updatedAt: isoOffset(-1) }));
+
+tasks.push(
+  {
+    id: "demo-task-follow-up-riverside",
+    projectId: "demo-project-riverside",
+    title: "Theo doi action item sau hop dieu hanh Riverside",
+    description: "Fixture follow-up task lien ket meeting/decision de nghiem thu Module 1 va cac module sau.",
+    assigneeId: "assistant-01",
+    dueDate: dateOffset(1),
+    status: "todo",
+    priority: "high",
+    category: "Follow-up",
+    createdAt: isoOffset(-4),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "demo-task-axis23-placeholder",
+    projectId: "demo-project-axis23-lab",
+    title: "Chuan bi placeholder Approval Center Axis 2/3",
+    description: "Du lieu mock de cac story sau co fixture cho axis/module ngoai Module 1.",
+    assigneeId: "pm-01",
+    dueDate: dateOffset(6),
+    status: "waiting",
+    priority: "medium",
+    category: "Approval Center",
+    createdAt: isoOffset(-4),
+    updatedAt: isoOffset(-1)
+  }
+);
 
 const documents = [
   {
@@ -238,6 +303,54 @@ const documents = [
   createdAt: isoOffset(-10),
   updatedAt: isoOffset(-1)
 }));
+
+documents.push(
+  {
+    id: "demo-project-riverside-doc-finance-confidential",
+    projectId: "demo-project-riverside",
+    title: "Bang tong hop ngan sach Riverside",
+    docType: "finance_budget",
+    classification: "CONFIDENTIAL",
+    externalUrl: "https://example.com/greennest/riverside/ngan-sach",
+    version: "v1",
+    status: "complete",
+    ownerId: "finance-manager-01",
+    approvalStatus: "approved",
+    reviewerId: "ceo-01",
+    reviewedAt: isoOffset(-2),
+    createdAt: isoOffset(-9),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "demo-project-garden-doc-legal-risk",
+    projectId: "demo-project-garden",
+    title: "Canh bao rui ro phap ly Garden",
+    docType: "legal_submission",
+    classification: "RESTRICTED",
+    version: "v1",
+    status: "needs_update",
+    ownerId: "legal-manager",
+    approvalStatus: "rejected",
+    reviewerId: "project-director-01",
+    reviewedAt: isoOffset(-3),
+    approvalNotes: "Ho so phap ly con thieu phan xac nhan quy hoach.",
+    createdAt: isoOffset(-9),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "demo-project-axis23-doc-placeholder",
+    projectId: "demo-project-axis23-lab",
+    title: "Placeholder ho so cho Axis 2/3",
+    docType: "approval_placeholder",
+    classification: "INTERNAL",
+    version: "v1",
+    status: "draft",
+    ownerId: "pm-01",
+    approvalStatus: "not_submitted",
+    createdAt: isoOffset(-8),
+    updatedAt: isoOffset(-1)
+  }
+);
 
 const documentVersions = documents.map((document) => ({
   id: `${document.id}-version-${document.version}`,
@@ -359,6 +472,116 @@ const meetings = [
   }
 ].map((meeting) => ({ ...meeting, createdAt: isoOffset(-4), updatedAt: isoOffset(-1) }));
 
+const riversideWeeklyMeeting = meetings.find((meeting) => meeting.id === "demo-meeting-riverside-weekly");
+if (riversideWeeklyMeeting) {
+  Object.assign(riversideWeeklyMeeting, {
+    organizationId: acceptanceFixture.organizationId,
+    projectIds: ["demo-project-riverside"],
+    axisId: "axis-1",
+    meetingType: "EXECUTIVE_OPERATIONAL_MEETING",
+    visibility: "executive",
+    participantScope: "project_team",
+    status: "FOLLOW_UP_PENDING",
+    startTime: isoOffset(-1),
+    hostId: "ceo-01",
+    participants: ["ceo-01", "project-director-01", "assistant-01", "legal-manager", "finance-manager-01"],
+    externalParticipants: [],
+    agenda: "Review phap ly, finance-sensitive budget va action item Module 1.",
+    meetingMinutes: "Draft minutes: can bo sung ho so phap ly, cap nhat ngan sach va theo doi approval qua han.",
+    aiSummary: {
+      status: "DRAFT",
+      content: "AI draft: Riverside co risk phap ly va mot approval dang qua han can executive follow-up."
+    },
+    followUpActions: [
+      {
+        id: "follow-up-riverside-legal",
+        title: "Theo doi bo sung ho so phap ly",
+        ownerId: "assistant-01",
+        dueDate: dateOffset(1),
+        relatedTaskId: "demo-task-follow-up-riverside",
+        status: "open"
+      }
+    ],
+    decisions: [
+      {
+        id: "decision-track-riverside-follow-up",
+        decisionText: "Tach follow-up thanh task va bao cao CEO truoc buoi hop sau.",
+        ownerId: "assistant-01",
+        dueDate: dateOffset(1),
+        status: "open",
+        relatedTaskId: "demo-task-follow-up-riverside"
+      }
+    ],
+    relatedApprovals: ["proposal-demo-overdue-approval"],
+    relatedTasks: ["demo-task-follow-up-riverside"],
+    auditLog: [
+      {
+        id: "audit-meeting-riverside-ai-draft",
+        actorId: "assistant-01",
+        action: "ai_summary.draft",
+        createdAt: isoOffset(-1),
+        note: "Demo-only AI summary draft."
+      }
+    ]
+  });
+}
+
+const gardenKickoffMeeting = meetings.find((meeting) => meeting.id === "demo-meeting-garden-kickoff");
+if (gardenKickoffMeeting) {
+  Object.assign(gardenKickoffMeeting, {
+    organizationId: acceptanceFixture.organizationId,
+    projectIds: ["demo-project-garden"],
+    axisId: "axis-1",
+    departmentId: "legal",
+    meetingType: "DEPARTMENT_INTERNAL_MEETING",
+    visibility: "department",
+    participantScope: "department",
+    status: "COMPLETED",
+    startTime: isoOffset(-3),
+    hostId: "department-head-01",
+    participants: ["department-head-01", "legal-manager", "viewer-01"],
+    externalParticipants: [],
+    agenda: "Khoi dong scope Garden va xac nhan ho so con thieu.",
+    meetingMinutes: "Draft minutes: Garden co ho so dat missing va risk phap ly can xu ly.",
+    aiSummary: { status: "DRAFT", content: "Garden can bo sung tai lieu phap ly quy dat." },
+    followUpActions: [],
+    decisions: [],
+    relatedApprovals: [],
+    relatedTasks: ["demo-task-team"],
+    auditLog: []
+  });
+}
+
+meetings.push({
+  id: "demo-meeting-axis23-approval-placeholder",
+  organizationId: acceptanceFixture.organizationId,
+  projectId: "demo-project-axis23-lab",
+  projectIds: ["demo-project-axis23-lab"],
+  axisId: "axis-2",
+  title: "Approval Center Axis 2/3 placeholder",
+  meetingType: "PROJECT_MEETING",
+  visibility: "project",
+  participantScope: "project_team",
+  status: "SCHEDULED",
+  meetingDate: isoOffset(2),
+  startTime: isoOffset(2),
+  hostId: "pm-01",
+  participants: ["pm-01", "assistant-01"],
+  externalParticipants: [],
+  agenda: "Placeholder cho Approval Center Axis 2/3.",
+  attachments: [],
+  aiSummary: { status: "DRAFT" },
+  decisions: [],
+  followUpActions: [],
+  relatedApprovals: ["proposal-axis-2-placeholder", "proposal-axis-3-placeholder"],
+  relatedTasks: ["demo-task-axis23-placeholder"],
+  auditLog: [],
+  summary: "Meeting placeholder cho module sau.",
+  createdBy: "pm-01",
+  createdAt: isoOffset(-2),
+  updatedAt: isoOffset(-1)
+});
+
 const decisions = [
   {
     id: "demo-decision-riverside-legal",
@@ -384,11 +607,24 @@ const decisions = [
     meetingId: "demo-meeting-garden-kickoff",
     projectId: "demo-project-garden",
     decisionText: "Tổ trưởng hoàn tất ảnh hiện trạng và ranh đất.",
-    ownerId: "lead-01",
+    ownerId: "department-head-01",
     dueDate: dateOffset(5),
     status: "open"
   }
 ].map((decision) => ({ ...decision, createdAt: isoOffset(-3), updatedAt: isoOffset(-1) }));
+
+decisions.push({
+  id: "demo-decision-riverside-follow-up",
+  meetingId: "demo-meeting-riverside-weekly",
+  projectId: "demo-project-riverside",
+  decisionText: "Thu ky theo doi action item va cap nhat trang thai truoc buoi hop tiep theo.",
+  ownerId: "assistant-01",
+  dueDate: dateOffset(1),
+  status: "open",
+  taskId: "demo-task-follow-up-riverside",
+  createdAt: isoOffset(-2),
+  updatedAt: isoOffset(-1)
+});
 
 function isTaskDone(task) {
   return task.status === "done";
@@ -545,8 +781,10 @@ const projectMemberships = [
   { id: "membership-riverside-assistant", projectId: "demo-project-riverside", userId: "assistant-01", role: "thu_ky_tro_ly" },
   { id: "membership-riverside-contractor", projectId: "demo-project-riverside", userId: "contractor-01", role: "nha_thau" },
   { id: "membership-riverside-consultant", projectId: "demo-project-riverside", userId: "consultant-01", role: "tu_van" },
-  { id: "membership-garden-lead", projectId: "demo-project-garden", userId: "lead-01", role: "to_truong" },
-  { id: "membership-garden-viewer", projectId: "demo-project-garden", userId: "viewer", role: "viewer" }
+  { id: "membership-garden-lead", projectId: "demo-project-garden", userId: "department-head-01", role: "to_truong" },
+  { id: "membership-garden-viewer", projectId: "demo-project-garden", userId: "viewer-01", role: "viewer" },
+  { id: "membership-skyline-ceo", projectId: "demo-project-skyline", userId: "ceo-01", role: "tong_giam_doc" },
+  { id: "membership-axis23-pm", projectId: "demo-project-axis23-lab", userId: "pm-01", role: "quan_ly_du_an" }
 ].map((membership) => ({ ...membership, createdAt: isoOffset(-12), updatedAt: isoOffset(-1) }));
 
 const knowledgeItems = [
@@ -921,6 +1159,86 @@ const proposals = [
   }
 ];
 
+proposals.push(
+  {
+    id: "proposal-demo-overdue-approval",
+    code: "DX-OVERDUE-DEMO",
+    title: "De xuat phe duyet ngan sach bo sung Riverside qua han",
+    type: "finance",
+    projectId: "demo-project-riverside",
+    module: "finance",
+    requestedBy: "finance-manager-01",
+    submittedBy: "finance-manager-01",
+    ownerId: "ceo-01",
+    status: "in_review",
+    priority: "urgent",
+    amount: 2100000000,
+    dueDate: dateOffset(-2),
+    summary: "Approval qua han de verify queue, escalation va finance visibility.",
+    aiReviewStatus: "warning",
+    aiReviewSummary: "Vuot nguong 2 ty, can Chu tich/Super Admin phe duyet.",
+    currentStepId: "proposal-step-demo-overdue-approval",
+    createdAt: isoOffset(-5),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "proposal-axis-2-placeholder",
+    code: "DX-AXIS2-DEMO",
+    title: "Placeholder approval Axis 2",
+    type: "general",
+    projectId: "demo-project-axis23-lab",
+    module: "axis-2",
+    requestedBy: "pm-01",
+    submittedBy: "pm-01",
+    ownerId: "executive-01",
+    status: "draft",
+    priority: "normal",
+    amount: 10000000,
+    summary: "Fixture placeholder cho Approval Center Axis 2.",
+    aiReviewStatus: "not_checked",
+    createdAt: isoOffset(-3),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "proposal-axis-3-placeholder",
+    code: "DX-AXIS3-DEMO",
+    title: "Placeholder approval Axis 3",
+    type: "general",
+    projectId: "demo-project-axis23-lab",
+    module: "axis-3",
+    requestedBy: "pm-01",
+    submittedBy: "pm-01",
+    ownerId: "executive-01",
+    status: "draft",
+    priority: "normal",
+    amount: 15000000,
+    summary: "Fixture placeholder cho Approval Center Axis 3.",
+    aiReviewStatus: "not_checked",
+    createdAt: isoOffset(-3),
+    updatedAt: isoOffset(-1)
+  },
+  {
+    id: "proposal-demo-on-behalf-ceo",
+    code: "DX-ONBEHALF-DEMO",
+    title: "Thu ky tao de xuat thay CEO trong scope Riverside",
+    type: "general",
+    projectId: "demo-project-riverside",
+    module: "proposal",
+    requestedBy: "ceo-01",
+    submittedBy: "assistant-01",
+    onBehalfOf: "ceo-01",
+    delegationId: "delegation-assistant-ceo-riverside-proposal-create",
+    ownerId: "ceo-01",
+    status: "draft",
+    priority: "high",
+    amount: 18000000,
+    summary: "Fixture positive delegation: assistant duoc tao proposal thay CEO nhung khong duoc approve.",
+    aiReviewStatus: "not_checked",
+    createdAt: isoOffset(-2),
+    updatedAt: isoOffset(-1)
+  }
+);
+
 const proposalSteps = [
   {
     id: "proposal-step-demo-investment-01",
@@ -933,6 +1251,20 @@ const proposalSteps = [
   }
 ];
 
+proposalSteps.push({
+  id: "proposal-step-demo-overdue-approval",
+  proposalId: "proposal-demo-overdue-approval",
+  stepOrder: 1,
+  approverRole: "super_admin",
+  requiredPermission: "proposal.approve",
+  thresholdPolicyId: "policy-approval-over-2b",
+  thresholdLabel: "Tren 2 ty",
+  approvalLevel: "CHAIRMAN",
+  status: "in_review",
+  createdAt: isoOffset(-4),
+  updatedAt: isoOffset(-1)
+});
+
 const proposalLinks = [
   {
     id: "proposal-link-demo-investment-01",
@@ -943,6 +1275,25 @@ const proposalLinks = [
     createdAt: isoOffset(-2)
   }
 ];
+
+proposalLinks.push(
+  {
+    id: "proposal-link-demo-overdue-approval-budget",
+    proposalId: "proposal-demo-overdue-approval",
+    entityType: "document",
+    entityId: "demo-project-riverside-doc-finance-confidential",
+    relationType: "evidence",
+    createdAt: isoOffset(-4)
+  },
+  {
+    id: "proposal-link-on-behalf-delegation",
+    proposalId: "proposal-demo-on-behalf-ceo",
+    entityType: "delegation",
+    entityId: "delegation-assistant-ceo-riverside-proposal-create",
+    relationType: "source",
+    createdAt: isoOffset(-2)
+  }
+);
 
 const proposalDecisions = [
   {
@@ -955,8 +1306,70 @@ const proposalDecisions = [
   }
 ];
 
+proposalDecisions.push(
+  {
+    id: "proposal-decision-demo-overdue-submitted",
+    proposalId: "proposal-demo-overdue-approval",
+    stepId: "proposal-step-demo-overdue-approval",
+    decision: "submitted",
+    decidedBy: "finance-manager-01",
+    decidedAt: isoOffset(-4),
+    notes: "Trinh approval qua han de demo escalation."
+  },
+  {
+    id: "proposal-decision-on-behalf-draft",
+    proposalId: "proposal-demo-on-behalf-ceo",
+    decision: "submitted",
+    decidedBy: "assistant-01",
+    decidedAt: isoOffset(-2),
+    notes: "Demo on-behalf proposal create/submit by assistant."
+  }
+);
+
+function withAuditTimestamps(item, createdOffset = -20) {
+  return {
+    ...item,
+    createdAt: item.createdAt ?? isoOffset(createdOffset),
+    updatedAt: item.updatedAt ?? isoOffset(-1),
+    createdBy: item.createdBy ?? "mock-founder",
+    updatedBy: item.updatedBy ?? "mock-founder"
+  };
+}
+
+const rolePermissionCatalog = {
+  roles: acceptanceFixture.rolePermissionCatalog.roles.map((role) => ({
+    ...role,
+    active: true,
+    createdAt: isoOffset(-20),
+    updatedAt: isoOffset(-1),
+    updatedBy: "mock-founder"
+  })),
+  permissions: acceptanceFixture.rolePermissionCatalog.permissions
+};
+
+const scopeAssignments = acceptanceFixture.scopeAssignments.map((assignment) =>
+  withAuditTimestamps(assignment)
+);
+
+const policySettings = {
+  approvalThresholds: acceptanceFixture.policySettings.approvalThresholds.map((policy) =>
+    withAuditTimestamps(policy)
+  ),
+  riskGroups: acceptanceFixture.policySettings.riskGroups.map((riskGroup) =>
+    withAuditTimestamps(riskGroup)
+  )
+};
+
+const leadershipDelegations = acceptanceFixture.leadershipDelegations.map((delegation) =>
+  withAuditTimestamps(delegation, -10)
+);
+
 await mkdir(dataDir, { recursive: true });
 await Promise.all([
+  writeFile(path.join(dataDir, "role-permission-catalog.json"), `${JSON.stringify(rolePermissionCatalog, null, 2)}\n`, "utf8"),
+  writeFile(path.join(dataDir, "scope-assignments.json"), `${JSON.stringify({ assignments: scopeAssignments }, null, 2)}\n`, "utf8"),
+  writeFile(path.join(dataDir, "policy-settings.json"), `${JSON.stringify(policySettings, null, 2)}\n`, "utf8"),
+  writeFile(path.join(dataDir, "leadership-delegations.json"), `${JSON.stringify({ delegations: leadershipDelegations }, null, 2)}\n`, "utf8"),
   writeFile(path.join(dataDir, "project-core.json"), `${JSON.stringify({ projects, legalSteps }, null, 2)}\n`, "utf8"),
   writeFile(path.join(dataDir, "task-management.json"), `${JSON.stringify({ tasks }, null, 2)}\n`, "utf8"),
   writeFile(path.join(dataDir, "document-center.json"), `${JSON.stringify({ documents, documentVersions }, null, 2)}\n`, "utf8"),
@@ -985,4 +1398,4 @@ await Promise.all([
 	  writeFile(path.join(dataDir, "users.json"), `${JSON.stringify({ users, projectMemberships, auditLogs }, null, 2)}\n`, "utf8")
 	]);
 
-console.log("Seeded GreenNest BuildFlow demo data into .mock-data");
+console.log(`Seeded GreenNest BuildFlow demo data into ${dataDir}`);

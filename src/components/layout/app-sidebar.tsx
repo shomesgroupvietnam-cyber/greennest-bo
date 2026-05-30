@@ -16,14 +16,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType } from "react";
+import React, { type ComponentType } from "react";
 
 import { getClientSessionSnapshot } from "@/lib/auth/client-session";
 import type { PermissionUser } from "@/lib/permissions/can";
 import {
   getPermittedNavItems as resolvePermittedNavItems,
   NAV_ITEMS,
-  type NavigationIconKey
+  type NavigationAccessContext,
+  type NavigationIconKey,
+  type NavigationItem,
+  type ShellContext
 } from "@/lib/permissions/navigation";
 import { cn } from "@/lib/utils";
 
@@ -53,25 +56,45 @@ const ICONS: Record<NavigationIconKey, ComponentType<{ className?: string; "aria
 
 export { NAV_ITEMS };
 
-export function getPermittedNavItems(user: PermissionUser) {
-  return resolvePermittedNavItems(user);
+export function getPermittedNavItems(
+  user: PermissionUser,
+  context?: NavigationAccessContext,
+) {
+  return resolvePermittedNavItems(user, context);
 }
 
-export function AppSidebar({ session }: { session?: NavigationSession }) {
+function navPath(href: string) {
+  return href.split("?")[0];
+}
+
+export function AppSidebar({
+  navItems,
+  session,
+  shellContext,
+}: {
+  navItems?: NavigationItem[];
+  session?: NavigationSession;
+  shellContext?: ShellContext;
+}) {
   const pathname = usePathname();
   const resolvedSession = session ?? getClientSessionSnapshot();
-  const navItems = getPermittedNavItems(resolvedSession.user);
+  const resolvedNavItems = navItems ?? getPermittedNavItems(resolvedSession.user);
+  const workspaceLabel =
+    shellContext?.currentWorkspaceLabel ?? resolvedSession.defaultScreen.label;
+  const scopeLabel = shellContext?.currentScopeLabel ?? "Tat ca pham vi duoc cap";
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-white lg:block">
       <div className="border-b px-5 py-4">
         <p className="text-sm font-semibold text-slate-950">GreenNest BuildFlow</p>
-        <p className="text-xs text-slate-500">{resolvedSession.defaultScreen.label}</p>
+        <p className="text-xs font-medium text-slate-600">{workspaceLabel}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-slate-500">{scopeLabel}</p>
       </div>
       <nav className="space-y-1 p-3" aria-label="Điều hướng chính">
-        {navItems.map((item) => {
+        {resolvedNavItems.map((item) => {
           const Icon = ICONS[item.icon];
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const itemPath = navPath(item.href);
+          const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 
           return (
             <Link

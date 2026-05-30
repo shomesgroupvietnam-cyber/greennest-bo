@@ -3,14 +3,17 @@ import {
   canReadDocumentInScope,
   canReadDecisionInScope,
   canReadMeetingInScope,
+  canReadProposalInScope,
   canReadProjectInScope,
   canReadTaskInScope,
   filterDecisionsForScope,
   filterDocumentsForScope,
   filterLegalStepsForScope,
   filterMeetingsForScope,
+  filterProposalsForScope,
   filterProjectsForScope,
   filterTasksForScope,
+  requiresAssignmentScopeForRole,
   resolveAccessScope
 } from "@/lib/permissions/access-scope";
 import { getDocument, listDocuments } from "@/modules/documents/services/document-service";
@@ -21,19 +24,45 @@ import { getDecision, getMeeting, listDecisions, listMeetings } from "@/modules/
 import type { DecisionListFilters, MeetingListFilters } from "@/modules/meetings/types";
 import { getProject, listProjects } from "@/modules/projects/services/project-service";
 import type { ProjectListFilters } from "@/modules/projects/types";
+import { proposalRepository, type ProposalRepository } from "@/modules/proposals/services/proposal-repository";
+import type { ProposalListFilters } from "@/modules/proposals/types";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
+import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
 import { getTask, listTasks } from "@/modules/tasks/services/task-service";
 import type { TaskListFilters } from "@/modules/tasks/types";
 import { listProjectMemberships } from "@/modules/users/services/user-service";
 
 async function getScopeInputs() {
-  const [memberships, tasks, documents] = await Promise.all([listProjectMemberships(), listTasks(), listDocuments()]);
+  const [memberships, tasks, documents, scopeAssignments, rolePermissionCatalog] = await Promise.all([
+    listProjectMemberships(),
+    listTasks(),
+    listDocuments(),
+    listActiveScopeAssignments(),
+    listRolePermissionCatalog(),
+  ]);
 
-  return { memberships, tasks, documents };
+  return {
+    memberships,
+    tasks,
+    documents,
+    rolePermissionCatalog,
+    scopeAssignments,
+  };
+}
+
+function resolveScopedResourceScope(
+  user: PermissionUser,
+  inputs: Awaited<ReturnType<typeof getScopeInputs>>,
+) {
+  return resolveAccessScope(user, {
+    ...inputs,
+    requireScopeAssignments: requiresAssignmentScopeForRole(user.role),
+  });
 }
 
 export async function listScopedProjects(user: PermissionUser, filters: ProjectListFilters = {}) {
   const [projects, inputs] = await Promise.all([listProjects(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterProjectsForScope(projects, scope);
 }
@@ -45,12 +74,12 @@ export async function getScopedProject(user: PermissionUser, projectId: string) 
     return undefined;
   }
 
-  return canReadProjectInScope(project, resolveAccessScope(user, inputs)) ? project : undefined;
+  return canReadProjectInScope(project, resolveScopedResourceScope(user, inputs)) ? project : undefined;
 }
 
 export async function listScopedTasks(user: PermissionUser, filters: TaskListFilters = {}) {
   const [tasks, inputs] = await Promise.all([listTasks(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterTasksForScope(tasks, scope);
 }
@@ -62,12 +91,12 @@ export async function getScopedTask(user: PermissionUser, taskId: string) {
     return undefined;
   }
 
-  return canReadTaskInScope(task, resolveAccessScope(user, inputs)) ? task : undefined;
+  return canReadTaskInScope(task, resolveScopedResourceScope(user, inputs)) ? task : undefined;
 }
 
 export async function listScopedDocuments(user: PermissionUser, filters: DocumentListFilters = {}) {
   const [documents, inputs] = await Promise.all([listDocuments(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterDocumentsForScope(documents, scope);
 }
@@ -79,19 +108,52 @@ export async function getScopedDocument(user: PermissionUser, documentId: string
     return undefined;
   }
 
-  return canReadDocumentInScope(document, resolveAccessScope(user, inputs)) ? document : undefined;
+  return canReadDocumentInScope(document, resolveScopedResourceScope(user, inputs)) ? document : undefined;
 }
 
 export async function listScopedLegalSteps(user: PermissionUser, filters: LegalStepListFilters = {}) {
   const [steps, inputs] = await Promise.all([listLegalSteps(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterLegalStepsForScope(steps, scope);
 }
 
+export async function listScopedProposals(
+  user: PermissionUser,
+  filters: ProposalListFilters = {},
+  repository: ProposalRepository = proposalRepository,
+) {
+  const [proposals, inputs] = await Promise.all([
+    repository.listProposals(filters),
+    getScopeInputs(),
+  ]);
+  const scope = resolveScopedResourceScope(user, inputs);
+
+  return filterProposalsForScope(proposals, scope);
+}
+
+export async function getScopedProposal(
+  user: PermissionUser,
+  proposalId: string,
+  repository: ProposalRepository = proposalRepository,
+) {
+  const [detail, inputs] = await Promise.all([
+    repository.getProposalDetail(proposalId),
+    getScopeInputs(),
+  ]);
+
+  if (!detail) {
+    return undefined;
+  }
+
+  return canReadProposalInScope(detail.proposal, resolveScopedResourceScope(user, inputs))
+    ? detail
+    : undefined;
+}
+
 export async function listScopedMeetings(user: PermissionUser, filters: MeetingListFilters = {}) {
   const [meetings, inputs] = await Promise.all([listMeetings(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterMeetingsForScope(meetings, scope);
 }
@@ -103,12 +165,12 @@ export async function getScopedMeeting(user: PermissionUser, meetingId: string) 
     return undefined;
   }
 
-  return canReadMeetingInScope(meeting, resolveAccessScope(user, inputs)) ? meeting : undefined;
+  return canReadMeetingInScope(meeting, resolveScopedResourceScope(user, inputs)) ? meeting : undefined;
 }
 
 export async function listScopedDecisions(user: PermissionUser, filters: DecisionListFilters = {}) {
   const [decisions, inputs] = await Promise.all([listDecisions(filters), getScopeInputs()]);
-  const scope = resolveAccessScope(user, inputs);
+  const scope = resolveScopedResourceScope(user, inputs);
 
   return filterDecisionsForScope(decisions, scope);
 }
@@ -120,5 +182,5 @@ export async function getScopedDecision(user: PermissionUser, decisionId: string
     return undefined;
   }
 
-  return canReadDecisionInScope(decision, resolveAccessScope(user, inputs)) ? decision : undefined;
+  return canReadDecisionInScope(decision, resolveScopedResourceScope(user, inputs)) ? decision : undefined;
 }

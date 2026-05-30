@@ -1,10 +1,14 @@
 import { z } from "zod";
 
-import { ROLES } from "@/constants/roles";
-
-const roleValues = Object.keys(ROLES) as [keyof typeof ROLES, ...Array<keyof typeof ROLES>];
-
-export const roleSchema = z.enum(roleValues);
+export const roleSchema = z
+  .string()
+  .trim()
+  .min(2, "Role key la bat buoc.")
+  .max(64, "Role key qua dai.")
+  .regex(
+    /^[a-z][a-z0-9_]*$/,
+    "Role key chi duoc gom chu thuong, so va dau gach duoi.",
+  );
 
 export const userInputSchema = z.object({
   fullName: z.string().trim().min(1, "Vui lòng nhập họ tên."),

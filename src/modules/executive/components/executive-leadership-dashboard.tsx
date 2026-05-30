@@ -334,6 +334,7 @@ function Sidebar({ activePage }: { activePage: ExecutivePageKey }) {
           <Home className="h-6 w-6" aria-hidden="true" />
         </div>
         <div>
+          <span className="sr-only">GreenNest BuildFlow</span>
           <p className="text-base font-bold">GREENNEST</p>
           <p className="text-xs font-semibold text-emerald-300">BUILDFLOW</p>
         </div>

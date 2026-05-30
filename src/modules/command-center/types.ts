@@ -4,13 +4,20 @@ import type {
   AxisOneRiskLevel,
   AxisOneTaskStatus,
 } from "@/modules/axis-1/types";
-import type { DashboardData } from "@/modules/dashboard/types";
+import type {
+  DashboardData,
+  ExecutiveCommonCenterData,
+  ExecutiveDashboardData,
+  ExecutiveMorningBriefingData,
+} from "@/modules/dashboard/types";
+import type { ExecutivePrivateWorkspaceData } from "@/modules/workspaces/types";
 import type {
   ExecutiveAiLeadershipSummary,
   ExecutiveAiInsight,
   ExecutiveAuditLogItem,
   ExecutiveAccessibleScope,
   ExecutiveAccessPolicy,
+  ApprovalCenterData,
   ExecutiveAxisDefinition,
   ExecutiveCommandCenterSnapshot,
   ExecutiveDashboardLayer,
@@ -23,6 +30,7 @@ import type {
   ExecutiveOrganization,
   ExecutiveOverviewCard,
   ExecutiveProjectRow,
+  ExecutiveRiskGroupMetadata,
   ExecutiveRoleDefinition,
   LeadershipApproval,
   LeadershipMeeting,
@@ -126,6 +134,7 @@ export type CommandCenterExecutiveWorkspaceData = {
   axisDefinitions: ExecutiveAxisDefinition[];
   dashboardLayers: ExecutiveDashboardLayer[];
   escalationRules: ExecutiveEscalationRule[];
+  riskGroups: ExecutiveRiskGroupMetadata[];
   globalStatusItems: ExecutiveGlobalStatusItem[];
   overviewCards: ExecutiveOverviewCard[];
   commandCenterSnapshot: ExecutiveCommandCenterSnapshot;
@@ -167,6 +176,7 @@ export type CommandCenterAxisOneDashboardData = {
   }>;
   riskAlerts: Array<{
     id: string;
+    stageId: string;
     title: string;
     riskLevel: AxisOneRiskLevel;
     reason: string;
@@ -177,6 +187,11 @@ export type CommandCenterAxisOneDashboardData = {
 
 export type CommandCenterData = {
   axes: CommandCenterAxis[];
+  approvalCenter: ApprovalCenterData | null;
+  executiveCommonCenter: ExecutiveCommonCenterData | null;
+  executiveDashboard: ExecutiveDashboardData | null;
+  executiveMorningBriefing: ExecutiveMorningBriefingData | null;
+  executivePrivateWorkspace: ExecutivePrivateWorkspaceData | null;
   executiveWorkspace: CommandCenterExecutiveWorkspaceData;
   operationsDashboard: DashboardData;
   axisOneDashboard: CommandCenterAxisOneDashboardData;

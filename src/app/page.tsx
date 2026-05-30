@@ -111,6 +111,7 @@ export default function HomePage() {
               <span className="rounded-br-md rounded-tl-lg bg-[#062f28]" />
             </div>
             <div>
+              <span className="sr-only">GreenNest BuildFlow</span>
               <p className="text-xl font-bold leading-6 tracking-wide sm:text-2xl">
                 GreenNest
               </p>

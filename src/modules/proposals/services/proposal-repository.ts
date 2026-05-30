@@ -10,6 +10,26 @@ type ProposalStore = {
   decisions: ProposalDecision[];
 };
 
+export type ProposalApprovalMutation = {
+  decision: ProposalDecision;
+  generatedLink?: ProposalLink;
+  newStep?: ProposalStep;
+  proposalId: string;
+  proposalPatch: Partial<Proposal>;
+  stepPatch?: {
+    patch: Partial<ProposalStep>;
+    stepId: string;
+  };
+};
+
+export type ProposalApprovalMutationResult = {
+  decision: ProposalDecision;
+  generatedLink?: ProposalLink;
+  newStep?: ProposalStep;
+  proposal: Proposal;
+  step?: ProposalStep;
+};
+
 const emptyStore: ProposalStore = {
   proposals: [],
   steps: [],
@@ -25,6 +45,8 @@ export type ProposalRepository = {
   addStep(step: ProposalStep): Promise<ProposalStep>;
   updateStep(stepId: string, patch: Partial<ProposalStep>): Promise<ProposalStep>;
   addDecision(decision: ProposalDecision): Promise<ProposalDecision>;
+  addLink(link: ProposalLink): Promise<ProposalLink>;
+  applyApprovalMutation(mutation: ProposalApprovalMutation): Promise<ProposalApprovalMutationResult>;
 };
 
 export class JsonProposalRepository implements ProposalRepository {
@@ -139,6 +161,77 @@ export class JsonProposalRepository implements ProposalRepository {
     await this.writeStore({ ...store, decisions: [decision, ...store.decisions] });
 
     return decision;
+  }
+
+  async addLink(link: ProposalLink) {
+    const store = await this.readStore();
+
+    await this.writeStore({ ...store, links: [link, ...store.links] });
+
+    return link;
+  }
+
+  async applyApprovalMutation(mutation: ProposalApprovalMutation) {
+    const store = await this.readStore();
+    const existingProposal = store.proposals.find(
+      (proposal) => proposal.id === mutation.proposalId,
+    );
+
+    if (!existingProposal) {
+      throw new Error("KhÃ´ng tÃ¬m tháº¥y Ä‘á» xuáº¥t.");
+    }
+
+    const updatedProposal = {
+      ...existingProposal,
+      ...mutation.proposalPatch,
+      id: existingProposal.id,
+      createdAt: existingProposal.createdAt
+    };
+    let updatedStep: ProposalStep | undefined;
+
+    if (mutation.stepPatch) {
+      const existingStep = store.steps.find(
+        (step) => step.id === mutation.stepPatch?.stepId,
+      );
+
+      if (!existingStep) {
+        throw new Error("KhÃ´ng tÃ¬m tháº¥y bÆ°á»›c duyá»‡t.");
+      }
+
+      updatedStep = {
+        ...existingStep,
+        ...mutation.stepPatch.patch,
+        id: existingStep.id,
+        createdAt: existingStep.createdAt
+      };
+    }
+
+    await this.writeStore({
+      ...store,
+      decisions: [mutation.decision, ...store.decisions],
+      links: mutation.generatedLink
+        ? [mutation.generatedLink, ...store.links]
+        : store.links,
+      proposals: store.proposals.map((proposal) =>
+        proposal.id === mutation.proposalId ? updatedProposal : proposal,
+      ),
+      steps: [
+        ...(mutation.newStep ? [mutation.newStep] : []),
+        ...store.steps.map((step) =>
+          step.id === mutation.stepPatch?.stepId && updatedStep
+            ? updatedStep
+            : step,
+        ),
+      ],
+    });
+
+    return {
+      decision: mutation.decision,
+      generatedLink: mutation.generatedLink,
+      newStep: mutation.newStep,
+      proposal: updatedProposal,
+      step: updatedStep,
+    };
   }
 
   private async readStore(): Promise<ProposalStore> {

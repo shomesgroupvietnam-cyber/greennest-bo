@@ -22,10 +22,23 @@ Use this order when documents overlap:
 
 Current implementation status is owned by `docs/product/PHASE_STATUS.md`. The roadmap remains the canonical phase sequence, but the phase status file records what has actually been completed and what is still blocked.
 
-## 2.1 Ownership Summary
+## 2.1 BMad Compatibility Layer
+
+GreenNest uses BMad as a workflow and traceability layer, not as a replacement for canonical documentation.
+
+- Canonical product decisions stay in `blueprint/`.
+- Canonical engineering and operations guidance stays in `docs/`.
+- BMad planning outputs live in `_bmad-output/planning-artifacts/`.
+- BMad implementation outputs live in `_bmad-output/implementation-artifacts/`.
+- Daily customer requirement changes should become BMad artifacts first, then be promoted into canonical docs only after acceptance.
+
+Use `docs/BMAD_DOCUMENTATION_MAP.md` to route new requirements, specs, stories and review artifacts.
+
+## 2.2 Ownership Summary
 
 | Question | Owning document |
 | --- | --- |
+| How do BMad artifacts map to canonical docs? | `docs/BMAD_DOCUMENTATION_MAP.md` |
 | What is the product long-term direction? | `blueprint/00-product-vision.md` |
 | What phase/sprint is completed now? | `docs/product/PHASE_STATUS.md` |
 | What should be built next by phase? | `blueprint/04-roadmap.md` |
@@ -38,6 +51,15 @@ Current implementation status is owned by `docs/product/PHASE_STATUS.md`. The ro
 | What did MVP sprints originally require? | Root MVP snapshot files |
 
 ## 3. Folder Responsibilities
+
+### `_bmad-output/`
+
+Use for BMad workflow artifacts:
+
+- `planning-artifacts/`: PRD updates, UX plans, architecture decisions, epics, readiness reports and change proposals.
+- `implementation-artifacts/`: specs, stories, checkpoints, investigations, code reviews and retrospectives.
+
+BMad artifacts are evidence and working agreements. They do not become canonical until the accepted change is reflected in `blueprint/` or `docs/`.
 
 ### `blueprint/`
 
@@ -92,11 +114,12 @@ These files are snapshots. Do not expand them into the current canonical roadmap
 
 When changing product direction:
 
-1. Update the relevant `blueprint/` file.
-2. Add or update a decision in `blueprint/10-decision-log.md` if the choice affects architecture/product direction.
-3. Update root MVP docs only if active sprint scope changes.
-4. Update `docs/` only if development/deployment/operations behavior changes.
-5. Report which source-of-truth files changed.
+1. Capture the change in a BMad planning or implementation artifact when it comes from a customer update, sprint change or scoped implementation request.
+2. Update the relevant `blueprint/` file when the accepted change affects long-term product, domain, roadmap, data, API, roles or AI strategy.
+3. Add or update a decision in `blueprint/10-decision-log.md` if the choice affects architecture/product direction.
+4. Update `docs/` if development, deployment, architecture standard, design standard, operations or current status changes.
+5. Update root MVP docs only if active MVP snapshot labeling is misleading. Do not expand them as current source of truth.
+6. Report both the BMad artifact and source-of-truth files changed.
 
 ## 6. Agent Reading Order
 
@@ -104,20 +127,23 @@ For documentation/design/architecture finalization:
 
 1. `docs/DOCS_INDEX.md`.
 2. `docs/DOCUMENTATION_STANDARD.md`.
-3. `blueprint/README.md`.
-4. `docs/product/PHASE_STATUS.md`.
-5. `docs/architecture/ARCHITECTURE_OVERVIEW.md`.
-6. `docs/design/DESIGN_STANDARD.md`.
+3. `docs/BMAD_DOCUMENTATION_MAP.md`.
+4. `blueprint/README.md`.
+5. `docs/product/PHASE_STATUS.md`.
+6. `docs/architecture/ARCHITECTURE_OVERVIEW.md`.
+7. `docs/design/DESIGN_STANDARD.md`.
 
 For a normal implementation sprint:
 
 1. `docs/DOCS_INDEX.md`.
-2. `blueprint/README.md`.
-3. Relevant blueprint file for the domain.
-4. `milestone.md` if the work maps to an existing sprint.
-5. `docs/STRUCTURE.md`.
-6. `docs/architecture/TECH_STACK.md`.
-7. Existing code for the affected module.
+2. `docs/BMAD_DOCUMENTATION_MAP.md`.
+3. Approved BMad artifact, if one exists.
+4. `blueprint/README.md`.
+5. Relevant blueprint file for the domain.
+6. `docs/product/PHASE_STATUS.md`.
+7. `docs/STRUCTURE.md`.
+8. `docs/architecture/TECH_STACK.md`.
+9. Existing code for the affected module.
 
 For AI features:
 

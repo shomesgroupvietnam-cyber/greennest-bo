@@ -1,19 +1,27 @@
 import type { PermissionUser } from "@/lib/permissions/can";
 import { can } from "@/lib/permissions/can";
 import {
+  canAccessScopedAction,
   filterDecisionsForScope,
   filterDocumentsForScope,
   filterLegalStepsForScope,
   filterMeetingsForScope,
   filterProjectsForScope,
   filterTasksForScope,
-  resolveAccessScope
+  hasAnyScopedActionGrant,
+  requiresAssignmentScopeForRole,
+  resolveAccessScope,
+  usesAssignmentModel
 } from "@/lib/permissions/access-scope";
+import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import { getDashboardData } from "@/modules/dashboard/services/dashboard-service";
 import { listDocuments } from "@/modules/documents/services/document-service";
 import { listLegalSteps } from "@/modules/legal/services/legal-service";
 import { listDecisions, listMeetings } from "@/modules/meetings/services/meeting-service";
 import { listProjects } from "@/modules/projects/services/project-service";
+import { listActiveDelegationsForDelegate } from "@/modules/settings/services/leadership-delegation-service";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
+import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
 import { isTaskOverdue, isTaskUpcoming, listTasks } from "@/modules/tasks/services/task-service";
 import { listAuditLogs, listProjectMemberships, listUsers } from "@/modules/users/services/user-service";
 import type { ProjectMembership } from "@/modules/users/types";
@@ -21,7 +29,12 @@ import { WORKSPACE_DEFINITIONS, type WorkspaceRoute } from "@/modules/workspaces
 import type { RoleWorkspaceData, WorkspaceScopedData } from "@/modules/workspaces/types";
 
 export function applyWorkspaceScope(user: PermissionUser, data: WorkspaceScopedData): WorkspaceScopedData {
-  const scope = resolveAccessScope(user, data);
+  const scope = resolveAccessScope(user, {
+    ...data,
+    requireScopeAssignments:
+      data.requireScopeAssignments ?? data.scopeAssignments !== undefined,
+  });
+  const useAssignmentModel = usesAssignmentModel(scope);
 
   return {
     ...data,
@@ -31,10 +44,26 @@ export function applyWorkspaceScope(user: PermissionUser, data: WorkspaceScopedD
     legalSteps: filterLegalStepsForScope(data.legalSteps, scope),
     meetings: filterMeetingsForScope(data.meetings, scope),
     decisions: filterDecisionsForScope(data.decisions, scope),
-    users: scope.kind === "external_limited" || scope.kind === "read_only_allowed" ? [] : data.users,
-    auditLogs: scope.kind === "external_limited" || scope.kind === "read_only_allowed" ? [] : data.auditLogs,
+    users:
+      useAssignmentModel && !canAccessScopedAction(user, "user.view", {}, {
+        rolePermissionCatalog: scope.rolePermissionCatalog,
+        scopeAssignments: scope.scopeAssignments,
+      })
+        ? []
+        : scope.kind === "external_limited" || scope.kind === "read_only_allowed"
+          ? []
+          : data.users,
+    auditLogs:
+      useAssignmentModel && !canAccessScopedAction(user, "audit.view", {}, {
+        rolePermissionCatalog: scope.rolePermissionCatalog,
+        scopeAssignments: scope.scopeAssignments,
+      })
+        ? []
+        : scope.kind === "external_limited" || scope.kind === "read_only_allowed"
+          ? []
+          : data.auditLogs,
     memberships:
-      scope.kind === "external_limited" || scope.kind === "read_only_allowed"
+      useAssignmentModel || scope.kind === "external_limited" || scope.kind === "read_only_allowed"
         ? data.memberships.filter((membership) => membership.userId === user.id)
         : data.memberships
   };
@@ -141,19 +170,73 @@ function buildActionItems(scoped: WorkspaceScopedData, today: Date) {
   ].slice(0, 8);
 }
 
-export async function getRoleWorkspaceData(user: PermissionUser, route: WorkspaceRoute): Promise<RoleWorkspaceData> {
+export function buildDelegationSummary(delegations: WorkspaceScopedData["delegations"] = []) {
+  return {
+    activeCount: delegations.length,
+    principalUserIds: Array.from(new Set(delegations.map((delegation) => delegation.principalUserId))),
+    actionKeys: Array.from(new Set(delegations.flatMap((delegation) => delegation.actionKeys))),
+  };
+}
+
+export async function getRoleWorkspaceData(
+  user: PermissionUser,
+  route: WorkspaceRoute,
+  options: { selectedScopeId?: string } = {},
+): Promise<RoleWorkspaceData> {
   const today = new Date();
-  const [dashboard, projects, tasks, documents, legalSteps, meetings, decisions, users, auditLogs, memberships] = await Promise.all([
-    getDashboardData(user, { today }),
-    can(user, "project.view") ? listProjects({}) : [],
-    can(user, "task.view") ? listTasks({}) : [],
-    can(user, "document.view") ? listDocuments({}) : [],
-    can(user, "legal.view") ? listLegalSteps({}) : [],
-    can(user, "meeting.view") ? listMeetings({}) : [],
-    can(user, "meeting.view") ? listDecisions({}) : [],
-    can(user, "user.view") ? listUsers() : [],
-    can(user, "audit.view") ? listAuditLogs() : [],
-    listProjectMemberships()
+  const [scopeAssignments, rolePermissionCatalog, delegations] = await Promise.all([
+    listActiveScopeAssignments(),
+    listRolePermissionCatalog(),
+    listActiveDelegationsForDelegate(user.id),
+  ]);
+  const selectedScopeAssignments = selectScopeAssignmentsForUser(
+    user,
+    scopeAssignments,
+    options.selectedScopeId,
+  );
+  const selectedScopeActive =
+    Boolean(options.selectedScopeId) && options.selectedScopeId !== "all";
+  const ignoreImplicitAssignments =
+    !selectedScopeActive &&
+    ["super_admin", "admin", "tong_giam_doc"].includes(user.role);
+  const effectiveScopeAssignments = ignoreImplicitAssignments
+    ? []
+    : selectedScopeAssignments;
+  const requireScopeAssignments =
+    selectedScopeActive || requiresAssignmentScopeForRole(user.role);
+  const canLoad = (action: Parameters<typeof hasAnyScopedActionGrant>[1]) =>
+    can(user, action) ||
+    hasAnyScopedActionGrant(user, action, {
+      rolePermissionCatalog,
+      scopeAssignments: effectiveScopeAssignments,
+    });
+  const [
+    dashboard,
+    projects,
+    tasks,
+    documents,
+    legalSteps,
+    meetings,
+    decisions,
+    users,
+    auditLogs,
+    memberships,
+  ] = await Promise.all([
+    getDashboardData(user, {
+      today,
+      requireScopeAssignments,
+      rolePermissionCatalog,
+      scopeAssignments: effectiveScopeAssignments,
+    }),
+    canLoad("project.view") ? listProjects({}) : [],
+    canLoad("task.view") ? listTasks({}) : [],
+    canLoad("document.view") ? listDocuments({}) : [],
+    canLoad("legal.view") ? listLegalSteps({}) : [],
+    canLoad("meeting.view") ? listMeetings({}) : [],
+    canLoad("meeting.view") ? listDecisions({}) : [],
+    canLoad("user.view") ? listUsers() : [],
+    canLoad("audit.view") ? listAuditLogs() : [],
+    listProjectMemberships(),
   ]);
   const scoped = applyWorkspaceScope(user, {
     projects,
@@ -164,14 +247,20 @@ export async function getRoleWorkspaceData(user: PermissionUser, route: Workspac
     decisions,
     users,
     auditLogs,
-    memberships: memberships as ProjectMembership[]
+    memberships: memberships as ProjectMembership[],
+    delegations,
+    requireScopeAssignments,
+    rolePermissionCatalog,
+    scopeAssignments: effectiveScopeAssignments,
   });
+  const delegationSummary = buildDelegationSummary(delegations);
 
   return {
     definition: WORKSPACE_DEFINITIONS[route],
     dashboard,
     scoped,
     kpis: buildKpis(route, scoped, today),
-    actionItems: buildActionItems(scoped, today)
+    actionItems: buildActionItems(scoped, today),
+    delegationSummary,
   };
 }

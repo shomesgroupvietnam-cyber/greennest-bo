@@ -1,7 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { resolveMockRole } from "@/lib/auth/mock-session";
 import {
   createSupabaseServerClient,
   isSupabaseAuthConfigured,
@@ -11,7 +13,17 @@ import { can } from "@/lib/permissions/can";
 import { canAccessWorkspaceRoute } from "@/modules/workspaces/config";
 import { createAuditLog } from "@/modules/users/services/user-service";
 
-const COMMAND_CENTER_ROLES = ["super_admin", "admin", "tong_giam_doc"] as const;
+const COMMAND_CENTER_ROLES = ["super_admin", "admin"] as const;
+const EXECUTIVE_LANDING_ROLES = [
+  "tong_giam_doc",
+  "pho_tong_giam_doc",
+] as const;
+const OPERATIONAL_OWNER_ROLES = [
+  "super_admin",
+  "tong_giam_doc",
+  "pho_tong_giam_doc",
+] as const;
+const MOCK_ROLE_COOKIE_NAME = "greennest_mock_role";
 
 async function auditAuthEvent(
   session: Awaited<ReturnType<typeof getCurrentSession>>,
@@ -47,12 +59,24 @@ function resolvePostLoginHref(
   }
 
   if (next === "development") {
-    if (COMMAND_CENTER_ROLES.includes(session.user.role as (typeof COMMAND_CENTER_ROLES)[number])) {
+    if (
+      EXECUTIVE_LANDING_ROLES.includes(
+        session.user.role as (typeof EXECUTIVE_LANDING_ROLES)[number],
+      )
+    ) {
+      return "/command-center?view=executive-dashboard";
+    }
+
+    if (
+      COMMAND_CENTER_ROLES.includes(
+        session.user.role as (typeof COMMAND_CENTER_ROLES)[number],
+      )
+    ) {
       return "/command-center";
     }
 
     if (canAccessWorkspaceRoute(session.user, "/executive")) {
-      return "/executive";
+      return "/command-center?view=executive-dashboard";
     }
 
     if (canAccessWorkspaceRoute(session.user, "/investment-workspace")) {
@@ -91,6 +115,14 @@ function resolvePostLoginHref(
   }
 
   if (next === "operations") {
+    if (
+      OPERATIONAL_OWNER_ROLES.includes(
+        session.user.role as (typeof OPERATIONAL_OWNER_ROLES)[number],
+      )
+    ) {
+      return "/command-center?view=operations-dashboard";
+    }
+
     if (canAccessWorkspaceRoute(session.user, "/admin")) {
       return "/admin";
     }
@@ -117,6 +149,17 @@ export async function loginAction(formData: FormData) {
   const next = String(formData.get("next") ?? "");
 
   if (!isSupabaseAuthConfigured()) {
+    const mockRole = formData.get("mockRole");
+
+    if (typeof mockRole === "string" && mockRole) {
+      const cookieStore = await cookies();
+
+      cookieStore.set(MOCK_ROLE_COOKIE_NAME, resolveMockRole(mockRole), {
+        path: "/",
+        sameSite: "lax",
+      });
+    }
+
     const session = await getCurrentSession();
     await auditAuthEvent(session, "auth.login");
     redirect(resolvePostLoginHref(next, session));
@@ -139,6 +182,9 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   const session = await getCurrentSession();
   await auditAuthEvent(session, "auth.logout");
+
+  const cookieStore = await cookies();
+  cookieStore.delete(MOCK_ROLE_COOKIE_NAME);
 
   if (isSupabaseAuthConfigured()) {
     const supabase = await createSupabaseServerClient();

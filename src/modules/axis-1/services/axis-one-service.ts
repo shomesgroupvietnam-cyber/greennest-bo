@@ -56,6 +56,7 @@ export function getAxisOneRiskAlerts() {
     .filter((stage) => ["high", "critical"].includes(stage.riskLevel))
     .map((stage) => ({
       id: stage.id,
+      stageId: stage.id,
       title: stage.title,
       riskLevel: stage.riskLevel,
       reason:

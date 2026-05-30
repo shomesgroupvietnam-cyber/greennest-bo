@@ -2,7 +2,7 @@ import { Shield, UserPlus } from "lucide-react";
 
 import { PageShell } from "@/components/shared/page-shell";
 import { Button } from "@/components/ui/button";
-import { ROLES } from "@/constants/roles";
+import { getStaticRoleLabel } from "@/constants/roles";
 import { can } from "@/lib/permissions/can";
 import { requirePermission } from "@/lib/permissions/guard";
 import { listProjects } from "@/modules/projects/services/project-service";
@@ -23,6 +23,7 @@ export default async function UsersPage() {
     listProjectMemberships(),
     listAuditLogs()
   ]);
+  const roleLabels = new Map(roles.map((role) => [role.key, role.label]));
 
   return (
     <PageShell
@@ -46,7 +47,7 @@ export default async function UsersPage() {
                       <p className="font-medium text-slate-950">{user.fullName}</p>
                       <p className="mt-1 text-sm text-slate-500">{user.email}</p>
                       <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                        {ROLES[user.role].label}
+                        {roleLabels.get(user.role) ?? getStaticRoleLabel(user.role)}
                       </p>
                     </div>
                     {canUpdateRole ? (
@@ -132,7 +133,7 @@ export default async function UsersPage() {
                     <div className="py-3 text-sm" key={membership.id}>
                       <p className="font-medium text-slate-950">{project?.name ?? membership.projectId}</p>
                       <p className="mt-1 text-slate-500">
-                        {user?.fullName ?? membership.userId} · {ROLES[membership.role].label}
+                        {user?.fullName ?? membership.userId} · {roleLabels.get(membership.role) ?? getStaticRoleLabel(membership.role)}
                       </p>
                     </div>
                   );

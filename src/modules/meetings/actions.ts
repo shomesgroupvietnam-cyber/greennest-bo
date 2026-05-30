@@ -16,11 +16,34 @@ import {
 } from "@/modules/meetings/services/meeting-service";
 import type { DecisionInput, MeetingInput, MeetingUpdateInput } from "@/modules/meetings/types";
 
+function readArrayField(formData: FormData, key: string) {
+  const raw = String(formData.get(key) ?? "");
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function formDataToMeetingInput(formData: FormData): MeetingInput {
   return {
+    organizationId: String(formData.get("organizationId") ?? ""),
     projectId: String(formData.get("projectId") ?? ""),
+    axisId: String(formData.get("axisId") ?? ""),
+    departmentId: String(formData.get("departmentId") ?? ""),
     title: String(formData.get("title") ?? ""),
+    meetingType: String(formData.get("meetingType") ?? "PROJECT_MEETING") as MeetingInput["meetingType"],
+    visibility: String(formData.get("visibility") ?? "project") as MeetingInput["visibility"],
+    participantScope: String(formData.get("participantScope") ?? "project_team") as MeetingInput["participantScope"],
+    status: String(formData.get("status") ?? "SCHEDULED") as MeetingInput["status"],
     meetingDate: String(formData.get("meetingDate") ?? ""),
+    endTime: String(formData.get("endTime") ?? ""),
+    hostId: String(formData.get("hostId") ?? ""),
+    participants: readArrayField(formData, "participants"),
+    externalParticipants: readArrayField(formData, "externalParticipants"),
+    roomId: String(formData.get("roomId") ?? ""),
+    agenda: String(formData.get("agenda") ?? ""),
+    meetingMinutes: String(formData.get("meetingMinutes") ?? ""),
     summary: String(formData.get("summary") ?? "")
   };
 }
@@ -48,14 +71,16 @@ export async function createMeetingAction(formData: FormData) {
   assertCan(currentUser, "meeting.create");
   const input = formDataToMeetingInput(formData);
 
-  if (!(await getScopedProject(currentUser, input.projectId))) {
+  if (input.projectId && !(await getScopedProject(currentUser, input.projectId))) {
     throw new Error("Bạn không có quyền tạo biên bản họp cho dự án này.");
   }
 
   const meeting = await createMeeting(input, currentUser.id);
 
   revalidatePath("/meetings");
-  revalidatePath(`/projects/${meeting.projectId}`);
+  if (meeting.projectId) {
+    revalidatePath(`/projects/${meeting.projectId}`);
+  }
   redirect(`/meetings/${meeting.id}`);
 }
 
@@ -72,7 +97,9 @@ export async function updateMeetingAction(meetingId: string, formData: FormData)
 
   revalidatePath("/meetings");
   revalidatePath(`/meetings/${meeting.id}`);
-  revalidatePath(`/projects/${meeting.projectId}`);
+  if (meeting.projectId) {
+    revalidatePath(`/projects/${meeting.projectId}`);
+  }
   redirect(`/meetings/${meeting.id}`);
 }
 
@@ -88,7 +115,9 @@ export async function createDecisionAction(meetingId: string, formData: FormData
 
   revalidatePath("/meetings");
   revalidatePath(`/meetings/${meetingId}`);
-  revalidatePath(`/projects/${decision.projectId}`);
+  if (decision.projectId) {
+    revalidatePath(`/projects/${decision.projectId}`);
+  }
 }
 
 export async function convertDecisionToTaskAction(decisionId: string) {
@@ -96,7 +125,12 @@ export async function convertDecisionToTaskAction(decisionId: string) {
   const decision = await getDecision(decisionId);
   assertCan(currentUser, "task.create");
 
-  if (!decision || !(await getScopedDecision(currentUser, decisionId)) || !(await getScopedProject(currentUser, decision.projectId))) {
+  if (
+    !decision ||
+    !decision.projectId ||
+    !(await getScopedDecision(currentUser, decisionId)) ||
+    !(await getScopedProject(currentUser, decision.projectId))
+  ) {
     throw new Error("Bạn không có quyền chuyển action item này thành công việc.");
   }
 
@@ -104,7 +138,9 @@ export async function convertDecisionToTaskAction(decisionId: string) {
 
   revalidatePath("/tasks");
   revalidatePath("/meetings");
-  revalidatePath(`/meetings/${decision.meetingId}`);
+  if (decision.meetingId) {
+    revalidatePath(`/meetings/${decision.meetingId}`);
+  }
   revalidatePath(`/projects/${decision.projectId}`);
   redirect(`/tasks/${task.id}`);
 }

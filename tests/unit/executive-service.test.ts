@@ -14,6 +14,7 @@ import {
   leadershipMeetingSchema,
   leadershipMemberSchema,
 } from "@/modules/executive/validation";
+import type { ScopeAssignment } from "@/modules/settings/types";
 
 describe("executive leadership service", () => {
   it("returns all required leadership sections for tong_giam_doc", async () => {
@@ -69,6 +70,23 @@ describe("executive leadership service", () => {
         "PROJECT_DIRECTOR",
         "CEO",
         "CHAIRMAN",
+      ]),
+    );
+    expect(data.escalationRules[0]).toMatchObject({
+      thresholdPolicyId: expect.any(String),
+      approverRole: expect.any(String),
+      requiredPermission: expect.any(String),
+    });
+    expect(data.riskGroups.map((riskGroup) => riskGroup.key)).toEqual(
+      expect.arrayContaining([
+        "legal",
+        "planning_technical",
+        "approval",
+        "schedule",
+        "finance",
+        "missing_document",
+        "system_permission",
+        "operation",
       ]),
     );
     expect(data.globalStatusItems.length).toBeGreaterThanOrEqual(5);
@@ -175,6 +193,33 @@ describe("executive leadership service", () => {
     expect(new Set(data.projects.map((project) => project.projectId))).toEqual(
       new Set(["project-riverside", "project-city", "project-ocean"]),
     );
+  });
+
+  it("applies selected scope assignments even for direct leadership roles", async () => {
+    const scopeAssignments: ScopeAssignment[] = [
+      {
+        id: "selected-riverside",
+        userId: "ceo-01",
+        roleKey: "giam_doc_du_an",
+        projectId: "project-riverside",
+        axisId: "axis-1",
+        permissionKeys: ["project.view", "task.view", "proposal.view"],
+        active: true,
+        scopeType: "scoped",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+
+    const data = await getExecutiveLeadershipData(
+      { id: "ceo-01", role: "tong_giam_doc" },
+      { selectedScopeId: "selected-riverside", scopeAssignments },
+    );
+
+    expect(data.accessibleScope.canViewAllProjects).toBe(false);
+    expect(data.projects.map((project) => project.projectId)).toEqual([
+      "project-riverside",
+    ]);
   });
 
   it("maps executive module access levels to existing business roles", async () => {
@@ -328,6 +373,24 @@ describe("executive leadership service", () => {
           item.approvalLevel === "DEPARTMENT_HEAD",
       ),
     ).toBe(true);
+  });
+
+  it("sanitizes finance fields for executive users without finance permission", async () => {
+    const data = await getExecutiveLeadershipData({
+      id: "legal-head-01",
+      role: "phap_ly",
+    });
+    const serialized = JSON.stringify(data);
+
+    expect(data.leadershipActionItems[0]).not.toHaveProperty("amount");
+    expect(data.leadershipActionItems[0]).not.toHaveProperty("amountLabel");
+    expect(serialized).not.toContain("amountLabel");
+    expect(serialized).not.toContain("cashFlowLabel");
+    expect(serialized).not.toContain("budgetLabel");
+    expect(serialized).not.toContain("budgetRange");
+    expect(serialized).not.toContain("allocatedBudget");
+    expect(serialized).not.toContain("committedBudget");
+    expect(serialized).not.toContain("12 triệu");
   });
 
   it("attaches projectId to project-related records and exposes structured audit log", async () => {

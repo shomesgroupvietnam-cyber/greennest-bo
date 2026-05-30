@@ -14,27 +14,32 @@ type ProposalDetailPageProps = {
 export default async function ProposalDetailPage({ params }: ProposalDetailPageProps) {
   const currentUser = await getCurrentUser();
   const { proposalId } = await params;
+  let detail;
 
-  if (!can(currentUser, "proposal.view")) {
+  try {
+    detail = await getProposalDetail(proposalId, currentUser);
+  } catch {
     return (
-      <PageShell title="Đề xuất">
-        <UnauthorizedState description="Vai trò hiện tại không có quyền xem đề xuất nội bộ." />
+      <PageShell title="De xuat">
+        <UnauthorizedState description="Vai tro hien tai khong co quyen xem de xuat noi bo nay." />
       </PageShell>
     );
   }
-
-  const detail = await getProposalDetail(proposalId, currentUser);
 
   if (!detail) {
     notFound();
   }
 
+  const canSubmit =
+    can(currentUser, "proposal.create") ||
+    (Boolean(detail.proposal.onBehalfOf) && detail.proposal.submittedBy === currentUser.id);
+
   return (
-    <PageShell title="Chi tiết đề xuất" description="Review, yêu cầu chỉnh sửa, phê duyệt hoặc từ chối đề xuất nội bộ.">
+    <PageShell title="Chi tiet de xuat" description="Review, yeu cau chinh sua, phe duyet hoac tu choi de xuat noi bo.">
       <ProposalDetail
         detail={detail}
-        canSubmit={can(currentUser, "proposal.create")}
-        canReview={can(currentUser, "proposal.review")}
+        canSubmit={canSubmit}
+        canRequestChange={can(currentUser, "proposal.request_change")}
         canApprove={can(currentUser, "proposal.approve")}
       />
     </PageShell>

@@ -1,4 +1,3 @@
-import type { Role } from "@/constants/roles";
 import type { EntityId, TimestampFields } from "@/types/common";
 
 export type User = TimestampFields & {
@@ -6,27 +5,27 @@ export type User = TimestampFields & {
   fullName: string;
   email: string;
   avatarUrl?: string;
-  role: Role;
+  role: string;
   status: "pending" | "active" | "suspended";
 };
 
 export type UserInput = {
   fullName: string;
   email: string;
-  role: Role;
+  role: string;
 };
 
 export type ProjectMembership = TimestampFields & {
   id: EntityId;
   projectId: EntityId;
   userId: EntityId;
-  role: Role;
+  role: string;
 };
 
 export type ProjectMembershipInput = {
   projectId: EntityId;
   userId: EntityId;
-  role: Role;
+  role: string;
 };
 
 export type AuditLog = {

@@ -130,7 +130,9 @@ describe("document approval workflow", () => {
   });
 
   it("requires document.approve permission for approval decisions", () => {
-    expect(can({ id: "admin", role: "admin" }, "document.approve")).toBe(true);
+    expect(can({ id: "super-admin", role: "super_admin" }, "document.approve")).toBe(true);
+    expect(can({ id: "ceo", role: "tong_giam_doc" }, "document.approve")).toBe(true);
+    expect(can({ id: "admin", role: "admin" }, "document.approve")).toBe(false);
     expect(can({ id: "viewer", role: "viewer" }, "document.approve")).toBe(false);
     expect(can({ id: "assistant", role: "thu_ky_tro_ly" }, "document.approve")).toBe(false);
   });

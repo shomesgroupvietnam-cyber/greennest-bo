@@ -1,4 +1,3 @@
-import type { Role } from "@/constants/roles";
 import type { PermissionAction, PermissionUser } from "@/lib/permissions/can";
 import { EXECUTIVE_ROUTE_ROLES } from "@/modules/executive/constants";
 
@@ -28,7 +27,7 @@ export type WorkspaceDefinition = {
   route: WorkspaceRoute;
   title: string;
   description: string;
-  roles: Role[];
+  roles: string[];
   permissions: PermissionAction[];
   futureNote?: string;
 };

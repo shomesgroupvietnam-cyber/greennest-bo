@@ -1,0 +1,725 @@
+{
+  "baseNow": "2026-05-24T00:00:00.000Z",
+  "organizationId": "org-greennest",
+  "requiredSeedFiles": [
+    "users.json",
+    "role-permission-catalog.json",
+    "scope-assignments.json",
+    "policy-settings.json",
+    "leadership-delegations.json",
+    "project-core.json",
+    "proposals.json",
+    "document-center.json",
+    "document-requirements.json",
+    "meetings-decisions.json",
+    "task-management.json"
+  ],
+  "personas": [
+    {
+      "id": "chairman-01",
+      "fullName": "Nguyen Thanh Binh",
+      "email": "chairman@greennest.vn",
+      "role": "super_admin",
+      "label": "Chu tich/Super Admin",
+      "acceptancePersona": true
+    },
+    {
+      "id": "mock-founder",
+      "fullName": "Nguyen Minh Anh",
+      "email": "admin@greennest.vn",
+      "role": "admin",
+      "label": "Admin smoke",
+      "acceptancePersona": false
+    },
+    {
+      "id": "ceo-01",
+      "fullName": "Dang Quoc Bao",
+      "email": "ceo@greennest.vn",
+      "role": "tong_giam_doc",
+      "label": "CEO",
+      "acceptancePersona": true
+    },
+    {
+      "id": "project-director-01",
+      "fullName": "Hoang Gia Khanh",
+      "email": "director@greennest.vn",
+      "role": "giam_doc_du_an",
+      "label": "Giam doc du an",
+      "acceptancePersona": true
+    },
+    {
+      "id": "department-head-01",
+      "fullName": "Le Quang Huy",
+      "email": "department.head@greennest.vn",
+      "role": "to_truong",
+      "label": "Truong bo phan",
+      "acceptancePersona": true
+    },
+    {
+      "id": "assistant-01",
+      "fullName": "Trinh Mai Anh",
+      "email": "assistant@greennest.vn",
+      "role": "thu_ky_tro_ly",
+      "label": "Thu ky/Tro ly",
+      "acceptancePersona": true
+    },
+    {
+      "id": "viewer-01",
+      "fullName": "Nguoi xem demo",
+      "email": "viewer@greennest.vn",
+      "role": "viewer",
+      "label": "Nguoi xem",
+      "acceptancePersona": true
+    },
+    {
+      "id": "executive-01",
+      "fullName": "Tran Hoang Nam",
+      "email": "pho.tgd@greennest.vn",
+      "role": "pho_tong_giam_doc",
+      "label": "Pho tong giam doc",
+      "acceptancePersona": false
+    },
+    {
+      "id": "pm-01",
+      "fullName": "Ngo Thanh Tam",
+      "email": "pm@greennest.vn",
+      "role": "quan_ly_du_an",
+      "label": "Quan ly du an",
+      "acceptancePersona": false
+    },
+    {
+      "id": "legal-manager",
+      "fullName": "Pham Thu Ha",
+      "email": "legal@greennest.vn",
+      "role": "phap_ly",
+      "label": "Phap ly",
+      "acceptancePersona": false
+    },
+    {
+      "id": "accountant",
+      "fullName": "Vu Lan Chi",
+      "email": "accounting@greennest.vn",
+      "role": "ke_toan",
+      "label": "Ke toan",
+      "acceptancePersona": false
+    },
+    {
+      "id": "designer",
+      "fullName": "Do Hai Yen",
+      "email": "design@greennest.vn",
+      "role": "thiet_ke",
+      "label": "Thiet ke",
+      "acceptancePersona": false
+    },
+    {
+      "id": "technical-01",
+      "fullName": "Bui Minh Khoa",
+      "email": "technical@greennest.vn",
+      "role": "ky_thuat",
+      "label": "Ky thuat",
+      "acceptancePersona": false
+    },
+    {
+      "id": "construction-01",
+      "fullName": "Phan Duc Long",
+      "email": "construction@greennest.vn",
+      "role": "thi_cong",
+      "label": "Thi cong",
+      "acceptancePersona": false
+    },
+    {
+      "id": "investment-01",
+      "fullName": "Lam Dau Tu",
+      "email": "investment@greennest.vn",
+      "role": "dau_tu_phat_trien",
+      "label": "Dau tu phat trien",
+      "acceptancePersona": false
+    },
+    {
+      "id": "finance-manager-01",
+      "fullName": "Dinh Tai Chinh",
+      "email": "finance.manager@greennest.vn",
+      "role": "quan_ly_tai_chinh",
+      "label": "Quan ly tai chinh",
+      "acceptancePersona": false
+    },
+    {
+      "id": "contract-manager-01",
+      "fullName": "Ho Hop Dong",
+      "email": "contract.manager@greennest.vn",
+      "role": "quan_ly_hop_dong",
+      "label": "Quan ly hop dong",
+      "acceptancePersona": false
+    },
+    {
+      "id": "contractor-01",
+      "fullName": "Nguyen Van Nha Thau",
+      "email": "contractor@greennest.vn",
+      "role": "nha_thau",
+      "label": "Nha thau",
+      "acceptancePersona": false
+    },
+    {
+      "id": "consultant-01",
+      "fullName": "Le Minh Tu Van",
+      "email": "consultant@greennest.vn",
+      "role": "tu_van",
+      "label": "Tu van",
+      "acceptancePersona": false
+    },
+    {
+      "id": "hr-01",
+      "fullName": "Pham Nhan Su",
+      "email": "hr@greennest.vn",
+      "role": "hanh_chinh_nhan_su",
+      "label": "Hanh chinh nhan su",
+      "acceptancePersona": false
+    },
+    {
+      "id": "quality-01",
+      "fullName": "Do QA QC",
+      "email": "quality@greennest.vn",
+      "role": "qa_qc_chat_luong",
+      "label": "QA/QC",
+      "acceptancePersona": false
+    },
+    {
+      "id": "safety-01",
+      "fullName": "Nguyen An Toan",
+      "email": "safety@greennest.vn",
+      "role": "an_toan_lao_dong",
+      "label": "An toan lao dong",
+      "acceptancePersona": false
+    },
+    {
+      "id": "internal-audit-01",
+      "fullName": "Ho Kiem Toan",
+      "email": "internal.audit@greennest.vn",
+      "role": "kiem_toan_noi_bo",
+      "label": "Kiem toan noi bo",
+      "acceptancePersona": false
+    }
+  ],
+  "projectScenarios": [
+    {
+      "id": "demo-project-riverside",
+      "code": "GN-2026-001",
+      "name": "GreenNest Riverside",
+      "location": "TP. Thu Duc, TP.HCM",
+      "area": 12500,
+      "projectType": "Khu nha o thap tang",
+      "investor": "GreenNest Investment",
+      "status": "active",
+      "ownerId": "project-director-01",
+      "ownerName": "Hoang Gia Khanh",
+      "signal": "yellow"
+    },
+    {
+      "id": "demo-project-garden",
+      "code": "GN-2026-002",
+      "name": "GreenNest Garden",
+      "location": "Binh Duong",
+      "area": 8200,
+      "projectType": "Chung cu trung tang",
+      "investor": "GreenNest Investment",
+      "status": "planning",
+      "ownerId": "department-head-01",
+      "ownerName": "Le Quang Huy",
+      "signal": "red"
+    },
+    {
+      "id": "demo-project-skyline",
+      "code": "GN-2026-003",
+      "name": "GreenNest Skyline",
+      "location": "Da Nang",
+      "area": 16400,
+      "projectType": "Can ho cao tang",
+      "investor": "GreenNest Investment",
+      "status": "active",
+      "ownerId": "ceo-01",
+      "ownerName": "Dang Quoc Bao",
+      "signal": "green"
+    },
+    {
+      "id": "demo-project-axis23-lab",
+      "code": "GN-2026-004",
+      "name": "GreenNest Axis 2/3 Lab",
+      "location": "Dong Nai",
+      "area": 6200,
+      "projectType": "Du an placeholder module sau",
+      "investor": "GreenNest Innovation",
+      "status": "paused",
+      "ownerId": "executive-01",
+      "ownerName": "Tran Hoang Nam",
+      "signal": "yellow"
+    }
+  ],
+  "rolePermissionCatalog": {
+    "roles": [
+      {
+        "key": "super_admin",
+        "labelVi": "Chu tich/Super Admin",
+        "scope": "system",
+        "permissionKeys": [
+          "axis1.view",
+          "project.view",
+          "project.create",
+          "project.update",
+          "task.view",
+          "task.create",
+          "task.update",
+          "document.view",
+          "document.create",
+          "document.update",
+          "legal.view",
+          "legal.update",
+          "meeting.view",
+          "meeting.create",
+          "meeting.update",
+          "decision.create",
+          "finance.view",
+          "proposal.view",
+          "proposal.create",
+          "proposal.update",
+          "proposal.review",
+          "proposal.approve",
+          "proposal.reject",
+          "proposal.request_change",
+          "settings.manage",
+          "delegation.manage",
+          "user.view",
+          "audit.view",
+          "ai.use",
+          "ai.view_insight"
+        ]
+      },
+      {
+        "key": "admin",
+        "labelVi": "Admin smoke",
+        "scope": "system",
+        "permissionKeys": [
+          "axis1.view",
+          "project.view",
+          "project.create",
+          "project.update",
+          "task.view",
+          "task.create",
+          "task.update",
+          "document.view",
+          "document.create",
+          "document.update",
+          "legal.view",
+          "legal.update",
+          "meeting.view",
+          "meeting.create",
+          "meeting.update",
+          "decision.create",
+          "proposal.view",
+          "proposal.create",
+          "proposal.update",
+          "proposal.review",
+          "settings.manage",
+          "delegation.manage",
+          "user.view",
+          "audit.view",
+          "ai.use"
+        ]
+      },
+      {
+        "key": "tong_giam_doc",
+        "labelVi": "CEO",
+        "scope": "system",
+        "permissionKeys": [
+          "axis1.view",
+          "project.view",
+          "project.update",
+          "task.view",
+          "document.view",
+          "legal.view",
+          "meeting.view",
+          "meeting.create",
+          "decision.create",
+          "finance.view",
+          "proposal.view",
+          "proposal.approve",
+          "proposal.reject",
+          "proposal.request_change",
+          "delegation.manage",
+          "report.view",
+          "ai.use",
+          "ai.view_insight"
+        ]
+      },
+      {
+        "key": "giam_doc_du_an",
+        "labelVi": "Giam doc du an",
+        "scope": "project",
+        "permissionKeys": [
+          "axis1.view",
+          "project.view",
+          "project.update",
+          "task.view",
+          "task.create",
+          "task.update",
+          "document.view",
+          "document.create",
+          "document.update",
+          "legal.view",
+          "legal.update",
+          "meeting.view",
+          "meeting.create",
+          "decision.create",
+          "finance.view",
+          "proposal.view",
+          "proposal.create",
+          "proposal.update",
+          "proposal.review",
+          "report.view",
+          "ai.use"
+        ]
+      },
+      {
+        "key": "to_truong",
+        "labelVi": "Truong bo phan",
+        "scope": "project",
+        "permissionKeys": [
+          "project.view",
+          "task.view",
+          "task.create",
+          "task.update_own",
+          "document.view",
+          "legal.view",
+          "meeting.view",
+          "report.view",
+          "ai.use"
+        ]
+      },
+      {
+        "key": "thu_ky_tro_ly",
+        "labelVi": "Thu ky/Tro ly",
+        "scope": "system",
+        "permissionKeys": [
+          "project.view",
+          "task.view",
+          "task.create",
+          "task.update",
+          "document.view",
+          "document.create",
+          "document.update",
+          "legal.view",
+          "legal.update",
+          "meeting.view",
+          "meeting.create",
+          "meeting.update",
+          "decision.create",
+          "report.view",
+          "ai.use"
+        ]
+      },
+      {
+        "key": "viewer",
+        "labelVi": "Nguoi xem",
+        "scope": "system",
+        "permissionKeys": [
+          "project.view",
+          "task.view",
+          "document.view",
+          "legal.view",
+          "meeting.view",
+          "report.view"
+        ]
+      },
+      {
+        "key": "dau_tu_phat_trien",
+        "labelVi": "Dau tu phat trien",
+        "scope": "system",
+        "permissionKeys": [
+          "project.view",
+          "document.view",
+          "task.view",
+          "meeting.view",
+          "proposal.view",
+          "proposal.create",
+          "proposal.update",
+          "proposal.review",
+          "finance.view"
+        ]
+      },
+      {
+        "key": "quan_ly_tai_chinh",
+        "labelVi": "Quan ly tai chinh",
+        "scope": "system",
+        "permissionKeys": [
+          "project.view",
+          "task.view",
+          "document.view",
+          "meeting.view",
+          "proposal.view",
+          "proposal.approve",
+          "proposal.reject",
+          "proposal.request_change",
+          "finance.view"
+        ]
+      }
+    ],
+    "permissions": [
+      { "key": "axis1.view", "module": "axis1", "labelVi": "Xem truc 1", "actionType": "view" },
+      { "key": "project.view", "module": "project", "labelVi": "Xem du an", "actionType": "view" },
+      { "key": "project.create", "module": "project", "labelVi": "Tao du an", "actionType": "create" },
+      { "key": "project.update", "module": "project", "labelVi": "Cap nhat du an", "actionType": "update" },
+      { "key": "task.view", "module": "task", "labelVi": "Xem cong viec", "actionType": "view" },
+      { "key": "task.create", "module": "task", "labelVi": "Tao cong viec", "actionType": "create" },
+      { "key": "task.update", "module": "task", "labelVi": "Cap nhat cong viec", "actionType": "update" },
+      { "key": "task.update_own", "module": "task", "labelVi": "Cap nhat viec duoc giao", "actionType": "update" },
+      { "key": "document.view", "module": "document", "labelVi": "Xem ho so", "actionType": "view" },
+      { "key": "document.create", "module": "document", "labelVi": "Tao ho so", "actionType": "create" },
+      { "key": "document.update", "module": "document", "labelVi": "Cap nhat ho so", "actionType": "update" },
+      { "key": "legal.view", "module": "legal", "labelVi": "Xem phap ly", "actionType": "view" },
+      { "key": "legal.update", "module": "legal", "labelVi": "Cap nhat phap ly", "actionType": "update" },
+      { "key": "meeting.view", "module": "meeting", "labelVi": "Xem hop", "actionType": "view" },
+      { "key": "meeting.create", "module": "meeting", "labelVi": "Tao hop", "actionType": "create" },
+      { "key": "meeting.update", "module": "meeting", "labelVi": "Cap nhat hop", "actionType": "update" },
+      { "key": "decision.create", "module": "meeting", "labelVi": "Tao quyet dinh", "actionType": "create" },
+      { "key": "finance.view", "module": "finance", "labelVi": "Xem tai chinh nhay cam", "sensitive": true, "actionType": "view" },
+      { "key": "proposal.view", "module": "proposal", "labelVi": "Xem de xuat", "actionType": "view" },
+      { "key": "proposal.create", "module": "proposal", "labelVi": "Tao de xuat", "actionType": "create" },
+      { "key": "proposal.update", "module": "proposal", "labelVi": "Cap nhat de xuat", "actionType": "update" },
+      { "key": "proposal.review", "module": "proposal", "labelVi": "Tham dinh de xuat", "actionType": "update" },
+      { "key": "proposal.approve", "module": "proposal", "labelVi": "Duyet de xuat", "actionType": "approve" },
+      { "key": "proposal.reject", "module": "proposal", "labelVi": "Tu choi de xuat", "actionType": "approve" },
+      { "key": "proposal.request_change", "module": "proposal", "labelVi": "Yeu cau sua de xuat", "actionType": "approve" },
+      { "key": "report.view", "module": "report", "labelVi": "Xem bao cao", "actionType": "view" },
+      { "key": "report.create", "module": "report", "labelVi": "Tao bao cao", "actionType": "export" },
+      { "key": "settings.manage", "module": "admin", "labelVi": "Quan ly thiet lap", "sensitive": true, "actionType": "admin" },
+      { "key": "delegation.manage", "module": "delegation", "labelVi": "Quan ly uy quyen", "sensitive": true, "actionType": "admin" },
+      { "key": "user.view", "module": "admin", "labelVi": "Xem nguoi dung", "actionType": "view" },
+      { "key": "audit.view", "module": "admin", "labelVi": "Xem audit", "sensitive": true, "actionType": "audit" },
+      { "key": "ai.use", "module": "ai", "labelVi": "Dung AI", "actionType": "ai" },
+      { "key": "ai.view_insight", "module": "ai", "labelVi": "Xem insight AI", "actionType": "ai" }
+    ]
+  },
+  "scopeAssignments": [
+    {
+      "id": "scope-chairman-global",
+      "userId": "chairman-01",
+      "roleKey": "super_admin",
+      "permissionKeys": [
+        "project.view",
+        "task.view",
+        "document.view",
+        "legal.view",
+        "meeting.view",
+        "finance.view",
+        "proposal.view",
+        "proposal.approve",
+        "settings.manage",
+        "delegation.manage",
+        "audit.view"
+      ],
+      "scopeType": "global",
+      "active": true
+    },
+    {
+      "id": "scope-admin-global-smoke",
+      "userId": "mock-founder",
+      "roleKey": "admin",
+      "permissionKeys": [
+        "project.view",
+        "task.view",
+        "document.view",
+        "legal.view",
+        "meeting.view",
+        "finance.view",
+        "proposal.view",
+        "settings.manage",
+        "delegation.manage",
+        "audit.view"
+      ],
+      "scopeType": "global",
+      "active": true
+    },
+    {
+      "id": "scope-ceo-company-axis1",
+      "userId": "ceo-01",
+      "roleKey": "tong_giam_doc",
+      "axisId": "axis-1",
+      "permissionKeys": ["project.view", "task.view", "document.view", "legal.view", "finance.view", "proposal.view", "proposal.approve"],
+      "scopeType": "scoped",
+      "active": true
+    },
+    {
+      "id": "scope-director-riverside",
+      "userId": "project-director-01",
+      "roleKey": "giam_doc_du_an",
+      "projectId": "demo-project-riverside",
+      "axisId": "axis-1",
+      "permissionKeys": ["project.view", "task.view", "document.view", "legal.view", "finance.view", "proposal.view", "proposal.create", "proposal.review"],
+      "scopeType": "scoped",
+      "active": true
+    },
+    {
+      "id": "scope-department-head-garden",
+      "userId": "department-head-01",
+      "roleKey": "to_truong",
+      "projectId": "demo-project-garden",
+      "axisId": "axis-1",
+      "permissionKeys": ["project.view", "task.view", "document.view", "legal.view"],
+      "scopeType": "scoped",
+      "active": true
+    },
+    {
+      "id": "scope-assistant-riverside",
+      "userId": "assistant-01",
+      "roleKey": "thu_ky_tro_ly",
+      "projectId": "demo-project-riverside",
+      "axisId": "axis-1",
+      "permissionKeys": ["project.view", "task.view", "document.view", "meeting.view", "meeting.create"],
+      "scopeType": "scoped",
+      "active": true
+    },
+    {
+      "id": "scope-viewer-garden-readonly",
+      "userId": "viewer-01",
+      "roleKey": "viewer",
+      "projectId": "demo-project-garden",
+      "axisId": "axis-1",
+      "permissionKeys": ["project.view", "task.view", "document.view", "legal.view", "meeting.view"],
+      "scopeType": "scoped",
+      "active": true
+    }
+  ],
+  "policySettings": {
+    "approvalThresholds": [
+      {
+        "id": "policy-approval-under-20m",
+        "policyKey": "approval_under_20m",
+        "labelVi": "Duoi 20 trieu",
+        "targetType": "general",
+        "amountMin": 0,
+        "amountMax": 19999999.99,
+        "currency": "VND",
+        "approvalLevel": "DEPARTMENT_HEAD",
+        "approverRoleKey": "dau_tu_phat_trien",
+        "requiredPermissionKey": "proposal.review",
+        "escalateOnRiskLevels": ["high", "critical"],
+        "active": true,
+        "priority": 100
+      },
+      {
+        "id": "policy-approval-20m-200m",
+        "policyKey": "approval_20m_200m",
+        "labelVi": "20 trieu den 200 trieu",
+        "targetType": "general",
+        "amountMin": 20000000,
+        "amountMax": 199999999.99,
+        "currency": "VND",
+        "approvalLevel": "PROJECT_DIRECTOR",
+        "approverRoleKey": "quan_ly_tai_chinh",
+        "requiredPermissionKey": "proposal.approve",
+        "escalateOnRiskLevels": ["high", "critical"],
+        "active": true,
+        "priority": 110
+      },
+      {
+        "id": "policy-approval-200m-2b",
+        "policyKey": "approval_200m_2b",
+        "labelVi": "200 trieu den 2 ty",
+        "targetType": "general",
+        "amountMin": 200000000,
+        "amountMax": 1999999999.99,
+        "currency": "VND",
+        "approvalLevel": "CEO",
+        "approverRoleKey": "tong_giam_doc",
+        "requiredPermissionKey": "proposal.approve",
+        "escalateOnRiskLevels": ["critical"],
+        "active": true,
+        "priority": 120
+      },
+      {
+        "id": "policy-approval-over-2b",
+        "policyKey": "approval_over_2b",
+        "labelVi": "Tren 2 ty",
+        "targetType": "general",
+        "amountMin": 2000000000,
+        "currency": "VND",
+        "approvalLevel": "CHAIRMAN",
+        "approverRoleKey": "super_admin",
+        "requiredPermissionKey": "proposal.approve",
+        "escalateOnRiskLevels": ["high", "critical"],
+        "active": true,
+        "priority": 130
+      }
+    ],
+    "riskGroups": [
+      {
+        "id": "risk-group-legal",
+        "riskKey": "legal",
+        "labelVi": "Phap ly",
+        "description": "Rui ro phap ly, ho so dat, chap thuan va tranh chap.",
+        "defaultSeverity": "high",
+        "moduleId": "legal",
+        "sortOrder": 10,
+        "isDefault": true,
+        "active": true
+      },
+      {
+        "id": "risk-group-approval",
+        "riskKey": "approval",
+        "labelVi": "Approval",
+        "description": "Rui ro cham hoac vuot nguong phe duyet.",
+        "defaultSeverity": "medium",
+        "moduleId": "proposal",
+        "sortOrder": 30,
+        "isDefault": true,
+        "active": true
+      },
+      {
+        "id": "risk-group-finance",
+        "riskKey": "finance",
+        "labelVi": "Tai chinh",
+        "description": "Rui ro dong tien, ngan sach, thanh toan hoac vuot chi phi.",
+        "defaultSeverity": "high",
+        "moduleId": "finance",
+        "sortOrder": 50,
+        "isDefault": true,
+        "active": true
+      },
+      {
+        "id": "risk-group-missing-document",
+        "riskKey": "missing_document",
+        "labelVi": "Ho so thieu",
+        "description": "Rui ro thieu ho so, tai lieu hoac bang chung bat buoc.",
+        "defaultSeverity": "medium",
+        "moduleId": "document",
+        "sortOrder": 60,
+        "isDefault": true,
+        "active": true
+      }
+    ]
+  },
+  "leadershipDelegations": [
+    {
+      "id": "delegation-assistant-ceo-riverside-proposal-create",
+      "principalUserId": "ceo-01",
+      "delegateUserId": "assistant-01",
+      "projectId": "demo-project-riverside",
+      "moduleId": "proposal",
+      "actionKeys": ["proposal.create"],
+      "active": true,
+      "startsAt": "2026-05-01T00:00:00.000Z",
+      "note": "Thu ky tao/submit de xuat thay CEO trong scope Riverside."
+    },
+    {
+      "id": "delegation-assistant-ceo-expired-negative",
+      "principalUserId": "ceo-01",
+      "delegateUserId": "assistant-01",
+      "projectId": "demo-project-garden",
+      "moduleId": "proposal",
+      "actionKeys": ["proposal.create"],
+      "active": true,
+      "startsAt": "2026-01-01T00:00:00.000Z",
+      "endsAt": "2026-03-31T23:59:59.000Z",
+      "note": "Negative fixture: expired delegation."
+    }
+  ]
+}

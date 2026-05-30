@@ -1,0 +1,1525 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GREENNEST BUILDFLOW - UX Design Directions</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-soft: #f1f5f9;
+        --border: #e5e7eb;
+        --text: #111827;
+        --muted: #4b5563;
+        --subtle: #6b7280;
+        --primary: #166534;
+        --primary-2: #15803d;
+        --info: #0284c7;
+        --warning: #d97706;
+        --danger: #dc2626;
+        --success: #16a34a;
+        --neutral: #64748b;
+        --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.45;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 264px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid var(--border);
+        background: #ffffff;
+        padding: 18px;
+        overflow-y: auto;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 8px;
+        background: #dcfce7;
+        color: var(--primary);
+        font-weight: 800;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .brand span {
+        color: var(--subtle);
+        font-size: 12px;
+      }
+
+      .nav-section {
+        margin-top: 18px;
+      }
+
+      .nav-title {
+        margin: 0 0 8px;
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .direction-button {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 9px 10px;
+        text-align: left;
+      }
+
+      .direction-button:hover,
+      .direction-button.active {
+        border-color: #bbf7d0;
+        background: #f0fdf4;
+        color: var(--primary);
+      }
+
+      .direction-button span {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .main {
+        min-width: 0;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(248, 250, 252, 0.94);
+        padding: 14px 22px;
+        backdrop-filter: blur(12px);
+      }
+
+      .topbar h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.2;
+      }
+
+      .topbar p {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill,
+      .chip,
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+        min-height: 28px;
+        padding: 5px 10px;
+        white-space: nowrap;
+      }
+
+      .badge.danger {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #991b1b;
+      }
+
+      .badge.warning {
+        border-color: #fed7aa;
+        background: #fff7ed;
+        color: #9a3412;
+      }
+
+      .badge.success {
+        border-color: #bbf7d0;
+        background: #f0fdf4;
+        color: #166534;
+      }
+
+      .badge.info {
+        border-color: #bae6fd;
+        background: #f0f9ff;
+        color: #075985;
+      }
+
+      .content {
+        padding: 22px;
+      }
+
+      .direction {
+        display: none;
+      }
+
+      .direction.active {
+        display: block;
+      }
+
+      .direction-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .summary,
+      .panel,
+      .metric,
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .summary {
+        padding: 18px;
+      }
+
+      .summary h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .summary p {
+        max-width: 780px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .fit-list {
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+      }
+
+      .fit-list strong {
+        font-size: 13px;
+      }
+
+      .fit-list span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 16px;
+        min-height: 640px;
+      }
+
+      .workspace.full {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid.cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid.cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .metric {
+        min-height: 108px;
+        padding: 14px;
+      }
+
+      .metric-label {
+        color: var(--subtle);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .metric-value {
+        margin-top: 8px;
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .metric-note {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .panel {
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        padding: 12px 14px;
+      }
+
+      .panel-head h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .panel-body {
+        padding: 14px;
+      }
+
+      .queue {
+        display: grid;
+        gap: 10px;
+      }
+
+      .queue-item {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        padding: 11px;
+      }
+
+      .queue-item:hover {
+        border-color: #86efac;
+        box-shadow: 0 6px 16px rgba(22, 101, 52, 0.08);
+      }
+
+      .queue-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .queue-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .queue-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: var(--subtle);
+        font-size: 12px;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .heatmap {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+      }
+
+      .heat {
+        min-height: 54px;
+        border-radius: 6px;
+        color: #111827;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .h1 {
+        background: #dcfce7;
+      }
+
+      .h2 {
+        background: #fef3c7;
+      }
+
+      .h3 {
+        background: #fed7aa;
+      }
+
+      .h4 {
+        background: #fecaca;
+      }
+
+      .chart {
+        display: grid;
+        gap: 9px;
+      }
+
+      .bar {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr) 44px;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .bar-track {
+        height: 9px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: var(--primary-2);
+      }
+
+      .bar-fill.warning {
+        background: var(--warning);
+      }
+
+      .bar-fill.danger {
+        background: var(--danger);
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        gap: 12px;
+      }
+
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .time {
+        color: var(--subtle);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .event {
+        border-left: 3px solid var(--primary);
+        padding-left: 10px;
+      }
+
+      .event strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .event span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      tr:hover td {
+        background: #f9fafb;
+      }
+
+      .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .btn {
+        min-height: 32px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 750;
+        padding: 7px 10px;
+      }
+
+      .btn.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .btn:hover {
+        border-color: #86efac;
+      }
+
+      .ai-panel {
+        border-left: 3px solid var(--info);
+        background: #f0f9ff;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .comparison {
+        margin-top: 16px;
+      }
+
+      .comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .comparison-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+      }
+
+      .comparison-card h4 {
+        margin: 0 0 6px;
+        font-size: 13px;
+      }
+
+      .comparison-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 1100px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .nav {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .workspace,
+        .direction-header {
+          grid-template-columns: 1fr;
+        }
+
+        .grid.cols-3,
+        .grid.cols-4,
+        .comparison-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .content {
+          padding: 14px;
+        }
+
+        .grid.cols-2,
+        .grid.cols-3,
+        .grid.cols-4,
+        .split,
+        .comparison-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-value {
+          font-size: 24px;
+        }
+
+        .table-wrap {
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="nav">
+        <div class="brand">
+          <div class="brand-mark">GN</div>
+          <div>
+            <strong>GREENNEST BUILDFLOW</strong>
+            <span>UX direction showcase</span>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <p class="nav-title">Hướng thiết kế</p>
+          <button class="direction-button active" data-target="d1">
+            Executive Command Center <span>01</span>
+          </button>
+          <button class="direction-button" data-target="d2">
+            Operations Control Room <span>02</span>
+          </button>
+          <button class="direction-button" data-target="d3">
+            Project War Room <span>03</span>
+          </button>
+          <button class="direction-button" data-target="d4">
+            Department Workflow Board <span>04</span>
+          </button>
+          <button class="direction-button" data-target="d5">
+            Secretary Briefing Desk <span>05</span>
+          </button>
+          <button class="direction-button" data-target="d6">
+            Strategic Board View <span>06</span>
+          </button>
+        </div>
+
+        <div class="nav-section">
+          <p class="nav-title">Tiêu chí so sánh</p>
+          <div class="fit-list">
+            <div>
+              <strong>Khoa học</strong><br />
+              <span>Phân cấp rõ, ít nhiễu, dữ liệu có nguồn.</span>
+            </div>
+            <div>
+              <strong>Dễ nhìn</strong><br />
+              <span>Ưu tiên, trạng thái và hành động nổi bật.</span>
+            </div>
+            <div>
+              <strong>Đúng vai trò</strong><br />
+              <span>Workspace khác nhau cho Chairman, CEO, Project Director.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1>Design Direction Mockups</h1>
+            <p>Khám phá 6 hướng UI cho workspace điều hành mới.</p>
+          </div>
+          <div class="toolbar">
+            <span class="pill">Web responsive</span>
+            <span class="pill">Tailwind + shadcn/ui</span>
+            <span class="pill">Vietnamese-first</span>
+          </div>
+        </header>
+
+        <div class="content">
+          <section id="d1" class="direction active">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>01. Executive Command Center</h2>
+                <p>
+                  Hướng khuyến nghị cho Chairman và CEO: KPI strip ở trên,
+                  risk/approval queue ở giữa, timeline và AI copilot ở bên
+                  phải. Phù hợp nhất với mục tiêu dễ nhìn, khoa học, ra quyết
+                  định nhanh.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>Chairman Workspace, CEO Workspace</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Ưu tiên rõ, drill-down tốt, giữ nhịp vận hành hằng ngày.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <div class="grid">
+                <div class="grid cols-4">
+                  <div class="metric">
+                    <div class="metric-label">Dự án trong scope</div>
+                    <div class="metric-value">38</div>
+                    <div class="metric-note">5 đỏ, 11 vàng, 22 xanh</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Approval vượt ngưỡng</div>
+                    <div class="metric-value">12</div>
+                    <div class="metric-note">4 quá hạn trên 5 ngày</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Dòng tiền đang chờ duyệt</div>
+                    <div class="metric-value">86.4B</div>
+                    <div class="metric-note">Hiển thị theo quyền tài chính</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Risk nghiêm trọng</div>
+                    <div class="metric-value">7</div>
+                    <div class="metric-note">3 pháp lý, 2 quy hoạch</div>
+                  </div>
+                </div>
+
+                <div class="split">
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Top vấn đề nguy hiểm</h3>
+                      <span class="badge danger">Cần xử lý</span>
+                    </div>
+                    <div class="panel-body queue">
+                      <div class="queue-item">
+                        <div class="queue-top">
+                          <p class="queue-title">Dự án An Phú bị chặn hồ sơ pháp lý</p>
+                          <span class="badge danger">Đỏ</span>
+                        </div>
+                        <div class="queue-meta">
+                          <span>Owner: Legal Lead</span>
+                          <span>Deadline: Hôm nay</span>
+                          <span>Next: Escalate CEO</span>
+                        </div>
+                      </div>
+                      <div class="queue-item">
+                        <div class="queue-top">
+                          <p class="queue-title">Approval chi phí tư vấn vượt ngưỡng</p>
+                          <span class="badge warning">Quá hạn</span>
+                        </div>
+                        <div class="queue-meta">
+                          <span>86.4B</span>
+                          <span>Chờ Chairman</span>
+                          <span>Audit sẵn sàng</span>
+                        </div>
+                      </div>
+                      <div class="queue-item">
+                        <div class="queue-top">
+                          <p class="queue-title">Risk quy hoạch tăng từ vàng sang đỏ</p>
+                          <span class="badge danger">Risk tăng</span>
+                        </div>
+                        <div class="queue-meta">
+                          <span>Dự án Long Thành</span>
+                          <span>Cần họp chiến lược</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Risk map</h3>
+                      <span class="badge info">Drill-down</span>
+                    </div>
+                    <div class="panel-body">
+                      <div class="heatmap">
+                        <div class="heat h1">1</div>
+                        <div class="heat h1">2</div>
+                        <div class="heat h2">3</div>
+                        <div class="heat h3">4</div>
+                        <div class="heat h4">5</div>
+                        <div class="heat h1">2</div>
+                        <div class="heat h2">4</div>
+                        <div class="heat h3">6</div>
+                        <div class="heat h4">7</div>
+                        <div class="heat h4">9</div>
+                        <div class="heat h2">3</div>
+                        <div class="heat h3">5</div>
+                        <div class="heat h3">6</div>
+                        <div class="heat h4">8</div>
+                        <div class="heat h4">11</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Dự án đỏ</th>
+                        <th>Lý do</th>
+                        <th>Owner</th>
+                        <th>Next action</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>An Phú</td>
+                        <td>Thiếu văn bản pháp lý chặn bước tiếp theo</td>
+                        <td>Legal Lead</td>
+                        <td>Họp CEO + Legal</td>
+                        <td><span class="badge danger">Đỏ</span></td>
+                      </tr>
+                      <tr>
+                        <td>Long Thành</td>
+                        <td>Risk quy hoạch vượt ngưỡng</td>
+                        <td>Planning Lead</td>
+                        <td>Trình Chairman</td>
+                        <td><span class="badge danger">Đỏ</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside class="grid">
+                <div class="panel ai-panel">
+                  <div class="panel-head">
+                    <h3>Executive AI Copilot</h3>
+                    <span class="badge info">Draft</span>
+                  </div>
+                  <div class="panel-body">
+                    <p class="muted">
+                      Gợi ý hôm nay: xử lý approval chi phí tư vấn trước,
+                      sau đó mở cuộc họp risk pháp lý An Phú.
+                    </p>
+                    <div class="action-row">
+                      <button class="btn primary">Xem nguồn</button>
+                      <button class="btn">Tạo agenda</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <h3>Executive Timeline</h3>
+                    <span class="badge success">Live</span>
+                  </div>
+                  <div class="panel-body timeline">
+                    <div class="timeline-item">
+                      <div class="time">08:20</div>
+                      <div class="event">
+                        <strong>Approval vượt ngưỡng được submit</strong>
+                        <span>CFO gửi Chairman review</span>
+                      </div>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">09:10</div>
+                      <div class="event">
+                        <strong>Risk An Phú chuyển đỏ</strong>
+                        <span>Legal Lead cập nhật blocker</span>
+                      </div>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">10:30</div>
+                      <div class="event">
+                        <strong>Meeting chiến lược được đề xuất</strong>
+                        <span>AI tạo agenda draft</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="d2" class="direction">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>02. Operations Control Room</h2>
+                <p>
+                  Hướng dành cho CEO: đặt vận hành tổng, resource allocation,
+                  performance analytics và escalation vào một bề mặt điều phối.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>CEO Workspace</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Điều phối liên dự án, nhìn bottleneck, theo dõi queue.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <div class="grid">
+                <div class="grid cols-3">
+                  <div class="metric">
+                    <div class="metric-label">Tiến độ tổng</div>
+                    <div class="metric-value">72%</div>
+                    <div class="metric-note">Tăng 4% trong tháng</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Resource overload</div>
+                    <div class="metric-value">6</div>
+                    <div class="metric-note">3 phòng ban đang quá tải</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Escalation mở</div>
+                    <div class="metric-value">18</div>
+                    <div class="metric-note">7 cần CEO trong 48h</div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <h3>Resource allocation</h3>
+                    <span class="badge warning">Có bottleneck</span>
+                  </div>
+                  <div class="panel-body chart">
+                    <div class="bar">
+                      <span>Pháp lý</span>
+                      <div class="bar-track"><div class="bar-fill danger" style="width: 92%"></div></div>
+                      <strong>92%</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Quy hoạch</span>
+                      <div class="bar-track"><div class="bar-fill warning" style="width: 78%"></div></div>
+                      <strong>78%</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Thiết kế</span>
+                      <div class="bar-track"><div class="bar-fill" style="width: 64%"></div></div>
+                      <strong>64%</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Tài chính</span>
+                      <div class="bar-track"><div class="bar-fill warning" style="width: 81%"></div></div>
+                      <strong>81%</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Approval queue</th>
+                        <th>Scope</th>
+                        <th>SLA</th>
+                        <th>Owner</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Phê duyệt khảo sát bổ sung</td>
+                        <td>Trục 1 / Dự án An Phú</td>
+                        <td><span class="badge warning">12h còn lại</span></td>
+                        <td>Investment Director</td>
+                        <td><button class="btn">Mở</button></td>
+                      </tr>
+                      <tr>
+                        <td>Chuyển cấp blocker pháp lý</td>
+                        <td>Trục 1 / Long Thành</td>
+                        <td><span class="badge danger">Quá hạn</span></td>
+                        <td>Legal Lead</td>
+                        <td><button class="btn">Drill-down</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside class="panel">
+                <div class="panel-head">
+                  <h3>Cross-project coordination</h3>
+                  <span class="badge info">CEO</span>
+                </div>
+                <div class="panel-body queue">
+                  <div class="queue-item">
+                    <p class="queue-title">3 dự án cùng chờ Legal Lead</p>
+                    <div class="queue-meta">
+                      <span>Gợi ý: phân bổ thêm reviewer</span>
+                    </div>
+                  </div>
+                  <div class="queue-item">
+                    <p class="queue-title">2 approval cần Finance + CEO</p>
+                    <div class="queue-meta">
+                      <span>Gợi ý: xử lý theo giá trị giảm dần</span>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="d3" class="direction">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>03. Project War Room</h2>
+                <p>
+                  Hướng dành cho Project Director: tập trung vào project được
+                  giao, Gantt timeline, cost, deadline heatmap, approval project
+                  và task priority.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>Project Director Workspace</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Rõ timeline, rõ deadline, rõ việc ưu tiên.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <div class="grid">
+                <div class="grid cols-4">
+                  <div class="metric">
+                    <div class="metric-label">Project KPI</div>
+                    <div class="metric-value">68%</div>
+                    <div class="metric-note">Tiến độ hoàn thành</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Cost variance</div>
+                    <div class="metric-value">+7%</div>
+                    <div class="metric-note">Cần Finance review</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Task priority</div>
+                    <div class="metric-value">14</div>
+                    <div class="metric-note">5 deadline tuần này</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Risk project</div>
+                    <div class="metric-value">4</div>
+                    <div class="metric-note">1 nghiêm trọng</div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <h3>Gantt Timeline</h3>
+                    <span class="badge info">Dự án An Phú</span>
+                  </div>
+                  <div class="panel-body chart">
+                    <div class="bar">
+                      <span>Khảo sát</span>
+                      <div class="bar-track"><div class="bar-fill" style="width: 100%"></div></div>
+                      <strong>Done</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Pháp lý</span>
+                      <div class="bar-track"><div class="bar-fill danger" style="width: 48%"></div></div>
+                      <strong>Blocked</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Quy hoạch</span>
+                      <div class="bar-track"><div class="bar-fill warning" style="width: 61%"></div></div>
+                      <strong>Risk</strong>
+                    </div>
+                    <div class="bar">
+                      <span>Approval</span>
+                      <div class="bar-track"><div class="bar-fill" style="width: 38%"></div></div>
+                      <strong>Open</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="split">
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Deadline heatmap</h3>
+                      <span class="badge warning">Tuần này</span>
+                    </div>
+                    <div class="panel-body heatmap">
+                      <div class="heat h1">T2</div>
+                      <div class="heat h2">T3</div>
+                      <div class="heat h4">T4</div>
+                      <div class="heat h3">T5</div>
+                      <div class="heat h2">T6</div>
+                    </div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Approval project</h3>
+                      <span class="badge danger">2 quá hạn</span>
+                    </div>
+                    <div class="panel-body queue">
+                      <div class="queue-item">
+                        <p class="queue-title">Duyệt thuê tư vấn quy hoạch</p>
+                        <div class="queue-meta">
+                          <span>Chờ CEO</span>
+                          <span>Quá hạn 2 ngày</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="panel">
+                <div class="panel-head">
+                  <h3>Task priority</h3>
+                  <span class="badge info">Project Director</span>
+                </div>
+                <div class="panel-body queue">
+                  <div class="queue-item">
+                    <p class="queue-title">Bổ sung hồ sơ pháp lý còn thiếu</p>
+                    <div class="queue-meta">
+                      <span>Owner: Legal Lead</span>
+                      <span>Hôm nay</span>
+                    </div>
+                  </div>
+                  <div class="queue-item">
+                    <p class="queue-title">Chốt phương án quy hoạch 1/500</p>
+                    <div class="queue-meta">
+                      <span>Owner: Planning Lead</span>
+                      <span>Thứ 5</span>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="d4" class="direction">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>04. Department Workflow Board</h2>
+                <p>
+                  Hướng dành cho trưởng bộ phận: hồ sơ chuyên môn, checklist,
+                  workflow tracking, approval chuyên môn và risk chuyên môn nằm
+                  cùng một board vận hành.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>Legal Lead, Planning Lead, Design Lead, Finance Lead</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Checklist rõ, queue xử lý rõ, AI hỗ trợ đúng ngữ cảnh.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <div class="grid">
+                <div class="grid cols-3">
+                  <div class="metric">
+                    <div class="metric-label">Hồ sơ đang xử lý</div>
+                    <div class="metric-value">46</div>
+                    <div class="metric-note">9 thiếu thông tin</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Checklist blocked</div>
+                    <div class="metric-value">8</div>
+                    <div class="metric-note">3 cần lãnh đạo</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Approval chuyên môn</div>
+                    <div class="metric-value">15</div>
+                    <div class="metric-note">4 quá hạn</div>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Checklist</th>
+                        <th>Dự án</th>
+                        <th>Owner</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Văn bản quy hoạch liên quan</td>
+                        <td>An Phú</td>
+                        <td>Planning Lead</td>
+                        <td>Hôm nay</td>
+                        <td><span class="badge danger">Thiếu</span></td>
+                      </tr>
+                      <tr>
+                        <td>Hồ sơ PCCC sơ bộ</td>
+                        <td>Long Thành</td>
+                        <td>Legal Lead</td>
+                        <td>Thứ 6</td>
+                        <td><span class="badge warning">Đang xử lý</span></td>
+                      </tr>
+                      <tr>
+                        <td>Bản vẽ concept</td>
+                        <td>Đông Sài Gòn</td>
+                        <td>Design Lead</td>
+                        <td>Tuần sau</td>
+                        <td><span class="badge success">Đủ</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside class="panel ai-panel">
+                <div class="panel-head">
+                  <h3>Checklist AI</h3>
+                  <span class="badge info">Gợi ý</span>
+                </div>
+                <div class="panel-body">
+                  <p class="muted">
+                    AI phát hiện hồ sơ An Phú thiếu văn bản quy hoạch và chưa
+                    có owner xác minh. Đề xuất tạo task cho Planning Lead.
+                  </p>
+                  <div class="action-row">
+                    <button class="btn primary">Tạo task draft</button>
+                    <button class="btn">Xem citation</button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="d5" class="direction">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>05. Secretary Briefing Desk</h2>
+                <p>
+                  Hướng dành cho thư ký/trợ lý: lịch lãnh đạo, hồ sơ trình, tài
+                  liệu họp, reminder và AI Meeting Preparation nằm trong một bàn
+                  làm việc hỗ trợ điều hành.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>Secretary / Assistant Workspace</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Chuẩn bị họp nhanh, giảm hỏi lại, rõ phạm vi ủy quyền.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <div class="grid">
+                <div class="grid cols-3">
+                  <div class="metric">
+                    <div class="metric-label">Lịch lãnh đạo hôm nay</div>
+                    <div class="metric-value">7</div>
+                    <div class="metric-note">2 cuộc họp chiến lược</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Hồ sơ trình</div>
+                    <div class="metric-value">11</div>
+                    <div class="metric-note">3 thiếu tài liệu</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Reminder</div>
+                    <div class="metric-value">18</div>
+                    <div class="metric-note">5 đến hạn hôm nay</div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <h3>Lịch và tài liệu họp</h3>
+                    <span class="badge warning">Cần chuẩn bị</span>
+                  </div>
+                  <div class="panel-body timeline">
+                    <div class="timeline-item">
+                      <div class="time">09:00</div>
+                      <div class="event">
+                        <strong>Họp risk An Phú</strong>
+                        <span>Thiếu 2 tài liệu, agenda đang draft</span>
+                      </div>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">14:00</div>
+                      <div class="event">
+                        <strong>Review approval chi phí tư vấn</strong>
+                        <span>Đã đủ hồ sơ, chờ Chairman</span>
+                      </div>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">16:30</div>
+                      <div class="event">
+                        <strong>Briefing CEO</strong>
+                        <span>AI summary đã tạo, cần kiểm tra citation</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="grid">
+                <div class="panel ai-panel">
+                  <div class="panel-head">
+                    <h3>AI Meeting Preparation</h3>
+                    <span class="badge info">Draft</span>
+                  </div>
+                  <div class="panel-body">
+                    <p class="muted">
+                      Agenda đề xuất: 1. Blocker pháp lý, 2. Quyết định người
+                      chịu trách nhiệm, 3. Deadline bổ sung hồ sơ, 4. Follow-up.
+                    </p>
+                    <div class="action-row">
+                      <button class="btn primary">Tạo agenda</button>
+                      <button class="btn">Xem nguồn</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <h3>Approval pending</h3>
+                    <span class="badge warning">Theo ủy quyền</span>
+                  </div>
+                  <div class="panel-body queue">
+                    <div class="queue-item">
+                      <p class="queue-title">Hồ sơ trình Chairman</p>
+                      <div class="queue-meta">
+                        <span>Đủ tài liệu</span>
+                        <span>Không có quyền approve thay</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="d6" class="direction">
+            <div class="direction-header">
+              <div class="summary">
+                <h2>06. Strategic Board View</h2>
+                <p>
+                  Hướng nghiêng về chiến lược cấp cao: ít bảng hơn, nhiều
+                  summary, chiến lược, bổ nhiệm, phân quyền cấp cao và quyết
+                  định lớn. Dùng tốt như view phụ cho Chairman, không nên là
+                  workspace mặc định duy nhất.
+                </p>
+              </div>
+              <div class="panel">
+                <div class="fit-list">
+                  <div>
+                    <strong>Phù hợp nhất cho:</strong><br />
+                    <span>Chairman strategic review</span>
+                  </div>
+                  <div>
+                    <strong>Điểm mạnh:</strong><br />
+                    <span>Nhìn chiến lược tốt, tránh task nhỏ, hợp họp cấp cao.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace full">
+              <div class="grid">
+                <div class="grid cols-3">
+                  <div class="metric">
+                    <div class="metric-label">Chiến lược cần quyết</div>
+                    <div class="metric-value">5</div>
+                    <div class="metric-note">2 liên quan dòng tiền</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Bổ nhiệm/phân quyền</div>
+                    <div class="metric-value">9</div>
+                    <div class="metric-note">4 thay đổi cấp cao</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">Dự án đỏ cấp tập đoàn</div>
+                    <div class="metric-value">5</div>
+                    <div class="metric-note">Cần executive drill-down</div>
+                  </div>
+                </div>
+
+                <div class="split">
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Strategic Dashboard</h3>
+                      <span class="badge info">Chairman</span>
+                    </div>
+                    <div class="panel-body queue">
+                      <div class="queue-item">
+                        <div class="queue-top">
+                          <p class="queue-title">Có nên chuyển Long Thành sang giai đoạn tiếp theo?</p>
+                          <span class="badge warning">Cần quyết</span>
+                        </div>
+                        <div class="queue-meta">
+                          <span>3 blockers</span>
+                          <span>2 approvals vượt ngưỡng</span>
+                          <span>AI summary draft</span>
+                        </div>
+                      </div>
+                      <div class="queue-item">
+                        <div class="queue-top">
+                          <p class="queue-title">Bổ nhiệm Project Director cho An Phú</p>
+                          <span class="badge info">Phân quyền</span>
+                        </div>
+                        <div class="queue-meta">
+                          <span>Cần audit</span>
+                          <span>Scope: Trục 1</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="panel">
+                    <div class="panel-head">
+                      <h3>Executive Drill-down</h3>
+                      <span class="badge success">Nguồn rõ</span>
+                    </div>
+                    <div class="panel-body">
+                      <p class="muted">
+                        Mỗi quyết định chiến lược liên kết tới risk, approval,
+                        meeting minutes, dòng tiền và audit trail. View này ưu
+                        tiên quyết định lớn, không đưa task nhỏ lên mặc định.
+                      </p>
+                      <div class="action-row">
+                        <button class="btn primary">Mở decision pack</button>
+                        <button class="btn">Xem audit</button>
+                        <button class="btn">Tạo họp chiến lược</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="comparison">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Khuyến nghị lựa chọn</h3>
+                <span class="badge success">Recommended</span>
+              </div>
+              <div class="panel-body">
+                <div class="comparison-grid">
+                  <div class="comparison-card">
+                    <h4>Base direction</h4>
+                    <p>
+                      Chọn 01 Executive Command Center làm nền chung cho
+                      Chairman và CEO vì cân bằng tốt giữa KPI, risk, approval,
+                      AI và timeline.
+                    </p>
+                  </div>
+                  <div class="comparison-card">
+                    <h4>Role variants</h4>
+                    <p>
+                      Dùng 03, 04, 05 làm biến thể workspace theo vai trò:
+                      Project Director, Department Head, Secretary/Assistant.
+                    </p>
+                  </div>
+                  <div class="comparison-card">
+                    <h4>Strategic mode</h4>
+                    <p>
+                      Dùng 06 như chế độ review chiến lược cho Chairman, không
+                      dùng thay thế hoàn toàn dashboard vận hành hằng ngày.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const buttons = Array.from(document.querySelectorAll(".direction-button"));
+      const sections = Array.from(document.querySelectorAll(".direction"));
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.target;
+          buttons.forEach((item) => item.classList.remove("active"));
+          sections.forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          document.getElementById(target).classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>

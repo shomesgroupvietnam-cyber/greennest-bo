@@ -20,17 +20,23 @@ The project has moved beyond a simple MVP checklist. Documentation is now separa
 1. [DOCUMENTATION_STANDARD.md](./DOCUMENTATION_STANDARD.md)  
    Defines source-of-truth rules and prevents overlapping docs.
 
-2. [../blueprint/README.md](../blueprint/README.md)  
+2. [BMAD_DOCUMENTATION_MAP.md](./BMAD_DOCUMENTATION_MAP.md)
+   Defines how BMad artifacts map to canonical product and engineering documents.
+
+3. [../blueprint/README.md](../blueprint/README.md)
    Index for product, domain, architecture, data, API, roles, AI and roadmap.
 
-3. [product/PHASE_STATUS.md](./product/PHASE_STATUS.md)  
+4. [product/PHASE_STATUS.md](./product/PHASE_STATUS.md)
    Current implementation status, completed phases and known production blockers.
 
-4. [architecture/ARCHITECTURE_OVERVIEW.md](./architecture/ARCHITECTURE_OVERVIEW.md)  
+5. [architecture/ARCHITECTURE_OVERVIEW.md](./architecture/ARCHITECTURE_OVERVIEW.md)
    Finalized technical architecture overview.
 
-5. [design/DESIGN_STANDARD.md](./design/DESIGN_STANDARD.md)  
+6. [design/DESIGN_STANDARD.md](./design/DESIGN_STANDARD.md)
    Finalized product UI/UX and role workspace design rules.
+
+7. [context/README.md](./context/README.md)
+   Lean AI-agent context packs for implementation hot spots.
 
 ## 3. Current Status Snapshot
 
@@ -45,6 +51,7 @@ This status register is the canonical current-state summary. The roadmap explain
 | Topic | Canonical Document |
 | --- | --- |
 | Documentation ownership | `docs/DOCUMENTATION_STANDARD.md` |
+| BMad artifact routing | `docs/BMAD_DOCUMENTATION_MAP.md` |
 | Current phase status | `docs/product/PHASE_STATUS.md` |
 | Product vision | `blueprint/00-product-vision.md` |
 | Domain model | `blueprint/01-domain-blueprint.md` |
@@ -64,6 +71,7 @@ This status register is the canonical current-state summary. The roadmap explain
 | Tech stack | `docs/architecture/TECH_STACK.md` |
 | Architecture overview | `docs/architecture/ARCHITECTURE_OVERVIEW.md` |
 | Design standard | `docs/design/DESIGN_STANDARD.md` |
+| AI agent context packs | `docs/context/README.md` |
 | Deployment | `docs/deployment/README.md` |
 | Supabase validation | `docs/deployment/SUPABASE_STAGING_VALIDATION.md` |
 
@@ -78,7 +86,16 @@ The root files are retained for sprint history and MVP execution reference. They
 
 Do not treat them as the long-term source of truth when they conflict with `blueprint/` or `docs/`. If they disagree, follow `docs/DOCUMENTATION_STANDARD.md`, `docs/product/PHASE_STATUS.md` and the relevant `blueprint/` document.
 
-## 6. Current Strategic Direction
+## 6. BMad Workflow
+
+BMad artifacts live under `_bmad-output/`:
+
+- `_bmad-output/planning-artifacts/` for requirement intake, PRD/UX/architecture planning, epics and readiness checks.
+- `_bmad-output/implementation-artifacts/` for implementation specs, story work, checkpoints, investigations and reviews.
+
+Use [BMAD_DOCUMENTATION_MAP.md](./BMAD_DOCUMENTATION_MAP.md) before creating or moving documentation.
+
+## 7. Current Strategic Direction
 
 GreenNest BuildFlow is not only a management app. It is being shaped as:
 

@@ -52,9 +52,11 @@ This folder is the long-term source of truth for GreenNest BuildFlow. It is broa
 ## How To Use
 
 - Start from `docs/DOCS_INDEX.md` for the full documentation map.
+- Use `docs/BMAD_DOCUMENTATION_MAP.md` to route daily requirement changes into BMad artifacts before implementation.
 - Use this folder for high-level and scalable decisions.
 - Use root-level `requirement.md`, `design.md`, `architecture.md`, and `milestone.md` only as MVP execution snapshots.
 - Use `docs/DOCUMENTATION_STANDARD.md` to decide where new documentation belongs.
+- Use `_bmad-output/planning-artifacts/` for working PRD/UX/architecture/epic artifacts and `_bmad-output/implementation-artifacts/` for specs, stories and reviews.
 - When implementation conflicts with these documents, update the blueprint intentionally instead of letting code drift silently.
 - Agents must read this index first, then open only the relevant document for their current task.
 

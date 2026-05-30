@@ -1,10 +1,11 @@
 import type { PermissionUser } from "@/lib/permissions/can";
-import { can } from "@/lib/permissions/can";
+import { can, normalizePermissionAction, type PermissionInput } from "@/lib/permissions/can";
 import {
   filterDocumentsForScope,
   filterLegalStepsForScope,
   filterProjectsForScope,
   filterTasksForScope,
+  hasAnyScopedActionGrant,
   resolveAccessScope,
 } from "@/lib/permissions/access-scope";
 import {
@@ -30,6 +31,9 @@ import {
   type ProjectRepository,
 } from "@/modules/projects/services/project-repository";
 import { listProjects } from "@/modules/projects/services/project-service";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
+import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
+import type { RolePermissionCatalog, ScopeAssignment } from "@/modules/settings/types";
 import {
   taskRepository,
   type TaskRepository,
@@ -66,15 +70,18 @@ function ratio(done: number, total: number) {
   return total > 0 ? done / total : undefined;
 }
 
-function resolvePermissions(user: PermissionUser): DashboardPermissions {
+function resolvePermissions(
+  user: PermissionUser,
+  hasScopedGrant: (action: PermissionInput) => boolean = () => false,
+): DashboardPermissions {
   return {
-    canViewProjects: can(user, "project.view"),
-    canViewTasks: can(user, "task.view"),
-    canViewDocuments: can(user, "document.view"),
-    canViewLegal: can(user, "legal.view"),
-    canViewFinance: can(user, "finance.view"),
-    canViewDesign: can(user, "design.view"),
-    canViewConstruction: can(user, "construction.view"),
+    canViewProjects: can(user, "project.view") || hasScopedGrant("project.view"),
+    canViewTasks: can(user, "task.view") || hasScopedGrant("task.view"),
+    canViewDocuments: can(user, "document.view") || hasScopedGrant("document.view"),
+    canViewLegal: can(user, "legal.view") || hasScopedGrant("legal.view"),
+    canViewFinance: can(user, "finance.view") || hasScopedGrant("finance.view"),
+    canViewDesign: can(user, "design.view") || hasScopedGrant("design.view"),
+    canViewConstruction: can(user, "construction.view") || hasScopedGrant("construction.view"),
   };
 }
 
@@ -84,9 +91,11 @@ export async function getDashboardData(
     today?: Date;
     upcomingWindowDays?: number;
     repositories?: DashboardRepositories;
+    requireScopeAssignments?: boolean;
+    scopeAssignments?: ScopeAssignment[];
+    rolePermissionCatalog?: RolePermissionCatalog;
   } = {},
 ): Promise<DashboardData> {
-  const permissions = resolvePermissions(user);
   const repositories = {
     projects: options.repositories?.projects ?? projectRepository,
     tasks: options.repositories?.tasks ?? taskRepository,
@@ -97,6 +106,23 @@ export async function getDashboardData(
   };
   const today = options.today ?? new Date();
   const upcomingWindowDays = options.upcomingWindowDays ?? 7;
+  const [scopeAssignments, rolePermissionCatalog] = await Promise.all([
+    options.scopeAssignments ?? listActiveScopeAssignments(),
+    options.rolePermissionCatalog ?? listRolePermissionCatalog(),
+  ]);
+  const hasScopedGrant = (action: PermissionInput) => {
+    const normalizedAction = normalizePermissionAction(action);
+
+    if (!normalizedAction) {
+      return false;
+    }
+
+    return hasAnyScopedActionGrant(user, normalizedAction, {
+      rolePermissionCatalog,
+      scopeAssignments,
+    });
+  };
+  const permissions = resolvePermissions(user, hasScopedGrant);
 
   const rawProjects = permissions.canViewProjects
     ? await listProjects({}, repositories.projects)
@@ -116,6 +142,9 @@ export async function getDashboardData(
   const scope = resolveAccessScope(user, {
     documents: rawDocuments,
     memberships: await listProjectMemberships(),
+    requireScopeAssignments: options.requireScopeAssignments ?? true,
+    rolePermissionCatalog,
+    scopeAssignments,
     tasks: rawTasks,
   });
   const projects = filterProjectsForScope(rawProjects, scope);

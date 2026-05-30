@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { getRolePermissions } from "@/lib/permissions/can";
 import { JsonDocumentRepository } from "@/modules/documents/services/document-repository";
 import { createDocument } from "@/modules/documents/services/document-service";
 import { getDashboardData } from "@/modules/dashboard/services/dashboard-service";
@@ -11,6 +12,7 @@ import { JsonLegalRepository } from "@/modules/legal/services/legal-repository";
 import { listLegalSteps, updateLegalStep } from "@/modules/legal/services/legal-service";
 import { JsonProjectRepository } from "@/modules/projects/services/project-repository";
 import { createProject } from "@/modules/projects/services/project-service";
+import type { ScopeAssignment } from "@/modules/settings/types";
 import { JsonTaskRepository } from "@/modules/tasks/services/task-repository";
 import { createTask } from "@/modules/tasks/services/task-service";
 
@@ -138,6 +140,19 @@ async function seedDashboardData() {
   return project;
 }
 
+function globalScopeAssignment(userId: string, roleKey: string): ScopeAssignment {
+  return {
+    id: `assignment-${userId}`,
+    userId,
+    roleKey,
+    permissionKeys: getRolePermissions(roleKey),
+    active: true,
+    scopeType: "global",
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 describe("dashboard service", () => {
   it("calculates dashboard KPIs from project, task, document and legal repositories", async () => {
     await seedDashboardData();
@@ -151,7 +166,8 @@ describe("dashboard service", () => {
           tasks: taskRepository,
           documents: documentRepository,
           legal: legalRepository
-        }
+        },
+        scopeAssignments: [globalScopeAssignment("admin", "admin")],
       }
     );
 
@@ -179,7 +195,8 @@ describe("dashboard service", () => {
           tasks: taskRepository,
           documents: documentRepository,
           legal: legalRepository
-        }
+        },
+        scopeAssignments: [globalScopeAssignment("admin", "admin")],
       }
     );
 
@@ -202,7 +219,8 @@ describe("dashboard service", () => {
           tasks: taskRepository,
           documents: documentRepository,
           legal: legalRepository
-        }
+        },
+        scopeAssignments: [globalScopeAssignment("site-user", "thi_cong")],
       }
     );
 
@@ -214,5 +232,98 @@ describe("dashboard service", () => {
     expect(dashboard.summary.blockedLegalSteps).toBe(0);
     expect(dashboard.blockedLegalSteps).toEqual([]);
   });
-});
 
+  it("filters dashboard DTOs by explicit scope assignments", async () => {
+    const projectA = await seedDashboardData();
+    const projectB = await createProject({ name: "GreenNest Hidden", status: "active" }, projectRepository);
+    await createTask(
+      {
+        projectId: projectB.id,
+        title: "Hidden overdue",
+        dueDate: "2026-05-10",
+        status: "in_progress",
+        priority: "urgent",
+      },
+      taskRepository,
+      projectRepository,
+    );
+    await createDocument(
+      {
+        projectId: projectB.id,
+        title: "Hidden missing document",
+        docType: "legal_submission",
+        version: "v1",
+        status: "missing",
+      },
+      documentRepository,
+      projectRepository,
+    );
+
+    const scopeAssignments: ScopeAssignment[] = [
+      {
+        id: "assignment-dashboard-a",
+        userId: "operator",
+        roleKey: "viewer",
+        permissionKeys: ["project.view", "task.view", "document.view", "legal.view"],
+        projectId: projectA.id,
+        active: true,
+        scopeType: "scoped",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+    const dashboard = await getDashboardData(
+      { id: "operator", role: "admin" },
+      {
+        today: new Date(2026, 4, 16),
+        repositories: {
+          projects: projectRepository,
+          tasks: taskRepository,
+          documents: documentRepository,
+          legal: legalRepository,
+        },
+        scopeAssignments,
+      },
+    );
+
+    expect(dashboard.projects.map((project) => project.id)).toEqual([projectA.id]);
+    expect(dashboard.overdueTasks.map((task) => task.title)).toEqual(["Việc quá hạn"]);
+    expect(dashboard.missingDocuments.map((document) => document.title)).toEqual(["Hồ sơ thiếu"]);
+    expect(dashboard.summary.totalProjects).toBe(1);
+  });
+
+  it("loads dashboard DTOs when a scoped assignment grants view permissions to a base role without them", async () => {
+    const project = await seedDashboardData();
+    const scopeAssignments: ScopeAssignment[] = [
+      {
+        id: "assignment-pending-dashboard",
+        userId: "operator",
+        roleKey: "viewer",
+        permissionKeys: ["project.view", "task.view", "document.view", "legal.view"],
+        projectId: project.id,
+        active: true,
+        scopeType: "scoped",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+    const dashboard = await getDashboardData(
+      { id: "operator", role: "pending" },
+      {
+        today: new Date(2026, 4, 16),
+        repositories: {
+          projects: projectRepository,
+          tasks: taskRepository,
+          documents: documentRepository,
+          legal: legalRepository,
+        },
+        scopeAssignments,
+      },
+    );
+
+    expect(dashboard.permissions.canViewProjects).toBe(true);
+    expect(dashboard.summary.totalProjects).toBe(1);
+    expect(dashboard.overdueTasks.map((task) => task.title)).toEqual(["Việc quá hạn"]);
+    expect(dashboard.missingDocuments.map((document) => document.title)).toEqual(["Hồ sơ thiếu"]);
+  });
+});

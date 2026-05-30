@@ -1,4 +1,4 @@
-import { ROLES, type Role } from "@/constants/roles";
+import { getStaticRoleLabel } from "@/constants/roles";
 import {
   projectRepository,
   type ProjectRepository,
@@ -15,6 +15,7 @@ import type {
   User,
   UserInput,
 } from "@/modules/users/types";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
 
 import { userRepository, type UserRepository } from "./user-repository";
 
@@ -26,12 +27,27 @@ function now() {
   return new Date().toISOString();
 }
 
-export function listRoles() {
-  return Object.entries(ROLES).map(([key, value]) => ({
-    key: key as Role,
-    label: value.label,
-    description: value.description,
-  }));
+export async function listRoles() {
+  const catalog = await listRolePermissionCatalog();
+
+  return catalog.roles
+    .filter((role) => role.active)
+    .map((role) => ({
+      key: role.key,
+      label: role.labelVi || getStaticRoleLabel(role.key),
+      description: role.description,
+    }));
+}
+
+async function assertAssignableRole(roleKey: string) {
+  const catalog = await listRolePermissionCatalog();
+  const role = catalog.roles.find((item) => item.key === roleKey);
+
+  if (!role?.active) {
+    throw new Error("Role khong ton tai hoac da bi vo hieu hoa.");
+  }
+
+  return role;
 }
 
 export async function listUsers(repository: UserRepository = userRepository) {
@@ -58,6 +74,7 @@ export async function inviteUser(
   repository: UserRepository = userRepository,
 ) {
   const parsedInput = userInputSchema.parse(input);
+  await assertAssignableRole(parsedInput.role);
   const timestamp = now();
   const user: User = {
     id: createId(),
@@ -86,11 +103,12 @@ export async function inviteUser(
 
 export async function updateUserRole(
   userId: string,
-  role: Role,
+  role: string,
   actorId: string,
   repository: UserRepository = userRepository,
 ) {
   const parsedRole = roleSchema.parse(role);
+  await assertAssignableRole(parsedRole);
   const existingUser = await repository.getUser(userId);
 
   if (!existingUser) {
@@ -131,6 +149,7 @@ export async function upsertProjectMembership(
   projects: ProjectRepository = projectRepository,
 ) {
   const parsedInput = projectMembershipInputSchema.parse(input);
+  await assertAssignableRole(parsedInput.role);
   const [project, user] = await Promise.all([
     projects.getProject(parsedInput.projectId),
     repository.getUser(parsedInput.userId),

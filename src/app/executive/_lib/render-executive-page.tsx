@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import type { AppSessionUser } from "@/lib/auth/session";
 import { requireWorkspaceRoute } from "@/lib/permissions/guard";
-import { getExecutiveLeadershipData } from "@/modules/executive/services/executive-service";
 import type { ExecutiveLeadershipData } from "@/modules/executive/types";
 
 type ExecutivePageComponent = (props: {
@@ -13,9 +14,25 @@ type ExecutivePageComponent = (props: {
 export async function renderExecutivePage(
   PageComponent: ExecutivePageComponent,
 ) {
-  const session = await requireWorkspaceRoute("/executive");
+  void PageComponent;
+  const headerStore = await headers();
+  const pathname = headerStore.get("x-greennest-pathname") ?? "/executive";
+  const search = headerStore.get("x-greennest-search") ?? "";
+  const viewByPath: Record<string, string> = {
+    "/executive": "executive-dashboard",
+    "/executive/approvals": "executive-approvals",
+    "/executive/decision-log": "executive-decision-log",
+    "/executive/directives": "executive-directives",
+    "/executive/investment-plans": "executive-investment-plans",
+    "/executive/leadership-team": "executive-leadership-team",
+    "/executive/meetings": "executive-meetings",
+  };
+  await requireWorkspaceRoute("/executive");
+  const view = viewByPath[pathname] ?? "executive-dashboard";
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+  params.set("view", view);
 
-  const data = await getExecutiveLeadershipData(session.user);
-
-  return <PageComponent data={data} user={session.user} />;
+  redirect(`/command-center?${params.toString()}`);
 }

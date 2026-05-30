@@ -1,4 +1,4 @@
-import type { Role } from "@/constants/roles";
+import { isKnownRole, type Role } from "@/constants/roles";
 
 export const PERMISSIONS = [
   "axis1.view",
@@ -90,6 +90,7 @@ export const PERMISSIONS = [
   "user.invite",
   "user.update_role",
   "settings.manage",
+  "delegation.manage",
   "audit.view",
   "ai.use",
   "ai.ask",
@@ -108,8 +109,10 @@ export type PermissionInput = PermissionAction | PermissionAlias;
 
 export type PermissionUser = {
   id: string;
-  role: Role;
+  role: string;
   permissions?: PermissionAction[];
+  permissionsMode?: "additive" | "replace";
+  roleActive?: boolean;
 };
 
 export type PermissionResource = {
@@ -120,6 +123,29 @@ export type PermissionResource = {
 };
 
 const allPermissions = [...PERMISSIONS];
+
+export const BUSINESS_APPROVAL_PERMISSIONS = [
+  "document.approve",
+  "legal.approve",
+  "decision.approve",
+  "knowledge.approve",
+  "design.approve_change",
+  "acceptance.approve",
+  "finance.approve",
+  "payment.approve",
+  "proposal.approve",
+  "proposal.reject",
+  "proposal.request_change",
+  "investment.approve",
+  "contract.approve",
+  "hr.approve",
+  "qa.approve",
+  "safety.approve",
+] satisfies PermissionAction[];
+
+function isBusinessApprovalPermission(permission: PermissionAction) {
+  return (BUSINESS_APPROVAL_PERMISSIONS as readonly PermissionAction[]).includes(permission);
+}
 
 function resolveEffectivePermissions(permissions: PermissionAction[]) {
   const effectivePermissions = new Set(permissions);
@@ -182,12 +208,8 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
   super_admin: allPermissions,
   admin: allPermissions.filter(
     (permission) =>
-      ![
-        "finance.create",
-        "finance.update",
-        "finance.approve",
-        "payment.approve",
-      ].includes(permission),
+      !isBusinessApprovalPermission(permission) &&
+      !["finance.create", "finance.update"].includes(permission),
   ),
   tong_giam_doc: allPermissions,
   pho_tong_giam_doc: [
@@ -211,6 +233,7 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
     "proposal.approve",
     "proposal.reject",
     "proposal.request_change",
+    "delegation.manage",
     "knowledge.view",
     "knowledge.create",
     "knowledge.review",
@@ -665,11 +688,11 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionAction[]> = {
   pending: [],
 };
 
-export function getRolePermissions(role: Role) {
-  return resolveEffectivePermissions(ROLE_PERMISSIONS[role]);
+export function getRolePermissions(role: string) {
+  return isKnownRole(role) ? resolveEffectivePermissions(ROLE_PERMISSIONS[role]) : [];
 }
 
-function normalizePermission(
+export function normalizePermissionAction(
   action: PermissionInput,
 ): PermissionAction | undefined {
   const normalized = action.replace(":", ".");
@@ -680,11 +703,11 @@ function normalizePermission(
 }
 
 export function can(
-  userOrRole: PermissionUser | Role,
+  userOrRole: PermissionUser | string,
   action: PermissionInput,
   resource?: PermissionResource,
 ) {
-  const normalizedAction = normalizePermission(action);
+  const normalizedAction = normalizePermissionAction(action);
 
   if (!normalizedAction) {
     return false;
@@ -692,9 +715,18 @@ export function can(
 
   const user =
     typeof userOrRole === "string" ? { id: "", role: userOrRole } : userOrRole;
+  if (user.roleActive === false) {
+    return false;
+  }
+
+  const basePermissions = user.permissionsMode === "replace"
+    ? []
+    : isKnownRole(user.role)
+      ? ROLE_PERMISSIONS[user.role]
+      : [];
   const permissions = new Set(
     resolveEffectivePermissions([
-      ...(ROLE_PERMISSIONS[user.role] ?? []),
+      ...basePermissions,
       ...(user.permissions ?? []),
     ]),
   );

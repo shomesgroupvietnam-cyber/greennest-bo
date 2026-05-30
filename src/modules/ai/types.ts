@@ -1,4 +1,3 @@
-import type { Role } from "@/constants/roles";
 import type { PermissionAction } from "@/lib/permissions/can";
 import type { AccessScopeKind } from "@/lib/permissions/access-scope";
 import type { KnowledgeModule } from "@/modules/knowledge/types";
@@ -101,7 +100,7 @@ export type AiResourceRef = {
 
 export type AiScopeSnapshot = {
   userId: EntityId;
-  role: Role;
+  role: string;
   permissions: PermissionAction[];
   scopeKind: AccessScopeKind;
   module: AiModule;

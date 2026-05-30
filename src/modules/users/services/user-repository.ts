@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
@@ -13,6 +14,16 @@ type UserStore = {
 
 function now() {
   return new Date().toISOString();
+}
+
+function isWriteContention(error: unknown) {
+  const code = (error as NodeJS.ErrnoException).code;
+
+  return code === "EPERM" || code === "EBUSY" || code === "EACCES";
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function defaultStore(): UserStore {
@@ -218,6 +229,9 @@ export class JsonUserRepository implements UserRepository {
   private async readStore(): Promise<UserStore> {
     try {
       const raw = await readFile(this.filePath, "utf8");
+      if (!raw.trim()) {
+        return defaultStore();
+      }
       const parsed = JSON.parse(raw) as Partial<UserStore>;
 
       return {
@@ -227,6 +241,10 @@ export class JsonUserRepository implements UserRepository {
       };
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
+
+      if (error instanceof SyntaxError) {
+        return defaultStore();
+      }
 
       if (code === "ENOENT") {
         return defaultStore();
@@ -238,11 +256,31 @@ export class JsonUserRepository implements UserRepository {
 
   private async writeStore(store: UserStore) {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(
-      this.filePath,
-      `${JSON.stringify(store, null, 2)}\n`,
-      "utf8",
-    );
+    const tempPath = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
+    const payload = `${JSON.stringify(store, null, 2)}\n`;
+
+    await writeFile(tempPath, payload, "utf8");
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        await rename(tempPath, this.filePath);
+        return;
+      } catch (error) {
+        if (!isWriteContention(error)) {
+          await unlink(tempPath).catch(() => undefined);
+          throw error;
+        }
+
+        if (attempt < 4) {
+          await delay(20 * (attempt + 1));
+          continue;
+        }
+
+        await writeFile(this.filePath, payload, "utf8");
+        await unlink(tempPath).catch(() => undefined);
+        return;
+      }
+    }
   }
 }
 

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import type { Meeting } from "@/modules/meetings/types";
 import type { Project } from "@/modules/projects/types";
 
+import { MeetingStatusBadge, MeetingTypeBadge, MeetingVisibilityBadge } from "./meeting-badges";
+
 type MeetingListTableProps = {
   canCreate?: boolean;
   canUpdate?: boolean;
@@ -46,15 +48,16 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Cuộc họp</th>
+              <th className="px-4 py-3">Phân loại</th>
               <th className="px-4 py-3">Dự án</th>
               <th className="px-4 py-3">Thời gian</th>
-              <th className="px-4 py-3">Người tạo</th>
+              <th className="px-4 py-3">Scope</th>
               <th className="px-4 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {meetings.map((meeting) => {
-              const project = projectById.get(meeting.projectId);
+              const project = meeting.projectId ? projectById.get(meeting.projectId) : undefined;
 
               return (
                 <tr className="align-top hover:bg-slate-50" key={meeting.id}>
@@ -62,7 +65,13 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
                     <Link className="font-medium text-emerald-700 hover:text-emerald-800" href={`/meetings/${meeting.id}`}>
                       {meeting.title}
                     </Link>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">{meeting.summary ?? "Chưa có tốm tắt."}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">{meeting.summary ?? meeting.agenda ?? "Chưa có tóm tắt."}</p>
+                  </td>
+                  <td className="min-w-48 px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <MeetingTypeBadge meetingType={meeting.meetingType} />
+                      <MeetingStatusBadge status={meeting.status} />
+                    </div>
                   </td>
                   <td className="min-w-56 px-4 py-3 text-slate-600">
                     {project ? (
@@ -70,11 +79,18 @@ export function MeetingListTable({ canCreate = true, canUpdate = true, meetings,
                         {project.code} - {project.name}
                       </Link>
                     ) : (
-                      "Không rõ"
+                      "Không gắn dự án"
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(meeting.meetingDate)}</td>
-                  <td className="px-4 py-3 text-slate-600">{meeting.createdBy ?? "-"}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(meeting.startTime)}</td>
+                  <td className="min-w-48 px-4 py-3 text-xs text-slate-600">
+                    <div className="space-y-1">
+                      <MeetingVisibilityBadge visibility={meeting.visibility} />
+                      <p>Org: {meeting.organizationId ?? "-"}</p>
+                      <p>Trục: {meeting.axisId ?? "-"}</p>
+                      <p>Phòng ban: {meeting.departmentId ?? "-"}</p>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <Button asChild size="sm" variant="outline">

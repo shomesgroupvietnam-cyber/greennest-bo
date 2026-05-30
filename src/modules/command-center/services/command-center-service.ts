@@ -1,7 +1,16 @@
-import type { PermissionUser } from "@/lib/permissions/can";
-import { can } from "@/lib/permissions/can";
 import {
-  getAxisOneDashboardSummary,
+  can,
+  PERMISSIONS,
+  type PermissionAction,
+  type PermissionUser,
+} from "@/lib/permissions/can";
+import {
+  canAccessScopedAction,
+  hasAnyScopedActionGrant,
+  requiresAssignmentScopeForRole,
+} from "@/lib/permissions/access-scope";
+import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
+import {
   getAxisOneMissingDocuments,
   getAxisOneOpenTasks,
   getAxisOneRiskAlerts,
@@ -20,12 +29,46 @@ import type {
   ProjectProgressSegment,
 } from "@/modules/command-center/types";
 import { getDashboardData } from "@/modules/dashboard/services/dashboard-service";
+import { getExecutiveCommonCenterData } from "@/modules/dashboard/services/executive-common-center-service";
+import { getExecutiveDashboardData } from "@/modules/dashboard/services/executive-dashboard-service";
+import { getExecutiveMorningBriefingData } from "@/modules/dashboard/services/executive-morning-briefing-service";
 import { canAccessExecutiveModule } from "@/modules/executive/constants";
 import { getExecutiveLeadershipData } from "@/modules/executive/services/executive-service";
+import { listActiveDelegationsForDelegate } from "@/modules/settings/services/leadership-delegation-service";
+import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
+import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
+import type { LeadershipDelegation, RolePermissionCatalog, ScopeAssignment } from "@/modules/settings/types";
+import { getExecutivePrivateWorkspaceData } from "@/modules/workspaces/services/executive-private-workspace-service";
+import { getApprovalCenterData } from "@/modules/proposals/services/approval-center-service";
 
-function buildAxes(user: PermissionUser): CommandCenterAxis[] {
-  const canViewExecutive = canAccessExecutiveModule(user.role);
-  const canViewAxisOne = can(user, "axis1.view");
+const executiveWorkspacePermissions = [
+  "project.view",
+  "task.view",
+  "document.view",
+  "legal.view",
+  "finance.view",
+  "meeting.view",
+  "decision.approve",
+  "proposal.view",
+  "proposal.approve",
+] as const;
+
+function buildAxes(
+  user: PermissionUser,
+  access: {
+    canViewAxisOne?: boolean;
+    canViewExecutive?: boolean;
+    canViewPrivateWorkspace?: boolean;
+    scopedPermissions?: ReadonlySet<PermissionAction>;
+  } = {},
+): CommandCenterAxis[] {
+  const hasPermission = (permission: PermissionAction) =>
+    can(user, permission) || (access.scopedPermissions?.has(permission) ?? false);
+  const canViewExecutive =
+    access.canViewExecutive ?? canAccessExecutiveModule(user.role);
+  const canViewPrivateWorkspace =
+    access.canViewPrivateWorkspace ?? canViewExecutive;
+  const canViewAxisOne = access.canViewAxisOne ?? can(user, "axis1.view");
 
   const axes: CommandCenterAxis[] = [
     {
@@ -39,8 +82,44 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
                 label: "Ban lãnh đạo",
                 href: "/command-center?view=executive-dashboard",
                 viewKey: "executive-dashboard",
+                children: [
+                  {
+                    label: "Dashboard Tong Quan",
+                    href: "/command-center?view=executive-dashboard",
+                    viewKey: "executive-dashboard",
+                  },
+                  {
+                    label: "Morning Briefing",
+                    href: "/command-center?view=executive-morning-briefing",
+                    viewKey: "executive-morning-briefing",
+                  },
+                  {
+                    label: "Executive Common Center",
+                    href: "/command-center?view=executive-common-center",
+                    viewKey: "executive-common-center",
+                  },
+                  {
+                    label: "Approval Center",
+                    href: "/command-center?view=executive-approvals",
+                    viewKey: "executive-approvals",
+                  },
+                  {
+                    label: "Private Workspace",
+                    href: "/command-center?view=executive-private-workspace",
+                    viewKey: "executive-private-workspace",
+                  },
+                ],
               },
             ]
+          : canViewPrivateWorkspace
+            ? [
+                {
+                  code: "01",
+                  label: "Private Workspace",
+                  href: "/command-center?view=executive-private-workspace",
+                  viewKey: "executive-private-workspace",
+                },
+              ]
           : []),
         ...(canViewAxisOne
           ? [
@@ -52,7 +131,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "legal.view")
+        ...(hasPermission("legal.view")
           ? [
               {
                 code: "03",
@@ -62,7 +141,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "design.view")
+        ...(hasPermission("design.view")
           ? [
               {
                 code: "04",
@@ -72,7 +151,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "proposal.view")
+        ...(hasPermission("proposal.view")
           ? [
               {
                 code: "05",
@@ -88,7 +167,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
       title: "Kiến tạo | Build Management",
       tone: "blue",
       items: [
-        ...(can(user, "project.view")
+        ...(hasPermission("project.view")
           ? [
               {
                 code: "01",
@@ -98,7 +177,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "contract.view")
+        ...(hasPermission("contract.view")
           ? [
               {
                 code: "02",
@@ -108,7 +187,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "project.view")
+        ...(hasPermission("project.view")
           ? [
               {
                 code: "03",
@@ -118,7 +197,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "construction.view")
+        ...(hasPermission("construction.view")
           ? [
               {
                 code: "04",
@@ -134,7 +213,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "qa.view")
+        ...(hasPermission("qa.view")
           ? [
               {
                 code: "05",
@@ -144,7 +223,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "safety.view")
+        ...(hasPermission("safety.view")
           ? [
               {
                 code: "06",
@@ -166,7 +245,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
           href: "/command-center?view=operations-dashboard",
           viewKey: "operations-dashboard",
         },
-        ...(can(user, "finance.view")
+        ...(hasPermission("finance.view")
           ? [
               {
                 code: "01",
@@ -176,7 +255,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "hr.view")
+        ...(hasPermission("hr.view")
           ? [
               {
                 code: "02",
@@ -186,7 +265,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "document.view")
+        ...(hasPermission("document.view")
           ? [
               {
                 code: "03",
@@ -196,7 +275,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "report.view")
+        ...(hasPermission("report.view")
           ? [
               {
                 code: "04",
@@ -206,7 +285,7 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
               },
             ]
           : []),
-        ...(can(user, "settings.manage")
+        ...(hasPermission("settings.manage")
           ? [
               {
                 code: "05",
@@ -221,6 +300,82 @@ function buildAxes(user: PermissionUser): CommandCenterAxis[] {
   ];
 
   return axes.filter((axis) => axis.items.length > 0);
+}
+
+function summarizeAxisOneStages(stages: ReturnType<typeof getAxisOneStages>) {
+  const completedStages = stages.filter(
+    (stage) => stage.status === "completed",
+  ).length;
+
+  return {
+    totalStages: stages.length,
+    completedStages,
+    completionRate:
+      stages.length > 0
+        ? Math.round(
+            stages.reduce((total, stage) => total + stage.progress, 0) /
+              stages.length,
+          )
+        : 0,
+    missingDocuments: stages.reduce(
+      (count, stage) =>
+        count +
+        stage.requiredDocuments.filter((document) => document.status === "missing")
+          .length,
+      0,
+    ),
+    openTasks: stages.reduce(
+      (count, stage) =>
+        count + stage.tasks.filter((task) => task.status !== "done").length,
+      0,
+    ),
+    blockedStages: stages.filter((stage) => stage.status === "blocked").length,
+    highRiskStages: stages.filter((stage) =>
+      ["high", "critical"].includes(stage.riskLevel),
+    ).length,
+  };
+}
+
+function buildScopedAxisOneDashboard(
+  user: PermissionUser,
+  scopeAssignments: ScopeAssignment[],
+  rolePermissionCatalog: RolePermissionCatalog,
+) {
+  const stages = getAxisOneStages().filter((stage) =>
+    canAccessScopedAction(
+      user,
+      "axis1.view",
+      {
+        axisId: "project_management",
+        moduleId: "axis1",
+        projectId: stage.projectId,
+        recordId: stage.id,
+        workstreamId: "axis1",
+      },
+      {
+        rolePermissionCatalog,
+        scopeAssignments,
+      },
+    ),
+  );
+
+  return buildAxisOneDashboardFromStages(stages);
+}
+
+function buildAxisOneDashboardFromStages(
+  stages: ReturnType<typeof getAxisOneStages>,
+) {
+  const stageIds = new Set(stages.map((stage) => stage.id));
+
+  return {
+    summary: summarizeAxisOneStages(stages),
+    stages,
+    missingDocuments: getAxisOneMissingDocuments().filter((item) =>
+      stageIds.has(item.stageId),
+    ),
+    openTasks: getAxisOneOpenTasks().filter((item) => stageIds.has(item.stageId)),
+    riskAlerts: getAxisOneRiskAlerts().filter((item) => stageIds.has(item.stageId)),
+  };
 }
 
 function buildKpis(
@@ -409,6 +564,7 @@ function emptyExecutiveWorkspace() {
     axisDefinitions: [],
     dashboardLayers: [],
     escalationRules: [],
+    riskGroups: [],
     globalStatusItems: [],
     overviewCards: [],
     commandCenterSnapshot: {
@@ -437,14 +593,145 @@ function emptyExecutiveWorkspace() {
   };
 }
 
+function buildScopedPermissionSet(
+  user: PermissionUser,
+  scopeAssignments: ScopeAssignment[],
+  rolePermissionCatalog: RolePermissionCatalog,
+) {
+  return new Set(
+    PERMISSIONS.filter((permission): permission is PermissionAction =>
+      hasAnyScopedActionGrant(user, permission, {
+        rolePermissionCatalog,
+        scopeAssignments,
+      }),
+    ),
+  );
+}
+
 export async function getCommandCenterData(
   user: PermissionUser,
+  options: {
+    delegations?: LeadershipDelegation[];
+    rolePermissionCatalog?: RolePermissionCatalog;
+    scopeAssignments?: ScopeAssignment[];
+    selectedScopeId?: string;
+  } = {},
 ): Promise<CommandCenterData> {
-  const canViewExecutive = canAccessExecutiveModule(user.role);
-  const [operationsDashboard, executiveData] = await Promise.all([
-    getDashboardData(user),
-    canViewExecutive ? getExecutiveLeadershipData(user) : null,
+  const [scopeAssignments, rolePermissionCatalog, delegations] = await Promise.all([
+    options.scopeAssignments ?? listActiveScopeAssignments(),
+    options.rolePermissionCatalog ?? listRolePermissionCatalog(),
+    options.delegations ?? listActiveDelegationsForDelegate(user.id),
   ]);
+  const selectedScopeAssignments = selectScopeAssignmentsForUser(
+    user,
+    scopeAssignments,
+    options.selectedScopeId,
+  );
+  const selectedScopeActive =
+    Boolean(options.selectedScopeId) && options.selectedScopeId !== "all";
+  const selectedScopeInvalid =
+    selectedScopeActive && selectedScopeAssignments.length === 0;
+  const ignoreImplicitAssignments =
+    !selectedScopeActive &&
+    ["super_admin", "admin", "tong_giam_doc"].includes(user.role);
+  const effectiveScopeAssignments = ignoreImplicitAssignments
+    ? []
+    : selectedScopeAssignments;
+  const requireScopeAssignments =
+    selectedScopeActive || requiresAssignmentScopeForRole(user.role);
+  const scopedPermissions = buildScopedPermissionSet(
+    user,
+    effectiveScopeAssignments,
+    rolePermissionCatalog,
+  );
+  const hasExecutiveScopeGrant = effectiveScopeAssignments.some((assignment) =>
+    canAccessExecutiveModule(assignment.roleKey) &&
+    executiveWorkspacePermissions.some((permission) =>
+      hasAnyScopedActionGrant(user, permission, {
+        rolePermissionCatalog,
+        scopeAssignments: [assignment],
+      }),
+    ),
+  );
+  const canViewExecutive =
+    !selectedScopeInvalid &&
+    (canAccessExecutiveModule(user.role) || hasExecutiveScopeGrant);
+  const canViewPrivateWorkspace =
+    !selectedScopeInvalid &&
+    (canViewExecutive || user.role === "thu_ky_tro_ly" || user.role === "viewer");
+  const canViewAxisOne = can(user, "axis1.view") || scopedPermissions.has("axis1.view");
+  const [
+    operationsDashboard,
+    executiveData,
+    executiveDashboard,
+    executiveMorningBriefing,
+  ] = await Promise.all([
+    getDashboardData(user, {
+      requireScopeAssignments,
+      rolePermissionCatalog,
+      scopeAssignments: effectiveScopeAssignments,
+    }),
+    canViewExecutive
+      ? getExecutiveLeadershipData(user, {
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null,
+    canViewExecutive
+      ? getExecutiveDashboardData(user, {
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null,
+    canViewExecutive
+      ? getExecutiveMorningBriefingData(user, {
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null,
+  ]);
+  const executiveCommonCenter =
+    canViewExecutive && executiveDashboard
+      ? await getExecutiveCommonCenterData(user, {
+          dashboardData: executiveDashboard,
+          executiveData,
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null;
+  const executivePrivateWorkspace =
+    canViewExecutive ||
+    selectedScopeInvalid ||
+    user.role === "thu_ky_tro_ly" ||
+    user.role === "viewer"
+      ? await getExecutivePrivateWorkspaceData(user, {
+          dashboardData: executiveDashboard ?? undefined,
+          delegations,
+          executiveData,
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null;
+  const approvalCenter =
+    canViewExecutive && executiveData
+      ? await getApprovalCenterData(user, {
+          leadershipApprovals: executiveData.approvals,
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+          scopeLabel: executiveData.scopeLabel,
+        })
+      : null;
   const executiveWorkspace = executiveData
     ? {
         scopeLabel: executiveData.scopeLabel,
@@ -455,6 +742,7 @@ export async function getCommandCenterData(
         axisDefinitions: executiveData.axisDefinitions,
         dashboardLayers: executiveData.dashboardLayers,
         escalationRules: executiveData.escalationRules,
+        riskGroups: executiveData.riskGroups,
         globalStatusItems: executiveData.globalStatusItems,
         overviewCards: executiveData.overviewCards,
         commandCenterSnapshot: executiveData.commandCenterSnapshot,
@@ -473,16 +761,34 @@ export async function getCommandCenterData(
     : emptyExecutiveWorkspace();
 
   return {
-    axes: buildAxes(user),
+    axes: buildAxes(user, {
+      canViewAxisOne,
+      canViewExecutive,
+      canViewPrivateWorkspace,
+      scopedPermissions,
+    }),
+    approvalCenter,
+    executiveDashboard,
+    executiveCommonCenter,
+    executiveMorningBriefing,
+    executivePrivateWorkspace,
     executiveWorkspace,
     operationsDashboard,
-    axisOneDashboard: {
-      summary: getAxisOneDashboardSummary(),
-      stages: getAxisOneStages(),
-      missingDocuments: getAxisOneMissingDocuments(),
-      openTasks: getAxisOneOpenTasks(),
-      riskAlerts: getAxisOneRiskAlerts(),
-    },
+    axisOneDashboard: canViewAxisOne
+      ? can(user, "axis1.view") && !selectedScopeActive
+        ? buildAxisOneDashboardFromStages(getAxisOneStages())
+        : buildScopedAxisOneDashboard(
+            user,
+            effectiveScopeAssignments,
+            rolePermissionCatalog,
+          )
+      : {
+          summary: summarizeAxisOneStages([]),
+          stages: [],
+          missingDocuments: [],
+          openTasks: [],
+          riskAlerts: [],
+        },
     kpis: buildKpis(operationsDashboard),
     progressSegments: buildProgressSegments(operationsDashboard),
     overdueTasks: buildOverdueTasks(operationsDashboard),
