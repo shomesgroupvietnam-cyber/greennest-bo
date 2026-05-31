@@ -1,43 +1,25 @@
 import { PERMISSIONS, type PermissionAction, type PermissionUser } from "@/lib/permissions/can";
 import { hasAnyScopedActionGrant } from "@/lib/permissions/access-scope";
+import { buildDelegatedPermissionsForPolicy } from "@/lib/permissions/navigation-policy-context";
+import { isPolicyWorkspaceHref } from "@/lib/permissions/navigation-policy";
 import {
   getPermittedNavItems,
   type NavigationAccessContext,
   type NavigationItem,
   type ShellContext,
 } from "@/lib/permissions/navigation";
+import { listActiveDelegationsForDelegate } from "@/modules/settings/services/leadership-delegation-service";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
 import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
-import type { RolePermissionCatalog, ScopeAssignment } from "@/modules/settings/types";
+import type {
+  LeadershipDelegation,
+  RolePermissionCatalog,
+  ScopeAssignment,
+} from "@/modules/settings/types";
 import {
   WORKSPACE_DEFINITIONS,
   type WorkspaceRoute,
 } from "@/modules/workspaces/config";
-
-const workspaceHrefs = new Set([
-  "/admin",
-  "/command-center",
-  "/command-center?view=executive-dashboard",
-  "/audit-workspace",
-  "/axis-1",
-  "/project-workbench",
-  "/team-workbench",
-  "/legal-workspace",
-  "/finance-workspace",
-  "/finance-management-workspace",
-  "/contract-workspace",
-  "/investment-workspace",
-  "/hr-workspace",
-  "/quality-workspace",
-  "/safety-workspace",
-  "/design-workspace",
-  "/technical-workspace",
-  "/construction-workspace",
-  "/assistant-workspace",
-  "/contractor",
-  "/consultant",
-  "/viewer",
-]);
 
 function stripQuery(href: string) {
   return href.split("?")[0];
@@ -150,6 +132,18 @@ function buildScopedWorkspaceRoutes(
     .map((definition) => definition.route satisfies WorkspaceRoute);
 }
 
+function buildDelegatedPermissions(
+  delegations: LeadershipDelegation[],
+  selectedScopeAssignments: ScopeAssignment[],
+  selectedScopeId?: string,
+) {
+  return buildDelegatedPermissionsForPolicy(
+    delegations,
+    selectedScopeAssignments,
+    selectedScopeId,
+  );
+}
+
 export function selectScopeAssignmentsForUser(
   user: PermissionUser,
   scopeAssignments: ScopeAssignment[],
@@ -179,7 +173,7 @@ function buildShellContext(input: {
   user: PermissionUser;
 }): ShellContext {
   const workspaceOptions = input.navItems
-    .filter((item) => workspaceHrefs.has(item.href))
+    .filter((item) => isPolicyWorkspaceHref(item.href))
     .map((item) => ({
       href: hrefWithCurrentScope(item.href, input.search),
       label: item.label,
@@ -223,9 +217,10 @@ export async function getNavigationShellData(input: {
   selectedScopeId?: string;
   user: PermissionUser;
 }) {
-  const [scopeAssignments, rolePermissionCatalog] = await Promise.all([
+  const [scopeAssignments, rolePermissionCatalog, delegations] = await Promise.all([
     listActiveScopeAssignments(),
     listRolePermissionCatalog(),
+    listActiveDelegationsForDelegate(input.user.id),
   ]);
   const selectedScopeAssignments = selectScopeAssignmentsForUser(
     input.user,
@@ -233,6 +228,11 @@ export async function getNavigationShellData(input: {
     input.selectedScopeId,
   );
   const accessContext: NavigationAccessContext = {
+    delegatedPermissions: buildDelegatedPermissions(
+      delegations,
+      selectedScopeAssignments,
+      input.selectedScopeId,
+    ),
     scopedPermissions: buildScopedPermissions(
       input.user,
       selectedScopeAssignments,

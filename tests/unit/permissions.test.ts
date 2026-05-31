@@ -9,6 +9,52 @@ function user(role: Role, id = "mock-founder"): PermissionUser {
 }
 
 describe("permission behavior", () => {
+  it("separates chairman business authority from super admin BO authority", () => {
+    const chairman = user("chu_tich");
+    const superAdmin = user("super_admin", "super-admin-01");
+    const chairmanBusinessPermissions = [
+      "axis1.view",
+      "project.view",
+      "project.update",
+      "task.view",
+      "document.view",
+      "legal.view",
+      "meeting.view",
+      "meeting.create",
+      "decision.create",
+      "decision.approve",
+      "proposal.view",
+      "proposal.approve",
+      "proposal.reject",
+      "proposal.request_change",
+      "finance.view",
+      "finance.approve",
+      "payment.approve",
+      "ai.confirm_action",
+    ] as const;
+
+    for (const permission of chairmanBusinessPermissions) {
+      expect(can(chairman, permission), permission).toBe(true);
+      expect(can(superAdmin, permission), permission).toBe(true);
+    }
+
+    for (const permission of [
+      "settings.manage",
+      "user.view",
+      "user.invite",
+      "user.update_role",
+      "delegation.manage",
+      "ai.configure",
+      "knowledge.manage_source_registry",
+    ] as const) {
+      expect(can(chairman, permission), permission).toBe(false);
+      expect(can(superAdmin, permission), permission).toBe(true);
+    }
+
+    expect(ROLE_DEFAULT_SCREENS.chu_tich.href).toBe("/command-center");
+    expect(ROLE_DEFAULT_SCREENS.super_admin.href).toBe("/command-center");
+  });
+
   it("allows admin to manage system settings without business approval authority", () => {
     const admin = user("admin");
 

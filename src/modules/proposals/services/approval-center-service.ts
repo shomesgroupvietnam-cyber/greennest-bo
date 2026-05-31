@@ -12,6 +12,7 @@ import {
   hasAnyScopedActionGrant,
   resolveAccessScope,
 } from "@/lib/permissions/access-scope";
+import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import {
   approvals as defaultLeadershipApprovals,
   projects as defaultExecutiveProjects,
@@ -84,6 +85,7 @@ export type ApprovalCenterServiceOptions = {
   now?: Date;
   notificationRepository?: NotificationRepository;
   policyRepository?: PolicySettingsRepository;
+  queueEscalationNotifications?: boolean;
   repository?: ProposalRepository;
   requireScopeAssignments?: boolean;
   rolePermissionCatalog?: RolePermissionCatalog;
@@ -125,14 +127,19 @@ const queueLeadershipStatuses = new Set<LeadershipApproval["status"]>([
   "revision_required",
 ]);
 
+const globalApprovalCenterRoles = new Set(["chu_tich", "super_admin", "tong_giam_doc"]);
+
 const proposalCategoryByType: Partial<Record<ProposalType, ApprovalCenterQueueCategory>> = {
-  contract: "phap_ly",
+  construction: "ky_thuat",
+  contract: "tai_chinh_chi",
   design: "ky_thuat",
   document: "ho_so_van_ban",
   finance: "tai_chinh_chi",
   investment: "chien_luoc",
   legal: "phap_ly",
   procurement: "tai_chinh_chi",
+  quality: "ky_thuat",
+  safety: "ky_thuat",
 };
 
 const leadershipCategoryByType: Record<
@@ -208,17 +215,44 @@ function userHasScopedQueueGrant(
   );
 }
 
+function withSelectedScopeAssignments(
+  user: PermissionUser,
+  options: ApprovalCenterServiceOptions,
+): ApprovalCenterServiceOptions {
+  if (!options.selectedScopeId || options.selectedScopeId === "all") {
+    return options;
+  }
+
+  return {
+    ...options,
+    requireScopeAssignments: true,
+    scopeAssignments: selectScopeAssignmentsForUser(
+      user,
+      options.scopeAssignments ?? [],
+      options.selectedScopeId,
+    ),
+  };
+}
+
+function userHasGlobalApprovalCenterGrant(user: PermissionUser) {
+  if (!globalApprovalCenterRoles.has(user.role)) {
+    return false;
+  }
+
+  return (
+    BUSINESS_APPROVAL_PERMISSIONS.some((permission) => can(user, permission)) ||
+    can(user, "proposal.review")
+  );
+}
+
 function canViewApprovalCenter(
   user: PermissionUser,
   options: ApprovalCenterServiceOptions,
 ) {
-  const hasBusinessGrant = BUSINESS_APPROVAL_PERMISSIONS.some((permission) =>
-    can(user, permission),
+  return (
+    userHasGlobalApprovalCenterGrant(user) ||
+    userHasScopedQueueGrant(user, options)
   );
-  const hasDirectReviewGrant =
-    user.role !== "admin" && can(user, "proposal.review");
-
-  return hasBusinessGrant || hasDirectReviewGrant || userHasScopedQueueGrant(user, options);
 }
 
 function canViewFinanceForRecord(
@@ -368,6 +402,14 @@ function buildBackHref(selectedScopeId?: string) {
   return withScopeId("/command-center?view=executive-approvals", selectedScopeId);
 }
 
+type LinkedSourceAccess = {
+  entityId: string;
+  helper: string;
+  href?: string;
+  label: string;
+  state: ApprovalCenterDetailSource["state"];
+};
+
 function safeEntityHref(link: ProposalLink, selectedScopeId?: string) {
   const encodedId = encodeURIComponent(link.entityId);
 
@@ -390,6 +432,118 @@ function safeEntityHref(link: ProposalLink, selectedScopeId?: string) {
     default:
       return undefined;
   }
+}
+
+function linkedSourcePermission(
+  link: ProposalLink,
+): PermissionAction | undefined {
+  switch (link.entityType.toLowerCase()) {
+    case "project":
+    case "projects":
+      return "project.view";
+    case "document":
+    case "documents":
+      return "document.view";
+    case "meeting":
+    case "meetings":
+      return "meeting.view";
+    case "task":
+    case "tasks":
+      return "task.view";
+    case "proposal":
+    case "proposals":
+      return "proposal.view";
+    default:
+      return undefined;
+  }
+}
+
+function linkedSourceTarget(
+  link: ProposalLink,
+  proposal: Proposal,
+) {
+  const normalized = link.entityType.toLowerCase();
+  const moduleId = normalized.endsWith("s")
+    ? normalized.slice(0, -1)
+    : normalized;
+  const projectId =
+    moduleId === "project" ? link.entityId : proposal.projectId;
+
+  return {
+    axisId: "project_management",
+    moduleId,
+    projectId,
+    recordId: link.entityId,
+    workstreamId: moduleId,
+  };
+}
+
+function canReadLinkedSource(
+  link: ProposalLink,
+  proposal: Proposal,
+  user: PermissionUser,
+  scope: ReturnType<typeof resolveAccessScope>,
+  options: ApprovalCenterServiceOptions,
+) {
+  const permission = linkedSourcePermission(link);
+
+  if (!permission) {
+    return false;
+  }
+
+  if (
+    !scope.scopeAssignmentsRequired &&
+    scope.scopeAssignments.length === 0 &&
+    can(user, permission)
+  ) {
+    return true;
+  }
+
+  return canAccessScopedAction(
+    user,
+    permission,
+    linkedSourceTarget(link, proposal),
+    {
+      rolePermissionCatalog: options.rolePermissionCatalog,
+      scopeAssignments: options.scopeAssignments,
+    },
+  );
+}
+
+function linkedSourceAccess(
+  link: ProposalLink,
+  proposal: Proposal,
+  user: PermissionUser,
+  scope: ReturnType<typeof resolveAccessScope>,
+  options: ApprovalCenterServiceOptions,
+): LinkedSourceAccess {
+  const href = safeEntityHref(link, options.selectedScopeId);
+
+  if (!href) {
+    return {
+      entityId: "placeholder",
+      helper: "Source type chua duoc ho tro trong MVP",
+      label: `${entityLabel(link.entityType)} source`,
+      state: "placeholder",
+    };
+  }
+
+  if (!canReadLinkedSource(link, proposal, user, scope, options)) {
+    return {
+      entityId: "restricted",
+      helper: "Khong co quyen xem source nay trong scope hien tai",
+      label: `${entityLabel(link.entityType)} bi gioi han quyen`,
+      state: "no_permission",
+    };
+  }
+
+  return {
+    entityId: link.entityId,
+    helper: "Source record",
+    href,
+    label: `${entityLabel(link.entityType)} ${link.entityId}`,
+    state: "linked",
+  };
 }
 
 function entityLabel(entityType: string) {
@@ -420,20 +574,23 @@ function entityLabel(entityType: string) {
 
 function buildLinkedSources(
   links: ProposalLink[],
-  selectedScopeId?: string,
+  proposal: Proposal,
+  user: PermissionUser,
+  scope: ReturnType<typeof resolveAccessScope>,
+  options: ApprovalCenterServiceOptions,
 ): ApprovalCenterDetailSource[] {
   return links.map((link) => {
-    const href = safeEntityHref(link, selectedScopeId);
+    const access = linkedSourceAccess(link, proposal, user, scope, options);
 
     return {
-      entityId: link.entityId,
+      entityId: access.entityId,
       entityType: link.entityType,
-      helper: href ? "Source record" : "Placeholder read-only",
-      href,
+      helper: access.helper,
+      href: access.href,
       id: link.id,
-      label: `${entityLabel(link.entityType)} ${link.entityId}`,
+      label: access.label,
       relationType: link.relationType,
-      state: href ? "linked" : "placeholder",
+      state: access.state,
     };
   });
 }
@@ -885,6 +1042,24 @@ function currentApprovalStep(proposal: Proposal, steps: ProposalStep[]) {
     : steps.find((step) => ["pending", "in_review"].includes(step.status));
 }
 
+async function maybeQueueEscalationNotification(
+  input: Parameters<typeof queueApprovalEscalationNotification>[0],
+  options: ApprovalCenterServiceOptions,
+): Promise<{
+  auditLog?: AuditLog;
+  escalation: ReturnType<typeof resolveApprovalEscalationState>;
+}> {
+  if (!options.queueEscalationNotifications) {
+    return { escalation: input.escalation };
+  }
+
+  return queueApprovalEscalationNotification(input, {
+    auditWriter: options.auditWriter,
+    notificationRepository: options.notificationRepository,
+    now: options.now,
+  });
+}
+
 async function buildProposalItems(
   user: PermissionUser,
   options: ApprovalCenterServiceOptions,
@@ -927,7 +1102,7 @@ async function buildProposalItems(
       policyLabel: policy.label,
       thresholdDays: policy.escalateAfterDays,
     });
-    const escalationResult = await queueApprovalEscalationNotification(
+    const escalationResult = await maybeQueueEscalationNotification(
       {
         escalation: resolveApprovalEscalationState({
           currentApprover: {
@@ -965,11 +1140,7 @@ async function buildProposalItems(
         },
         user,
       },
-      {
-        auditWriter: options.auditWriter,
-        notificationRepository: options.notificationRepository,
-        now: options.now,
-      },
+      options,
     );
     const canViewFinance = canViewFinanceForRecord(
       user,
@@ -1010,12 +1181,14 @@ async function buildProposalItems(
       projectName,
       reason: proposal.summary,
       requester: proposal.requestedBy,
+      reviewerLabel: step?.approverUserId ?? step?.approverRole ?? step?.approvalLevel,
       scopeLabel: proposalScopeLabel(proposal, projectName),
       sourceId: proposal.id,
       sourceType: "proposal",
       status: proposal.status,
       statusLabel: proposalStatusLabels[proposal.status],
       title: proposal.title,
+      updatedAt: proposal.updatedAt,
     };
   }));
 }
@@ -1062,7 +1235,7 @@ async function buildLeadershipItems(
         policyLabel: policy.label,
         thresholdDays: policy.escalateAfterDays,
       });
-      const escalationResult = await queueApprovalEscalationNotification(
+      const escalationResult = await maybeQueueEscalationNotification(
         {
           escalation: resolveApprovalEscalationState({
             currentApprover: {
@@ -1096,11 +1269,7 @@ async function buildLeadershipItems(
           },
           user,
         },
-        {
-          auditWriter: options.auditWriter,
-          notificationRepository: options.notificationRepository,
-          now: options.now,
-        },
+        options,
       );
       const canViewFinance = canViewFinanceForRecord(
         user,
@@ -1168,6 +1337,12 @@ function sortItems(items: ApprovalCenterQueueItem[]) {
 
     if (dueDateRank !== 0) {
       return dueDateRank;
+    }
+
+    const updatedAtRank = (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+
+    if (updatedAtRank !== 0) {
+      return updatedAtRank;
     }
 
     return `${a.code} ${a.title}`.localeCompare(`${b.code} ${b.title}`);
@@ -1244,21 +1419,22 @@ export async function getApprovalCenterData(
   user: PermissionUser,
   options: ApprovalCenterServiceOptions = {},
 ): Promise<ApprovalCenterData> {
+  const scopedOptions = withSelectedScopeAssignments(user, options);
   const now = options.now ?? new Date();
 
-  if (!canViewApprovalCenter(user, options)) {
-    return emptyApprovalCenterData(user, options, now);
+  if (!canViewApprovalCenter(user, scopedOptions)) {
+    return emptyApprovalCenterData(user, scopedOptions, now);
   }
 
   const [proposalItems, leadershipItems] = await Promise.all([
-    buildProposalItems(user, options, now),
-    Promise.resolve(buildLeadershipItems(user, options, now)),
+    buildProposalItems(user, scopedOptions, now),
+    Promise.resolve(buildLeadershipItems(user, scopedOptions, now)),
   ]);
   const canViewFinance =
     can(user, "finance.view") ||
     hasAnyScopedActionGrant(user, "finance.view", {
-      rolePermissionCatalog: options.rolePermissionCatalog,
-      scopeAssignments: options.scopeAssignments,
+      rolePermissionCatalog: scopedOptions.rolePermissionCatalog,
+      scopeAssignments: scopedOptions.scopeAssignments,
     });
 
   return {
@@ -1267,7 +1443,7 @@ export async function getApprovalCenterData(
       canView: true,
       canViewFinance,
     },
-    scopeLabel: options.scopeLabel ?? "Approval scope",
+    scopeLabel: scopedOptions.scopeLabel ?? "Approval scope",
     tabs: buildTabs([...proposalItems, ...leadershipItems]),
   };
 }
@@ -1277,11 +1453,13 @@ export async function getApprovalCenterDetailData(
   user: PermissionUser,
   options: ApprovalCenterServiceOptions = {},
 ): Promise<ApprovalCenterDetailData | undefined> {
-  if (source.sourceType !== "proposal" || !canViewApprovalCenter(user, options)) {
+  const scopedOptions = withSelectedScopeAssignments(user, options);
+
+  if (source.sourceType !== "proposal" || !canViewApprovalCenter(user, scopedOptions)) {
     return undefined;
   }
 
-  const repository = options.repository ?? proposalRepository;
+  const repository = scopedOptions.repository ?? proposalRepository;
   const detail = await repository.getProposalDetail(source.sourceId);
 
   if (!detail) {
@@ -1293,9 +1471,9 @@ export async function getApprovalCenterDetailData(
   }
 
   const scope = resolveAccessScope(user, {
-    requireScopeAssignments: options.requireScopeAssignments,
-    rolePermissionCatalog: options.rolePermissionCatalog,
-    scopeAssignments: options.scopeAssignments,
+    requireScopeAssignments: scopedOptions.requireScopeAssignments,
+    rolePermissionCatalog: scopedOptions.rolePermissionCatalog,
+    scopeAssignments: scopedOptions.scopeAssignments,
   });
 
   if (!canReadProposalInScope(detail.proposal, scope)) {
@@ -1310,18 +1488,18 @@ export async function getApprovalCenterDetailData(
   const canViewFinance = canViewFinanceForRecord(
     user,
     { projectId: detail.proposal.projectId, recordId: detail.proposal.id },
-    options,
+    scopedOptions,
   );
-  const canViewAudit = canViewAuditForRecord(user, detail.proposal, options);
-  const now = options.now ?? new Date();
+  const canViewAudit = canViewAuditForRecord(user, detail.proposal, scopedOptions);
+  const now = scopedOptions.now ?? new Date();
   const step = currentApprovalStep(detail.proposal, detail.steps);
   let overdue: ReturnType<typeof resolveApprovalOverdueState> | undefined;
-  let escalationResult: Awaited<ReturnType<typeof queueApprovalEscalationNotification>> | undefined;
+  let escalationResult: Awaited<ReturnType<typeof maybeQueueEscalationNotification>> | undefined;
 
   if (queueProposalStatuses.has(detail.proposal.status)) {
     const [policies, delegations] = await Promise.all([
-      resolveApprovalPolicies(options),
-      resolveDelegations(options),
+      resolveApprovalPolicies(scopedOptions),
+      resolveDelegations(scopedOptions),
     ]);
     const policy = escalationPolicyForStep(step, policyById(policies));
 
@@ -1332,7 +1510,7 @@ export async function getApprovalCenterDetailData(
       policyLabel: policy.label,
       thresholdDays: policy.escalateAfterDays,
     });
-    escalationResult = await queueApprovalEscalationNotification(
+    escalationResult = await maybeQueueEscalationNotification(
       {
         escalation: resolveApprovalEscalationState({
           currentApprover: {
@@ -1370,17 +1548,13 @@ export async function getApprovalCenterDetailData(
         },
         user,
       },
-      {
-        auditWriter: options.auditWriter,
-        notificationRepository: options.notificationRepository,
-        now: options.now,
-      },
+      scopedOptions,
     );
   }
   const auditLogs = await resolveProposalAuditLogs(
     detail.proposal.id,
     canViewAudit,
-    options,
+    scopedOptions,
   );
   const visibleAuditLogs =
     canViewAudit && escalationResult?.auditLog
@@ -1392,16 +1566,26 @@ export async function getApprovalCenterDetailData(
         ? "allowed"
         : "no_permission"
       : "not_applicable";
+  const linkedSources = buildLinkedSources(
+    detail.links,
+    detail.proposal,
+    user,
+    scope,
+    scopedOptions,
+  );
+  const historyLinks = detail.links.filter((link) =>
+    linkedSources.some((source) => source.id === link.id && source.state === "linked"),
+  );
 
   return {
-    backHref: buildBackHref(options.selectedScopeId),
+    backHref: buildBackHref(scopedOptions.selectedScopeId),
     escalation: escalationResult?.escalation,
     generatedAt: now.toISOString(),
-    history: buildHistory(detail.decisions, detail.steps, visibleAuditLogs, detail.links),
-    linkedSources: buildLinkedSources(detail.links, options.selectedScopeId),
+    history: buildHistory(detail.decisions, detail.steps, visibleAuditLogs, historyLinks),
+    linkedSources,
     overdue,
     permissions: {
-      availableActions: buildAvailableActions(detail, user, options),
+      availableActions: buildAvailableActions(detail, user, scopedOptions),
       canView: true,
       canViewAudit,
       canViewFinance,
@@ -1424,7 +1608,7 @@ export async function getApprovalCenterDetailData(
       submittedBy: detail.proposal.submittedBy,
       summary: detail.proposal.summary,
     },
-    selectedScopeId: options.selectedScopeId,
+    selectedScopeId: scopedOptions.selectedScopeId,
     source: {
       axisKey: "axis_1",
       category,

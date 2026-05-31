@@ -1176,7 +1176,7 @@ proposals.push(
     dueDate: dateOffset(-2),
     summary: "Approval qua han de verify queue, escalation va finance visibility.",
     aiReviewStatus: "warning",
-    aiReviewSummary: "Vuot nguong 2 ty, can Chu tich/Super Admin phe duyet.",
+    aiReviewSummary: "Vuot nguong 2 ty, can Chu tich phe duyet.",
     currentStepId: "proposal-step-demo-overdue-approval",
     createdAt: isoOffset(-5),
     updatedAt: isoOffset(-1)
@@ -1255,7 +1255,7 @@ proposalSteps.push({
   id: "proposal-step-demo-overdue-approval",
   proposalId: "proposal-demo-overdue-approval",
   stepOrder: 1,
-  approverRole: "super_admin",
+  approverRole: "chu_tich",
   requiredPermission: "proposal.approve",
   thresholdPolicyId: "policy-approval-over-2b",
   thresholdLabel: "Tren 2 ty",

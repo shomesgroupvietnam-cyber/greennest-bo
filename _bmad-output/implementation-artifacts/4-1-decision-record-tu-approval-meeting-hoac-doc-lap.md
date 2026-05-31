@@ -1,6 +1,6 @@
 # Story 4.1: Decision Record Từ Approval, Meeting Hoặc Độc Lập
 
-Status: review
+Status: done
 
 Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này mở Epic 4 bằng decision record chính thức, phân biệt với approval action và meeting action item hiện có. Phạm vi là data/service/action contract, persistence mock + Supabase-ready, permission và audit cho tạo decision. Chưa tạo multi-assignment/task từ decision, chưa làm version/history khi sửa, và chưa xây full Decision & Assignment Center UI; các phần đó thuộc Story 4.2-4.4.
 
@@ -100,6 +100,21 @@ so that chỉ đạo điều hành được ghi nhận riêng với approval.
   - [x] Repository tests cho JSON/Supabase mapping field mới nếu repository adapter được mở rộng.
   - [x] Regression tests cho existing meeting decision/action item và `convertDecisionToTask`.
   - [x] Run at minimum `npm run typecheck`, `npm run lint`, `npm run test`; run `npm run test:e2e` nếu route/UI behavior thay đổi.
+
+### Review Findings (Chunk 1: Core service/permission/action)
+
+- [x] [Review][Patch] Multi-project decision creation authorizes when any project matches instead of every project in scope [src/modules/executive/services/decision-record-service.ts:250]
+- [x] [Review][Patch] Project-scoped decision can assign an unknown or unscoped owner because zero memberships pass validation [src/modules/executive/services/decision-record-service.ts:287]
+- [x] [Review][Patch] Meeting decision action still writes through the legacy service, bypassing official `decision.created` audit and current-actor metadata [src/modules/meetings/actions.ts:114]
+- [x] [Review][Patch] User-supplied `sourceId`/`linkedRecords` can be stored without source/read-scope validation [src/modules/executive/services/decision-record-service.ts:353]
+- [x] [Review][Patch] Source-linked decisions can override `workstreamId`/`moduleId` away from the source scope [src/modules/executive/services/decision-record-service.ts:127]
+- [x] [Review][Patch] Executive decision FormData parsing throws raw JSON errors for malformed `linkedRecordsJson` [src/modules/executive/actions.ts:29]
+
+### Review Findings (Chunk 2-3: Persistence/RLS/tests/spec tracking)
+
+- [x] [Review][Patch] Supabase `listDecisions({ projectId })` ignores `project_ids`, so multi-project decisions disappear in Supabase while JSON mode returns them [src/modules/meetings/services/meeting-repository.ts:545]
+- [x] [Review][Patch] Decision RLS write policies reuse the read-scope helper, allowing multi-project create/update when the user can access only one project [database/policies/001_mvp_rls.sql:951]
+- [x] [Review][Patch] Decision RLS does not validate proposal/approval source read access, so direct Supabase inserts can link arbitrary proposal/approval sources when project scope is omitted [database/policies/001_mvp_rls.sql:291]
 
 ## Dev Notes
 

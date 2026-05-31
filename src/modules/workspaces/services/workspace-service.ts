@@ -198,7 +198,7 @@ export async function getRoleWorkspaceData(
     Boolean(options.selectedScopeId) && options.selectedScopeId !== "all";
   const ignoreImplicitAssignments =
     !selectedScopeActive &&
-    ["super_admin", "admin", "tong_giam_doc"].includes(user.role);
+    ["chu_tich", "super_admin", "admin", "tong_giam_doc"].includes(user.role);
   const effectiveScopeAssignments = ignoreImplicitAssignments
     ? []
     : selectedScopeAssignments;

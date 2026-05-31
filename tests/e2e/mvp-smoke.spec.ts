@@ -60,6 +60,35 @@ async function useMockRole(page: Page, role: string) {
 }
 
 test.describe("External role isolation", () => {
+  for (const { role, route } of [
+    { role: "nha_thau", route: "/contractor" },
+    { role: "tu_van", route: "/consultant" },
+  ]) {
+    test(`${role} login enters external workspace`, async ({ page }) => {
+      await page.context().clearCookies();
+      await page.goto("/login?entry=1&next=development");
+      await page.waitForLoadState("networkidle");
+      await page.locator('select[name="mockRole"]').selectOption(role);
+      await page.locator('button[type="submit"]').click();
+
+      await page.waitForURL(`**${route}`);
+      expect(page.url()).toContain(route);
+      expect(page.url()).not.toContain("/command-center");
+      expect(page.url()).not.toContain("/dashboard");
+    });
+
+    test(`${role} direct command center redirects to external workspace`, async ({ page }) => {
+      await useMockRole(page, role);
+
+      await page.goto("/command-center", { waitUntil: "domcontentloaded" });
+
+      await page.waitForURL(`**${route}`);
+      await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
+      await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+      await expect(page.locator("body")).not.toContainText("Ban lanh dao");
+    });
+  }
+
   test("contractor sees only assigned global records and cannot open unassigned details", async ({ page }) => {
     test.setTimeout(30000);
 
@@ -104,7 +133,41 @@ test.describe("External role isolation", () => {
 });
 
 test.describe("Permission-aware workspace entry", () => {
-  test("chairman login enters command center instead of BO settings", async ({ page }) => {
+  test("chairman login enters command center without BO navigation", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login?entry=1&next=development");
+    await page.waitForLoadState("networkidle");
+    await page.locator('select[name="mockRole"]').selectOption("chu_tich");
+    await page.locator('button[type="submit"]').click();
+
+    await page.waitForURL("**/command-center");
+    expect(page.url()).toContain("/command-center");
+    expect(page.url()).not.toContain("/admin");
+    await expect(page.getByRole("heading", { name: /Nguyen Thanh Binh/ })).toBeVisible();
+    await expect(page.getByText("Chu tich")).toBeVisible();
+    await expect(page.getByRole("button", { name: /T.ng quan/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /C.i/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Quan tri|BO Settings|Nguoi dung/i })).toHaveCount(0);
+
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('a[href="/command-center"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/command-center?view=executive-dashboard"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/admin"]')).toHaveCount(0);
+    await expect(page.locator('a[href="/settings"]')).toHaveCount(0);
+    await expect(page.locator('a[href="/users"]')).toHaveCount(0);
+
+    for (const route of ["/admin", "/settings", "/users"]) {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), route).toBe(403);
+      await expect(page.locator("body"), route).not.toContainText(
+        /Khong gian quan tri|Cai dat BO|Danh sach nguoi dung|Role Permission Catalog|Quan tri he thong|Nguoi dung|BO Settings/i,
+      );
+    }
+  });
+
+  test("super admin enters command center and keeps BO navigation", async ({ page }) => {
+    test.setTimeout(30000);
+
     await page.context().clearCookies();
     await page.goto("/login?entry=1&next=development");
     await page.waitForLoadState("networkidle");
@@ -113,7 +176,20 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.waitForURL("**/command-center");
     expect(page.url()).toContain("/command-center");
-    expect(page.url()).not.toContain("/admin");
+    await expect(page.getByRole("heading", { name: /Tran Quan Tri He Thong/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /C.i/i })).toBeVisible();
+
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('a[href="/command-center"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/command-center?view=executive-dashboard"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/admin"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/settings"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/users"]').first()).toBeVisible();
+
+    for (const route of ["/admin", "/settings", "/users"]) {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), route).toBe(200);
+    }
   });
 
   test("leadership login enters Module 1 leadership workspace view", async ({ page }) => {
@@ -158,6 +234,74 @@ test.describe("Permission-aware workspace entry", () => {
     await expect(page.getByRole("region", { name: "Read-only summary" })).toBeVisible();
     await expect(page.getByText("Read-only: khong co mutation action trong workspace nay.")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
+  });
+
+  test("viewer direct top-level command center redirects to read-only workspace", async ({ page }) => {
+    await useMockRole(page, "viewer");
+
+    await page.goto("/command-center", { waitUntil: "domcontentloaded" });
+
+    await page.waitForURL("**/viewer");
+    await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
+    await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+    await expect(page.locator("body")).not.toContainText("Executive Command Center");
+  });
+
+  test("assistant without active scope uses assistant workspace and cannot open command center", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login?entry=1&next=development");
+    await page.waitForLoadState("networkidle");
+    await page.locator('select[name="mockRole"]').selectOption("thu_ky_tro_ly");
+    await page.locator('button[type="submit"]').click();
+
+    await page.waitForURL("**/assistant-workspace");
+    expect(page.url()).toContain("/assistant-workspace");
+
+    await page.goto("/command-center", { waitUntil: "domcontentloaded" });
+    await page.waitForURL("**/assistant-workspace");
+    await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
+    await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+  });
+
+  for (const { role, route } of [
+    { role: "phap_ly", route: "/legal-workspace" },
+    { role: "thiet_ke", route: "/design-workspace" },
+    { role: "ky_thuat", route: "/technical-workspace" },
+  ]) {
+    test(`${role} development login enters specialist workspace`, async ({ page }) => {
+      await page.context().clearCookies();
+      await page.goto("/login?entry=1&next=development");
+      await page.waitForLoadState("networkidle");
+      await page.locator('select[name="mockRole"]').selectOption(role);
+      await page.locator('button[type="submit"]').click();
+
+      await page.waitForURL(`**${route}`);
+      expect(page.url()).toContain(route);
+      expect(page.url()).not.toContain("/command-center");
+    });
+  }
+
+  test("project director enters project workbench and Command Center opens Axis 1 overview", async ({ page }) => {
+    test.setTimeout(30000);
+
+    await page.context().clearCookies();
+    await page.goto("/login?entry=1&next=development");
+    await page.waitForLoadState("networkidle");
+    await page.locator('select[name="mockRole"]').selectOption("giam_doc_du_an");
+    await page.locator('button[type="submit"]').click();
+
+    await page.waitForURL("**/project-workbench");
+    expect(page.url()).toContain("/project-workbench");
+
+    await page.getByRole("link", { name: "Tong quan Truc 1" }).click();
+    await page.waitForURL("**/command-center?view=axis1-search-development");
+    await expect(
+      page.getByRole("link", { name: /Quay lai Ban du an/i }),
+    ).toHaveAttribute("href", "/project-workbench");
+    await expect(page.locator("body")).not.toContainText("Application error");
+
+    await page.goto("/command-center", { waitUntil: "domcontentloaded" });
+    await page.waitForURL("**/command-center?view=axis1-search-development");
   });
 
   test("leadership executive dashboard renders DTO sections", async ({ page }) => {
@@ -232,14 +376,16 @@ test.describe("Permission-aware workspace entry", () => {
   });
 
   test("leadership can drill from approval center to actionable approval detail", async ({ page }) => {
-    await useMockRole(page, "super_admin");
+    test.setTimeout(30000);
+
+    await useMockRole(page, "chu_tich");
 
     await page.goto("/command-center?view=executive-approvals", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("link", { name: "Open detail" }).first().click();
+    await page.getByRole("link", { name: /^Mo chi tiet/ }).first().click();
 
-    await expect(page).toHaveURL(/\/approvals\/proposal\//);
+    await expect(page).toHaveURL(/\/approvals\/proposal\//, { timeout: 15000 });
     await expect(page.getByRole("heading", { name: "Approval Detail" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Request summary" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Policy" })).toBeVisible();
@@ -252,7 +398,7 @@ test.describe("Permission-aware workspace entry", () => {
   });
 
   test("approval detail action panel fits mobile viewport", async ({ page }) => {
-    await useMockRole(page, "super_admin");
+    await useMockRole(page, "chu_tich");
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto("/approvals/proposal/proposal-demo-overdue-approval", { waitUntil: "domcontentloaded" });

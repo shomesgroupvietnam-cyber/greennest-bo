@@ -15,6 +15,7 @@
 - **[1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md](./1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md)** - Approval thresholds risk policy
 - **[1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md](./1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md)** - Leadership assistant delegation
 - **[1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md](./1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md)** - Module 1 acceptance seed data
+- **[1-6-separate-chairman-role-from-super-admin.md](./1-6-separate-chairman-role-from-super-admin.md)** - Separate Chairman role from Super Admin
 
 ### Epic 2 - Workspace And Dashboard
 
@@ -25,6 +26,9 @@
 - **[2-5-executive-common-center.md](./2-5-executive-common-center.md)** - Executive common center
 - **[2-6-private-workspace-theo-vai-tro.md](./2-6-private-workspace-theo-vai-tro.md)** - Role-based private workspace
 - **[2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md](./2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md)** - Workspace drilldown QA
+- **[2-8-external-role-workspace-isolation-va-command-center-guard.md](./2-8-external-role-workspace-isolation-va-command-center-guard.md)** - External role workspace isolation
+- **[2-9-role-navigation-policy-matrix-va-command-center-eligibility.md](./2-9-role-navigation-policy-matrix-va-command-center-eligibility.md)** - Role navigation policy matrix
+- **[2-10-chairman-admin-navigation-policy-settings.md](./2-10-chairman-admin-navigation-policy-settings.md)** - Chairman/admin navigation policy settings
 
 ### Epic 3 - Approval Center
 

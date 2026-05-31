@@ -228,9 +228,12 @@ describe("executive leadership service", () => {
       role: "admin",
     });
 
+    expect(resolveExecutiveAccess("chu_tich")?.level).toBe("owner");
     expect(resolveExecutiveAccess("super_admin")?.level).toBe("owner");
     expect(resolveExecutiveAccess("tong_giam_doc")?.level).toBe("founder");
     expect(adminData.access.level).toBe("admin");
+    expect(adminData.access.canApproveProposal).toBe(false);
+    expect(adminData.access.approvalLevels).toEqual([]);
     expect(resolveExecutiveAccess("viewer")).toBeNull();
     expect(canAccessExecutiveModule("viewer")).toBe(false);
     expect(canAccessExecutiveModule("nha_thau")).toBe(false);
@@ -241,6 +244,7 @@ describe("executive leadership service", () => {
       [
         "admin",
         "an_toan_lao_dong",
+        "chu_tich",
         "dau_tu_phat_trien",
         "giam_doc_du_an",
         "ky_thuat",
@@ -256,6 +260,7 @@ describe("executive leadership service", () => {
       ].sort(),
     );
     expect(canAccessExecutiveModule("super_admin")).toBe(true);
+    expect(canAccessExecutiveModule("chu_tich")).toBe(true);
     expect(canAccessExecutiveModule("admin")).toBe(true);
     expect(canAccessExecutiveModule("tong_giam_doc")).toBe(true);
     expect(canAccessExecutiveModule("pho_tong_giam_doc")).toBe(true);
@@ -287,8 +292,8 @@ describe("executive leadership service", () => {
 
   it("keeps chairman at strategic/global level and does not surface small department work", async () => {
     const data = await getExecutiveLeadershipData({
-      id: "owner-01",
-      role: "super_admin",
+      id: "chairman-01",
+      role: "chu_tich",
     });
 
     expect(data.accessibleScope.operatingRole).toBe("CHAIRMAN");

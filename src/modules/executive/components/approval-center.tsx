@@ -38,9 +38,9 @@ const priorityToneClasses: Record<ApprovalCenterPriority, string> = {
 };
 
 const financeLabels: Record<ApprovalCenterFinancialAccess, string> = {
-  allowed: "Finance visible",
-  no_permission: "Finance hidden",
-  not_applicable: "No finance data",
+  allowed: "Tai chinh duoc xem",
+  no_permission: "Tai chinh han che quyen",
+  not_applicable: "Khong co du lieu tai chinh",
 };
 
 function escalationTargetSummary(item: ApprovalCenterQueueItem) {
@@ -98,6 +98,15 @@ function CategorySummary({ tab }: { tab: ApprovalCenterAxisTab }) {
 
 function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
   const targetSummary = escalationTargetSummary(item);
+  const visibleAmountLabel =
+    item.financialAccess === "allowed" ? item.amountLabel : undefined;
+  const policyLabel = item.policyLabel ?? item.escalation?.policyLabel;
+  const metadata = [
+    item.ownerName ? `Owner: ${item.ownerName}` : undefined,
+    item.reviewerLabel ? `Approver: ${item.reviewerLabel}` : undefined,
+    item.riskLevel ? `Risk: ${item.riskLevel}` : undefined,
+    policyLabel ? `Policy: ${policyLabel}` : undefined,
+  ].filter((detail): detail is string => Boolean(detail));
 
   return (
     <article className="rounded-lg border bg-white p-4 shadow-sm">
@@ -120,6 +129,18 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
           <p className="mt-1 text-sm text-slate-500">
             {item.projectName ?? item.scopeLabel} - Requester: {item.requester}
           </p>
+          {metadata.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+              {metadata.map((detail) => (
+                <span
+                  className="rounded-md bg-slate-50 px-2 py-1"
+                  key={detail}
+                >
+                  {detail}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
           <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold ${dueToneClasses[item.dueGroup]}`}>
@@ -183,17 +204,18 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
           {financeLabels[item.financialAccess]}
         </span>
-        {item.amountLabel ? (
+        {visibleAmountLabel ? (
           <span className="rounded-md bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
-            {item.amountLabel}
+            {visibleAmountLabel}
           </span>
         ) : null}
         {item.href ? (
           <Link
+            aria-label={`Mo chi tiet ${item.title}`}
             className="ml-auto inline-flex items-center gap-1 rounded-md border px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-50"
             href={item.href}
           >
-            Open detail
+            Mo chi tiet
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
@@ -234,6 +256,46 @@ export function ApprovalCenter({
     return <ApprovalCenterNoAccessState />;
   }
 
+  const focusTab = (key: ApprovalCenterAxisKey) => {
+    document.getElementById(tabButtonId(key))?.focus();
+  };
+
+  const handleTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    const lastIndex = data.tabs.length - 1;
+    let nextIndex: number | undefined;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1;
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1;
+    }
+
+    if (event.key === "Home") {
+      nextIndex = 0;
+    }
+
+    if (event.key === "End") {
+      nextIndex = lastIndex;
+    }
+
+    if (nextIndex === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextKey = data.tabs[nextIndex]?.key;
+
+    if (nextKey) {
+      setActiveKey(nextKey);
+      focusTab(nextKey);
+    }
+  };
+
   return (
     <section className="space-y-5">
       <div className="rounded-lg border bg-white p-5 shadow-sm">
@@ -259,7 +321,7 @@ export function ApprovalCenter({
           className="mt-5 flex flex-wrap gap-2"
           role="tablist"
         >
-          {data.tabs.map((tab) => (
+          {data.tabs.map((tab, index) => (
             <button
               aria-controls={tabPanelId(tab.key)}
               aria-selected={activeTab.key === tab.key}
@@ -271,7 +333,9 @@ export function ApprovalCenter({
               id={tabButtonId(tab.key)}
               key={tab.key}
               onClick={() => setActiveKey(tab.key)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}
               role="tab"
+              tabIndex={activeTab.key === tab.key ? 0 : -1}
               type="button"
             >
               {tab.label}

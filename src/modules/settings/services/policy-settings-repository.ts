@@ -114,7 +114,7 @@ export function createDefaultPolicySettings(): PolicySettings {
         amountMin: 2_000_000_000,
         currency: "VND",
         approvalLevel: "CHAIRMAN",
-        approverRoleKey: "super_admin",
+        approverRoleKey: "chu_tich",
         requiredPermissionKey: "proposal.approve",
         escalateAfterDays: 3,
         escalateOnRiskLevels: ["high", "critical"],

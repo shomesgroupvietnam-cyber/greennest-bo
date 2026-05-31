@@ -188,6 +188,12 @@ export type CommandCenterAxisOneDashboardData = {
 export type CommandCenterData = {
   axes: CommandCenterAxis[];
   approvalCenter: ApprovalCenterData | null;
+  availableViews: {
+    notifications: boolean;
+    operationsDashboard: boolean;
+    overview: boolean;
+    settings: boolean;
+  };
   executiveCommonCenter: ExecutiveCommonCenterData | null;
   executiveDashboard: ExecutiveDashboardData | null;
   executiveMorningBriefing: ExecutiveMorningBriefingData | null;

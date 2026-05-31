@@ -174,6 +174,30 @@ create policy "risk groups updatable by settings managers" on public.risk_group_
     or public.current_user_has_scope_assignment_permission('settings.manage')
   );
 
+insert into public.roles (key, label_vi, description, scope, is_active)
+values
+  ('chu_tich', 'Chu tich', 'Executive chairman business leadership and approvals', 'system', true)
+on conflict (key) do update
+set label_vi = excluded.label_vi,
+    description = excluded.description,
+    scope = excluded.scope,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+insert into public.permissions (key, module, description)
+values
+  ('proposal.approve', 'proposal', 'Approve internal proposals')
+on conflict (key) do update
+set module = excluded.module,
+    description = excluded.description;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id
+from public.roles r
+join public.permissions p on p.key = 'proposal.approve'
+where r.key = 'chu_tich'
+on conflict (role_id, permission_id) do nothing;
+
 insert into public.approval_threshold_policies (
   id,
   policy_key,
@@ -208,7 +232,7 @@ from (
     ('policy-approval-under-20m', 'approval_under_20m', 'Duoi 20 trieu', 'general', 0::numeric(18, 2), 19999999.99::numeric(18, 2), 'VND', 'DEPARTMENT_HEAD', 'dau_tu_phat_trien', 'proposal.review', array['high', 'critical']::text[], true, 100),
     ('policy-approval-20m-200m', 'approval_20m_200m', '20 trieu den 200 trieu', 'general', 20000000::numeric(18, 2), 199999999.99::numeric(18, 2), 'VND', 'PROJECT_DIRECTOR', 'quan_ly_tai_chinh', 'proposal.approve', array['high', 'critical']::text[], true, 110),
     ('policy-approval-200m-2b', 'approval_200m_2b', '200 trieu den 2 ty', 'general', 200000000::numeric(18, 2), 1999999999.99::numeric(18, 2), 'VND', 'CEO', 'tong_giam_doc', 'proposal.approve', array['critical']::text[], true, 120),
-    ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty hoac quyet dinh chien luoc', 'general', 2000000000::numeric(18, 2), null::numeric(18, 2), 'VND', 'CHAIRMAN', 'super_admin', 'proposal.approve', array['high', 'critical']::text[], true, 130)
+    ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty hoac quyet dinh chien luoc', 'general', 2000000000::numeric(18, 2), null::numeric(18, 2), 'VND', 'CHAIRMAN', 'chu_tich', 'proposal.approve', array['high', 'critical']::text[], true, 130)
 ) as seed(
   id,
   policy_key,
@@ -233,7 +257,19 @@ where exists (
     and p.key = seed.required_permission_key
     and r.is_active = true
 )
-on conflict (policy_key) do nothing;
+on conflict (policy_key) do update
+set label_vi = excluded.label_vi,
+    target_type = excluded.target_type,
+    amount_min = excluded.amount_min,
+    amount_max = excluded.amount_max,
+    currency = excluded.currency,
+    approval_level = excluded.approval_level,
+    approver_role_key = excluded.approver_role_key,
+    required_permission_key = excluded.required_permission_key,
+    escalate_on_risk_levels = excluded.escalate_on_risk_levels,
+    is_active = excluded.is_active,
+    priority = excluded.priority,
+    updated_at = now();
 
 insert into public.risk_group_configs (
   id,

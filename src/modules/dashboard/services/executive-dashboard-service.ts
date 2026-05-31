@@ -295,7 +295,7 @@ function resolveEffectiveScopeAssignments(
   const selectedScopeActive = selectedScopeId !== "all";
   const ignoreImplicitAssignments =
     !selectedScopeActive &&
-    ["super_admin", "admin", "tong_giam_doc"].includes(user.role);
+    ["chu_tich", "super_admin", "admin", "tong_giam_doc"].includes(user.role);
 
   return ignoreImplicitAssignments ? [] : selectedScopeAssignments;
 }

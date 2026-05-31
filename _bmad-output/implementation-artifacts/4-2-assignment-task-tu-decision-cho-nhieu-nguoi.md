@@ -1,6 +1,6 @@
 # Story 4.2: Assignment/Task Từ Decision Cho Nhiều Người
 
-Status: ready-for-dev
+Status: in-progress
 
 Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này phụ thuộc Story 4.1 để có official decision record. Phạm vi là service/action/persistence contract cho việc tạo nhiều assignment/task từ một decision hợp lệ, validate target theo scope, link task về decision và audit mutation. Không xây full Decision & Assignment Center UI, không làm version/history khi sửa decision và không thêm bước người nhận xác nhận đã nhận việc.
 

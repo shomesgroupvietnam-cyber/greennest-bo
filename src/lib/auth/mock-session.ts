@@ -9,10 +9,15 @@ export type MockCurrentUser = {
 };
 
 const MOCK_ROLE_USERS: Record<Role, Omit<MockCurrentUser, "role">> = {
-  super_admin: {
+  chu_tich: {
     id: "chairman-01",
     fullName: "Nguyen Thanh Binh",
     email: "chairman@greennest.vn",
+  },
+  super_admin: {
+    id: "super-admin-01",
+    fullName: "Tran Quan Tri He Thong",
+    email: "super.admin@greennest.vn",
   },
   admin: {
     id: "mock-founder",

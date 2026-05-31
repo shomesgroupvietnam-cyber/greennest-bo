@@ -322,6 +322,86 @@ as $$
     )
 $$;
 
+create or replace function public.current_user_can_write_decision_scope(
+  decision_project_id uuid,
+  decision_project_ids uuid[],
+  decision_source_type text,
+  decision_source_id text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with scoped_projects as (
+    select distinct scoped_project.project_id
+    from unnest(
+      (
+        case
+          when decision_project_id is null then '{}'::uuid[]
+          else array[decision_project_id]
+        end
+      ) || coalesce(decision_project_ids, '{}'::uuid[])
+    ) as scoped_project(project_id)
+    where scoped_project.project_id is not null
+  ),
+  scope_allowed as (
+    select case
+      when exists (select 1 from scoped_projects) then
+        not exists (
+          select 1
+          from scoped_projects
+          where not public.current_user_can_read_project(project_id)
+        )
+      else public.current_user_has_internal_permission('decision.create')
+    end as allowed
+  ),
+  source_allowed as (
+    select case
+      when decision_source_type = 'independent' then true
+      when decision_source_type = 'meeting' then
+        decision_source_id is not null
+        and exists (
+          select 1
+          from public.meetings meeting
+          where meeting.id::text = decision_source_id
+            and public.current_user_has_permission('meeting.view')
+            and (
+              public.current_user_has_internal_permission('meeting.view')
+              or meeting.host_id = public.current_app_user_id()
+              or public.current_app_user_id() = any(meeting.participants)
+              or (
+                meeting.project_id is not null
+                and public.current_user_can_read_project(meeting.project_id)
+              )
+              or exists (
+                select 1
+                from unnest(coalesce(meeting.project_ids, '{}'::uuid[])) as meeting_project(project_id)
+                where public.current_user_can_read_project(meeting_project.project_id)
+              )
+            )
+        )
+      when decision_source_type in ('proposal', 'approval') then
+        decision_source_id is not null
+        and exists (
+          select 1
+          from public.proposals proposal
+          where proposal.id = decision_source_id
+            and public.current_user_has_permission('proposal.view')
+            and (
+              proposal.project_id is null
+              or public.current_user_can_read_project(proposal.project_id)
+            )
+        )
+      else false
+    end as allowed
+  )
+  select
+    (select allowed from scope_allowed)
+    and (select allowed from source_allowed)
+$$;
+
 create or replace function public.current_user_can_create_document(project_uuid uuid, owner_uuid uuid)
 returns boolean
 language sql
@@ -948,7 +1028,7 @@ create policy "decisions creatable by scoped permitted users" on public.decision
   for insert to authenticated
   with check (
     public.current_user_has_permission('decision.create')
-    and public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    and public.current_user_can_write_decision_scope(project_id, project_ids, source_type, source_id)
     and created_by = public.current_app_user_id()
   );
 
@@ -956,14 +1036,14 @@ drop policy if exists "decisions updatable by scoped meeting/task users" on publ
 create policy "decisions updatable by scoped meeting/task users" on public.decisions
   for update to authenticated
   using (
-    public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    public.current_user_can_write_decision_scope(project_id, project_ids, source_type, source_id)
     and (
       public.current_user_has_internal_permission('meeting.update')
       or public.current_user_has_permission('task.create')
     )
   )
   with check (
-    public.current_user_can_access_decision_scope(project_id, project_ids, source_type, source_id)
+    public.current_user_can_write_decision_scope(project_id, project_ids, source_type, source_id)
     and (
       public.current_user_has_internal_permission('meeting.update')
       or public.current_user_has_permission('task.create')

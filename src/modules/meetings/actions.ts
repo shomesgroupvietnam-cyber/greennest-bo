@@ -6,9 +6,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { assertCan } from "@/lib/permissions/can";
 import { getScopedDecision, getScopedMeeting, getScopedProject } from "@/lib/permissions/scoped-resources";
+import { createDecisionRecord } from "@/modules/executive/services/decision-record-service";
 import {
   convertDecisionToTask,
-  createDecision,
   createMeeting,
   getDecision,
   getMeeting,
@@ -105,18 +105,26 @@ export async function updateMeetingAction(meetingId: string, formData: FormData)
 
 export async function createDecisionAction(meetingId: string, formData: FormData) {
   const currentUser = await getCurrentUser();
-  assertCan(currentUser, "decision.create");
-
-  if (!(await getScopedMeeting(currentUser, meetingId))) {
-    throw new Error("Bạn không có quyền tạo quyết định cho cuộc họp này.");
-  }
-
-  const decision = await createDecision(formDataToDecisionInput(meetingId, formData));
+  const input = formDataToDecisionInput(meetingId, formData);
+  const decision = await createDecisionRecord(
+    {
+      sourceType: "meeting",
+      sourceId: meetingId,
+      decisionText: input.decisionText,
+      ownerId: input.ownerId,
+      dueDate: input.dueDate,
+      status: input.status
+    },
+    currentUser
+  );
 
   revalidatePath("/meetings");
   revalidatePath(`/meetings/${meetingId}`);
   if (decision.projectId) {
     revalidatePath(`/projects/${decision.projectId}`);
+  }
+  for (const projectId of decision.projectIds ?? []) {
+    revalidatePath(`/projects/${projectId}`);
   }
 }
 

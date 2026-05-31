@@ -24,7 +24,7 @@ const navItems: NavigationItem[] = [
   {
     href: "/admin",
     icon: "users",
-    label: "Quan tri Chu tich",
+    label: "Quan tri he thong",
   },
 ];
 
@@ -52,8 +52,8 @@ describe("PermissionAwareShell header", () => {
             label: "Lanh dao",
           },
           user: {
-            fullName: "Nguyen Thanh Binh",
-            id: "chairman-01",
+            fullName: "Tran Quan Tri He Thong",
+            id: "super-admin-01",
             role: "super_admin",
           },
         }}
@@ -65,6 +65,6 @@ describe("PermissionAwareShell header", () => {
     expect(screen.getAllByText("Scope project-a").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Workspace")).toBeInTheDocument();
     expect(screen.getByLabelText("Scope")).toBeInTheDocument();
-    expect(screen.getByText("Nguyen Thanh Binh")).toBeInTheDocument();
+    expect(screen.getByText("Tran Quan Tri He Thong")).toBeInTheDocument();
   });
 });

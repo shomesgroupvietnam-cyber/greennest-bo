@@ -25,6 +25,7 @@ let repository: JsonPolicySettingsRepository;
 let catalogRepository: JsonRolePermissionCatalogRepository;
 
 const settingsManager: PermissionUser = { id: "mock-founder", role: "admin" };
+const chairman: PermissionUser = { id: "chairman-01", role: "chu_tich" };
 const viewer: PermissionUser = { id: "viewer-user", role: "viewer" };
 
 beforeEach(async () => {
@@ -426,6 +427,22 @@ describe("policy settings service", () => {
     await expect(
       upsertApprovalThresholdPolicy(
         {
+          policyKey: "finance_chairman_bo_denied",
+          labelVi: "Chairman cannot manage BO policy",
+          targetType: "finance",
+          amountMin: 0,
+          approvalLevel: "DEPARTMENT_HEAD",
+          approverRoleKey: "quan_ly_tai_chinh",
+          requiredPermissionKey: "proposal.approve",
+        },
+        chairman,
+        { repository, catalogRepository },
+      ),
+    ).rejects.toThrow(/quyen|permission/i);
+
+    await expect(
+      upsertApprovalThresholdPolicy(
+        {
           policyKey: "finance_invalid_role",
           labelVi: "Invalid role",
           targetType: "finance",
@@ -481,7 +498,7 @@ describe("policy settings service", () => {
         targetType: "investment",
         amountMin: 2_000_000_000,
         approvalLevel: "CHAIRMAN",
-        approverRoleKey: "super_admin",
+        approverRoleKey: "chu_tich",
         requiredPermissionKey: "proposal.approve",
         priority: 1,
         organizationId: "org-green-nest",
@@ -497,7 +514,7 @@ describe("policy settings service", () => {
       targetType: "investment",
       amountMin: 2_000_000_000,
       approvalLevel: "CHAIRMAN",
-      approverRoleKey: "super_admin",
+      approverRoleKey: "chu_tich",
       requiredPermissionKey: "proposal.approve",
       active: true,
       organizationId: "org-green-nest",

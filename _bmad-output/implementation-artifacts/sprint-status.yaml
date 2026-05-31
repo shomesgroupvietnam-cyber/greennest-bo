@@ -1,5 +1,5 @@
 # generated: 2026-05-23T16:00:49+07:00
-# last_updated: 2026-05-30T09:50:55+07:00
+# last_updated: 2026-05-31T13:43:59+07:00
 # project: green_nest_buider_web
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-23T16:00:49+07:00
-last_updated: 2026-05-30T09:50:55+07:00
+last_updated: 2026-05-31T13:43:59+07:00
 project: green_nest_buider_web
 project_key: NOKEY
 tracking_system: file-system
@@ -48,6 +48,7 @@ development_status:
   1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk: done
   1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao: done
   1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1: done
+  1-6-separate-chairman-role-from-super-admin: done
   epic-1-retrospective: optional
   epic-2: in-progress
   2-1-permission-aware-shell-va-workspace-entry: done
@@ -57,17 +58,20 @@ development_status:
   2-5-executive-common-center: done
   2-6-private-workspace-theo-vai-tro: done
   2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace: done
+  2-8-external-role-workspace-isolation-va-command-center-guard: done
+  2-9-role-navigation-policy-matrix-va-command-center-eligibility: done
+  2-10-chairman-admin-navigation-policy-settings: done
   epic-2-retrospective: optional
   epic-3: in-progress
-  3-1-approval-center-scoped-queue-va-axis-tabs: review
+  3-1-approval-center-scoped-queue-va-axis-tabs: done
   3-2-approval-detail-cho-request-truc-1: done
   3-3-approval-actions-voi-validation-va-permission: done
   3-4-approval-history-version-va-audit: done
   3-5-approval-qua-han-va-escalation-theo-policy: done
   epic-3-retrospective: optional
   epic-4: in-progress
-  4-1-decision-record-tu-approval-meeting-hoac-doc-lap: review
-  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: ready-for-dev
+  4-1-decision-record-tu-approval-meeting-hoac-doc-lap: done
+  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: in-progress
   4-3-version-history-khi-sua-decision-quan-trong: backlog
   4-4-decision-assignment-center-ui: backlog
   epic-4-retrospective: optional

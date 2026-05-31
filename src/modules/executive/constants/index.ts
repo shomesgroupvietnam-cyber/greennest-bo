@@ -55,10 +55,10 @@ const accessPolicies: Record<ExecutiveAccessLevel, ExecutiveAccessPolicy> = {
     canApprovePlan: true,
     canCreateDirective: true,
     canCreateMeetingAction: true,
-    canApproveProposal: true,
+    canApproveProposal: false,
     canViewAudit: true,
     canUseAiPanel: true,
-    approvalLevels: ["CHAIRMAN"],
+    approvalLevels: [],
   },
   leader: {
     level: "leader",
@@ -137,6 +137,7 @@ const accessPolicies: Record<ExecutiveAccessLevel, ExecutiveAccessPolicy> = {
 export const EXECUTIVE_ACCESS_BY_ROLE: Partial<
   Record<Role, ExecutiveAccessLevel>
 > = {
+  chu_tich: "owner",
   super_admin: "owner",
   tong_giam_doc: "founder",
   admin: "admin",

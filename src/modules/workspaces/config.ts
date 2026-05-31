@@ -59,6 +59,7 @@ export const WORKSPACE_DEFINITIONS: Record<
       "meeting.view",
       "decision.approve",
       "proposal.view",
+      "proposal.review",
       "proposal.approve",
       "proposal.reject",
       "proposal.request_change",

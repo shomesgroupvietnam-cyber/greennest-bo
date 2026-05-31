@@ -26,7 +26,13 @@ function readLinkedRecords(formData: FormData): DecisionLinkedRecord[] {
     return [];
   }
 
-  const parsed = JSON.parse(raw);
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Du lieu linked records khong hop le.");
+  }
 
   return Array.isArray(parsed) ? (parsed as DecisionLinkedRecord[]) : [];
 }

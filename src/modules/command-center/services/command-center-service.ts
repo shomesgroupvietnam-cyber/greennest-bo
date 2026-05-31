@@ -5,6 +5,14 @@ import {
   type PermissionUser,
 } from "@/lib/permissions/can";
 import {
+  AXIS_ONE_COMMAND_CENTER_VIEW,
+  canOpenCommandCenter,
+} from "@/lib/permissions/navigation-policy";
+import {
+  buildDelegatedPermissionsForPolicy,
+  buildDelegatedScopeAssignmentsForPolicy,
+} from "@/lib/permissions/navigation-policy-context";
+import {
   canAccessScopedAction,
   hasAnyScopedActionGrant,
   requiresAssignmentScopeForRole,
@@ -28,7 +36,10 @@ import type {
   CommandTask,
   ProjectProgressSegment,
 } from "@/modules/command-center/types";
-import { getDashboardData } from "@/modules/dashboard/services/dashboard-service";
+import {
+  DASHBOARD_PROGRESS_FORMULA,
+  getDashboardData,
+} from "@/modules/dashboard/services/dashboard-service";
 import { getExecutiveCommonCenterData } from "@/modules/dashboard/services/executive-common-center-service";
 import { getExecutiveDashboardData } from "@/modules/dashboard/services/executive-dashboard-service";
 import { getExecutiveMorningBriefingData } from "@/modules/dashboard/services/executive-morning-briefing-service";
@@ -41,23 +52,13 @@ import type { LeadershipDelegation, RolePermissionCatalog, ScopeAssignment } fro
 import { getExecutivePrivateWorkspaceData } from "@/modules/workspaces/services/executive-private-workspace-service";
 import { getApprovalCenterData } from "@/modules/proposals/services/approval-center-service";
 
-const executiveWorkspacePermissions = [
-  "project.view",
-  "task.view",
-  "document.view",
-  "legal.view",
-  "finance.view",
-  "meeting.view",
-  "decision.approve",
-  "proposal.view",
-  "proposal.approve",
-] as const;
-
 function buildAxes(
   user: PermissionUser,
   access: {
     canViewAxisOne?: boolean;
+    canViewApprovalCenter?: boolean;
     canViewExecutive?: boolean;
+    canViewOperations?: boolean;
     canViewPrivateWorkspace?: boolean;
     scopedPermissions?: ReadonlySet<PermissionAction>;
   } = {},
@@ -66,9 +67,12 @@ function buildAxes(
     can(user, permission) || (access.scopedPermissions?.has(permission) ?? false);
   const canViewExecutive =
     access.canViewExecutive ?? canAccessExecutiveModule(user.role);
+  const canViewOperations = access.canViewOperations ?? canViewExecutive;
   const canViewPrivateWorkspace =
     access.canViewPrivateWorkspace ?? canViewExecutive;
   const canViewAxisOne = access.canViewAxisOne ?? can(user, "axis1.view");
+  const canViewApprovalCenter =
+    access.canViewApprovalCenter ?? canViewExecutive;
 
   const axes: CommandCenterAxis[] = [
     {
@@ -98,11 +102,15 @@ function buildAxes(
                     href: "/command-center?view=executive-common-center",
                     viewKey: "executive-common-center",
                   },
-                  {
-                    label: "Approval Center",
-                    href: "/command-center?view=executive-approvals",
-                    viewKey: "executive-approvals",
-                  },
+                  ...(canViewApprovalCenter
+                    ? [
+                        {
+                          label: "Approval Center",
+                          href: "/command-center?view=executive-approvals",
+                          viewKey: "executive-approvals",
+                        },
+                      ]
+                    : []),
                   {
                     label: "Private Workspace",
                     href: "/command-center?view=executive-private-workspace",
@@ -111,15 +119,26 @@ function buildAxes(
                 ],
               },
             ]
-          : canViewPrivateWorkspace
-            ? [
-                {
-                  code: "01",
-                  label: "Private Workspace",
-                  href: "/command-center?view=executive-private-workspace",
-                  viewKey: "executive-private-workspace",
-                },
-              ]
+          : []),
+        ...(!canViewExecutive && canViewApprovalCenter
+          ? [
+              {
+                code: "01",
+                label: "Approval Center",
+                href: "/command-center?view=executive-approvals",
+                viewKey: "executive-approvals",
+              },
+            ]
+          : []),
+        ...(!canViewExecutive && canViewPrivateWorkspace
+          ? [
+              {
+                code: "02",
+                label: "Private Workspace",
+                href: "/command-center?view=executive-private-workspace",
+                viewKey: "executive-private-workspace",
+              },
+            ]
           : []),
         ...(canViewAxisOne
           ? [
@@ -299,7 +318,55 @@ function buildAxes(
     },
   ];
 
-  return axes.filter((axis) => axis.items.length > 0);
+  return axes
+    .map((axis) =>
+      canViewOperations
+        ? axis
+        : {
+            ...axis,
+            items: axis.items.filter(
+              (item) => item.viewKey !== "operations-dashboard",
+            ),
+          },
+    )
+    .filter((axis) => axis.items.length > 0);
+}
+
+function emptyOperationsDashboard(): CommandCenterData["operationsDashboard"] {
+  return {
+    blockedLegalSteps: [],
+    generatedAt: new Date().toISOString(),
+    missingDocuments: [],
+    missingRequiredDocuments: [],
+    needsUpdateDocuments: [],
+    overdueTasks: [],
+    permissions: {
+      canViewConstruction: false,
+      canViewDesign: false,
+      canViewDocuments: false,
+      canViewFinance: false,
+      canViewLegal: false,
+      canViewProjects: false,
+      canViewTasks: false,
+    },
+    progressFormula: DASHBOARD_PROGRESS_FORMULA,
+    projects: [],
+    summary: {
+      activeProjects: 0,
+      blockedLegalSteps: 0,
+      missingDocuments: 0,
+      missingRequiredDocuments: 0,
+      needsUpdateDocuments: 0,
+      overallProgress: 0,
+      overdueTasks: 0,
+      totalProjects: 0,
+      upcomingTasks: 0,
+      waitingAuthorityLegalSteps: 0,
+    },
+    tasksDueThisWeek: [],
+    upcomingTasks: [],
+    waitingAuthorityLegalSteps: [],
+  };
 }
 
 function summarizeAxisOneStages(stages: ReturnType<typeof getAxisOneStages>) {
@@ -633,7 +700,7 @@ export async function getCommandCenterData(
     selectedScopeActive && selectedScopeAssignments.length === 0;
   const ignoreImplicitAssignments =
     !selectedScopeActive &&
-    ["super_admin", "admin", "tong_giam_doc"].includes(user.role);
+    ["chu_tich", "super_admin", "admin", "tong_giam_doc"].includes(user.role);
   const effectiveScopeAssignments = ignoreImplicitAssignments
     ? []
     : selectedScopeAssignments;
@@ -644,33 +711,78 @@ export async function getCommandCenterData(
     effectiveScopeAssignments,
     rolePermissionCatalog,
   );
-  const hasExecutiveScopeGrant = effectiveScopeAssignments.some((assignment) =>
-    canAccessExecutiveModule(assignment.roleKey) &&
-    executiveWorkspacePermissions.some((permission) =>
-      hasAnyScopedActionGrant(user, permission, {
-        rolePermissionCatalog,
-        scopeAssignments: [assignment],
-      }),
-    ),
+  const delegatedPermissions = buildDelegatedPermissionsForPolicy(
+    delegations,
+    selectedScopeAssignments,
+    options.selectedScopeId,
   );
+  const delegatedScopeAssignments = buildDelegatedScopeAssignmentsForPolicy(
+    user,
+    delegations,
+    selectedScopeAssignments,
+    options.selectedScopeId,
+  );
+  const commandCenterPolicyContext = {
+    delegatedPermissions,
+    delegatedScopeAssignments,
+    scopedPermissions: [...scopedPermissions],
+  };
+  const commandCenterScopedPermissions = new Set([
+    ...scopedPermissions,
+    ...delegatedPermissions,
+  ]);
   const canViewExecutive =
     !selectedScopeInvalid &&
-    (canAccessExecutiveModule(user.role) || hasExecutiveScopeGrant);
-  const canViewPrivateWorkspace =
+    canOpenCommandCenter(
+      user,
+      "executive-dashboard",
+      commandCenterPolicyContext,
+    );
+  const canViewPrivateWorkspace = canOpenCommandCenter(
+    user,
+    "executive-private-workspace",
+    commandCenterPolicyContext,
+  );
+  const canViewOperations =
     !selectedScopeInvalid &&
-    (canViewExecutive || user.role === "thu_ky_tro_ly" || user.role === "viewer");
-  const canViewAxisOne = can(user, "axis1.view") || scopedPermissions.has("axis1.view");
+    canOpenCommandCenter(
+      user,
+      "operations-dashboard",
+      commandCenterPolicyContext,
+    );
+  const canViewAxisOne =
+    !selectedScopeInvalid &&
+    canOpenCommandCenter(
+      user,
+      AXIS_ONE_COMMAND_CENTER_VIEW,
+      commandCenterPolicyContext,
+    );
+  const canOpenApprovalCenter =
+    !selectedScopeInvalid &&
+    canOpenCommandCenter(
+      user,
+      "executive-approvals",
+      commandCenterPolicyContext,
+    );
+  const axisOneScopeAssignments = [
+    ...effectiveScopeAssignments,
+    ...delegatedScopeAssignments.filter((assignment) =>
+      assignment.permissionKeys.includes("axis1.view"),
+    ),
+  ];
   const [
     operationsDashboard,
     executiveData,
     executiveDashboard,
     executiveMorningBriefing,
   ] = await Promise.all([
-    getDashboardData(user, {
-      requireScopeAssignments,
-      rolePermissionCatalog,
-      scopeAssignments: effectiveScopeAssignments,
-    }),
+    canViewOperations
+      ? getDashboardData(user, {
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : Promise.resolve(emptyOperationsDashboard()),
     canViewExecutive
       ? getExecutiveLeadershipData(user, {
           rolePermissionCatalog,
@@ -709,8 +821,7 @@ export async function getCommandCenterData(
   const executivePrivateWorkspace =
     canViewExecutive ||
     selectedScopeInvalid ||
-    user.role === "thu_ky_tro_ly" ||
-    user.role === "viewer"
+    canViewPrivateWorkspace
       ? await getExecutivePrivateWorkspaceData(user, {
           dashboardData: executiveDashboard ?? undefined,
           delegations,
@@ -722,14 +833,14 @@ export async function getCommandCenterData(
         })
       : null;
   const approvalCenter =
-    canViewExecutive && executiveData
+    canOpenApprovalCenter
       ? await getApprovalCenterData(user, {
-          leadershipApprovals: executiveData.approvals,
+          leadershipApprovals: executiveData?.approvals ?? [],
           requireScopeAssignments,
           rolePermissionCatalog,
           selectedScopeId: options.selectedScopeId,
           scopeAssignments: effectiveScopeAssignments,
-          scopeLabel: executiveData.scopeLabel,
+          scopeLabel: executiveData?.scopeLabel,
         })
       : null;
   const executiveWorkspace = executiveData
@@ -752,7 +863,7 @@ export async function getCommandCenterData(
         leadershipTeam: executiveData.leadershipTeam,
         directives: executiveData.directives,
         meetings: executiveData.meetings,
-        approvals: executiveData.approvals,
+        approvals: approvalCenter?.permissions.canView ? executiveData.approvals : [],
         decisionLog: executiveData.decisionLog,
         auditLog: executiveData.auditLog,
         aiInsights: executiveData.aiInsights,
@@ -763,11 +874,19 @@ export async function getCommandCenterData(
   return {
     axes: buildAxes(user, {
       canViewAxisOne,
+      canViewApprovalCenter: approvalCenter?.permissions.canView ?? false,
       canViewExecutive,
+      canViewOperations,
       canViewPrivateWorkspace,
-      scopedPermissions,
+      scopedPermissions: commandCenterScopedPermissions,
     }),
     approvalCenter,
+    availableViews: {
+      notifications: canViewExecutive,
+      operationsDashboard: canViewOperations,
+      overview: canViewOperations,
+      settings: can(user, "settings.manage") || can(user, "delegation.manage"),
+    },
     executiveDashboard,
     executiveCommonCenter,
     executiveMorningBriefing,
@@ -779,7 +898,7 @@ export async function getCommandCenterData(
         ? buildAxisOneDashboardFromStages(getAxisOneStages())
         : buildScopedAxisOneDashboard(
             user,
-            effectiveScopeAssignments,
+            axisOneScopeAssignments,
             rolePermissionCatalog,
           )
       : {
@@ -789,10 +908,12 @@ export async function getCommandCenterData(
           openTasks: [],
           riskAlerts: [],
         },
-    kpis: buildKpis(operationsDashboard),
-    progressSegments: buildProgressSegments(operationsDashboard),
-    overdueTasks: buildOverdueTasks(operationsDashboard),
-    projects: buildProjectRows(operationsDashboard),
+    kpis: canViewOperations ? buildKpis(operationsDashboard) : [],
+    progressSegments: canViewOperations
+      ? buildProgressSegments(operationsDashboard)
+      : [],
+    overdueTasks: canViewOperations ? buildOverdueTasks(operationsDashboard) : [],
+    projects: canViewOperations ? buildProjectRows(operationsDashboard) : [],
     schedule:
       executiveData?.schedule.map(
         (item): CommandScheduleItem => ({
@@ -803,7 +924,7 @@ export async function getCommandCenterData(
           tone: item.tone,
         }),
       ) ?? [],
-    quickActions: buildQuickActions(user),
+    quickActions: canViewOperations ? buildQuickActions(user) : [],
     notifications:
       executiveData?.notifications.map(
         (item): CommandNotification => ({
@@ -813,6 +934,6 @@ export async function getCommandCenterData(
           tone: item.tone,
         }),
       ) ?? [],
-    aiSuggestions: buildAiSuggestions(operationsDashboard),
+    aiSuggestions: canViewOperations ? buildAiSuggestions(operationsDashboard) : [],
   };
 }

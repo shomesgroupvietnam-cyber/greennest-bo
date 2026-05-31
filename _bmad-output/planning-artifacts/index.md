@@ -6,6 +6,7 @@
 - **[axis-1-requirement-brd-architecture-draft.md](./axis-1-requirement-brd-architecture-draft.md)** - Truc 1 BRD architecture draft
 - **[implementation-readiness-report-2026-05-23.md](./implementation-readiness-report-2026-05-23.md)** - Initial implementation readiness assessment
 - **[implementation-readiness-report-2026-05-24.md](./implementation-readiness-report-2026-05-24.md)** - Updated implementation readiness assessment
+- **[module-1-gap-closure-dashboard-workspace-meeting.md](./module-1-gap-closure-dashboard-workspace-meeting.md)** - Module 1 gap closure for dashboard contract, private workspace variants, and meeting boundary
 - **[sprint-change-proposal-2026-05-24-module-1-navigation-ia.md](./sprint-change-proposal-2026-05-24-module-1-navigation-ia.md)** - Module 1 navigation change proposal
 - **[truc-1-mvp-bmad-requirement.md](./truc-1-mvp-bmad-requirement.md)** - Truc 1 MVP BMad requirements
 - **[truc-1-mvp-final-bmad-ready.md](./truc-1-mvp-final-bmad-ready.md)** - Final BMad-ready MVP requirements

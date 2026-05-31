@@ -690,6 +690,7 @@ export type ApprovalCenterQueueItem = {
   dueDate?: string;
   dueGroup: ApprovalCenterDueGroup;
   dueLabel: string;
+  updatedAt?: string;
   overdue?: ApprovalOverdueState;
   escalation?: ApprovalEscalationState;
   reason?: string;

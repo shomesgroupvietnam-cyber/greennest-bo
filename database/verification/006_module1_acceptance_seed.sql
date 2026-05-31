@@ -3,20 +3,27 @@
 --
 -- Read-only checks for staging SQL editor or psql.
 
+with expected_personas(id, email, role) as (
+  values
+    ('20000000-0000-4000-8000-000000000101', 'chairman@greennest.vn', 'chu_tich'),
+    ('20000000-0000-4000-8000-000000000111', 'super.admin@greennest.vn', 'super_admin'),
+    ('20000000-0000-4000-8000-000000000102', 'admin@greennest.vn', 'admin'),
+    ('20000000-0000-4000-8000-000000000103', 'ceo@greennest.vn', 'tong_giam_doc'),
+    ('20000000-0000-4000-8000-000000000104', 'director@greennest.vn', 'giam_doc_du_an'),
+    ('20000000-0000-4000-8000-000000000105', 'department.head@greennest.vn', 'to_truong'),
+    ('20000000-0000-4000-8000-000000000106', 'assistant@greennest.vn', 'thu_ky_tro_ly'),
+    ('20000000-0000-4000-8000-000000000107', 'viewer@greennest.vn', 'viewer')
+)
 select
-  'module1_acceptance_personas_present' as check_name,
-  count(*) = 7 as passed,
-  array_agg(role order by role) as seeded_roles
-from public.users
-where email in (
-  'chairman@greennest.vn',
-  'ceo@greennest.vn',
-  'director@greennest.vn',
-  'department.head@greennest.vn',
-  'assistant@greennest.vn',
-  'viewer@greennest.vn',
-  'admin@greennest.vn'
-);
+  'module1_acceptance_personas_exact' as check_name,
+  count(u.id) = 8
+  and bool_and(u.email = expected_personas.email and u.role = expected_personas.role) as passed,
+  array_agg(
+    expected_personas.id || ':' || coalesce(u.email, '<missing>') || ':' || coalesce(u.role, '<missing>')
+    order by expected_personas.email
+  ) as seeded_personas
+from expected_personas
+left join public.users u on u.id::text = expected_personas.id;
 
 select
   'module1_projects_cover_status_signals' as check_name,
@@ -25,19 +32,33 @@ select
 from public.projects
 where code in ('GN-2026-001', 'GN-2026-002', 'GN-2026-003', 'GN-2026-004');
 
+with expected_scope_assignments(id, user_id, role_key, scope_type, project_id, axis_id) as (
+  values
+    ('32000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000101', 'chu_tich', 'global', null, null),
+    ('32000000-0000-4000-8000-000000000108', '20000000-0000-4000-8000-000000000111', 'super_admin', 'global', null, null),
+    ('32000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000103', 'tong_giam_doc', 'scoped', null, 'axis-1'),
+    ('32000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000104', 'giam_doc_du_an', 'scoped', '30000000-0000-4000-8000-000000000101', 'axis-1'),
+    ('32000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000105', 'to_truong', 'scoped', '30000000-0000-4000-8000-000000000102', 'axis-1'),
+    ('32000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000106', 'thu_ky_tro_ly', 'scoped', '30000000-0000-4000-8000-000000000101', 'axis-1'),
+    ('32000000-0000-4000-8000-000000000106', '20000000-0000-4000-8000-000000000107', 'viewer', 'scoped', '30000000-0000-4000-8000-000000000102', 'axis-1')
+)
 select
-  'module1_scope_assignments_present' as check_name,
-  count(*) >= 6 as passed,
-  array_agg(role_key order by role_key) as scoped_roles
-from public.access_scope_assignments
-where id in (
-  '32000000-0000-4000-8000-000000000101',
-  '32000000-0000-4000-8000-000000000102',
-  '32000000-0000-4000-8000-000000000103',
-  '32000000-0000-4000-8000-000000000104',
-  '32000000-0000-4000-8000-000000000105',
-  '32000000-0000-4000-8000-000000000106'
-);
+  'module1_scope_assignments_exact' as check_name,
+  count(a.id) = 7
+  and bool_and(
+    a.user_id::text = expected_scope_assignments.user_id
+    and a.role_key = expected_scope_assignments.role_key
+    and a.scope_type = expected_scope_assignments.scope_type
+    and coalesce(a.project_id, '') = coalesce(expected_scope_assignments.project_id, '')
+    and coalesce(a.axis_id, '') = coalesce(expected_scope_assignments.axis_id, '')
+  ) as passed,
+  array_agg(
+    expected_scope_assignments.id || ':' || coalesce(a.user_id::text, '<missing>') || ':' ||
+    coalesce(a.role_key, '<missing>') || ':' || coalesce(a.scope_type, '<missing>')
+    order by expected_scope_assignments.id
+  ) as scoped_assignments
+from expected_scope_assignments
+left join public.access_scope_assignments a on a.id::text = expected_scope_assignments.id;
 
 select
   'assistant_scope_has_no_finance_view' as check_name,
@@ -53,7 +74,8 @@ select
     select 1
     from public.approval_threshold_policies
     where policy_key = 'approval_over_2b'
-      and approver_role_key = 'super_admin'
+      and approval_level = 'CHAIRMAN'
+      and approver_role_key = 'chu_tich'
       and required_permission_key = 'proposal.approve'
       and is_active = true
   )

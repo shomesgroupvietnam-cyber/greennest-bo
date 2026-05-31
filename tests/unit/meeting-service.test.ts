@@ -275,6 +275,31 @@ describe("meeting service", () => {
         created_at: "2026-05-24T09:30:00.000Z",
         updated_at: "2026-05-24T09:45:00.000Z",
       },
+      {
+        id: "decision-supabase-multi",
+        title: "Approve multi-project parity",
+        organization_id: "org-green-nest",
+        meeting_id: null,
+        project_id: null,
+        project_ids: ["project-a", "project-b"],
+        axis_id: "axis-1",
+        workstream_id: "decision",
+        module_id: "meeting",
+        decision_text: "Approve multi-project parity",
+        source_type: "independent",
+        source_id: null,
+        linked_records: [],
+        owner_id: "owner-02",
+        priority: "medium",
+        due_date: "2026-05-27",
+        status: "open",
+        task_id: null,
+        created_by: "assistant-01",
+        decided_by: "director-01",
+        decided_at: "2026-05-24T10:31:00.000Z",
+        created_at: "2026-05-24T10:30:00.000Z",
+        updated_at: "2026-05-24T10:45:00.000Z",
+      },
     ];
     const repository = new SupabaseMeetingRepository();
 
@@ -340,6 +365,12 @@ describe("meeting service", () => {
         createdBy: "assistant-01",
         decidedBy: "director-01",
         decidedAt: "2026-05-24T09:31:00.000Z",
+      }),
+      expect.objectContaining({
+        id: "decision-supabase-multi",
+        projectId: undefined,
+        projectIds: ["project-a", "project-b"],
+        sourceType: "independent",
       }),
     ]);
     expect(JSON.stringify({ decisions, meetings })).not.toMatch(

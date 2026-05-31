@@ -196,7 +196,8 @@ const rolePreviewOptions: Array<{
 }> = [
   { label: "Tổng giám đốc", value: "tong_giam_doc" },
   { label: "Phó tổng giám đốc", value: "pho_tong_giam_doc" },
-  { label: "Owner/Founder", value: "super_admin" },
+  { label: "Chu tich", value: "chu_tich" },
+  { label: "Super Admin", value: "super_admin" },
   { label: "Admin", value: "admin" },
   { label: "Viewer", value: "viewer" },
 ];

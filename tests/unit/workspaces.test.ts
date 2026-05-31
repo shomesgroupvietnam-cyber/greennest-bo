@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { ROLE_DEFAULT_SCREENS, type Role } from "@/constants/roles";
+import { ROLE_DEFAULT_SCREENS, ROLES, type Role } from "@/constants/roles";
 import { getPermittedNavItems } from "@/lib/permissions/navigation";
+import {
+  getNavigationPolicyForRole,
+  type PolicyWorkspaceHref,
+} from "@/lib/permissions/navigation-policy";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
-import type { PermissionUser } from "@/lib/permissions/can";
+import { can, type PermissionUser } from "@/lib/permissions/can";
 import {
   canAccessWorkspaceRoute,
   WORKSPACE_DEFINITIONS,
@@ -20,6 +24,7 @@ function user(role: Role, id = `${role}-user`): PermissionUser {
 describe("role workspaces", () => {
   it("maps every role to a concrete workspace route", () => {
     const expectedRoutes: Record<Role, string> = {
+      chu_tich: "/command-center",
       super_admin: "/command-center",
       admin: "/admin",
       tong_giam_doc: "/command-center?view=executive-dashboard",
@@ -68,6 +73,9 @@ describe("role workspaces", () => {
     const adminNav = getPermittedNavItems(user("admin")).map(
       (item) => item.href,
     );
+    const chairmanNav = getPermittedNavItems(user("chu_tich")).map(
+      (item) => item.href,
+    );
     const ceoNav = getPermittedNavItems(user("tong_giam_doc")).map(
       (item) => item.href,
     );
@@ -95,10 +103,18 @@ describe("role workspaces", () => {
     const contractorNav = getPermittedNavItems(user("nha_thau")).map(
       (item) => item.href,
     );
+    const consultantNav = getPermittedNavItems(user("tu_van")).map(
+      (item) => item.href,
+    );
     const viewerNav = getPermittedNavItems(user("viewer")).map(
       (item) => item.href,
     );
 
+    expect(chairmanNav).toContain("/command-center");
+    expect(chairmanNav).toContain("/command-center?view=executive-dashboard");
+    expect(chairmanNav).not.toContain("/admin");
+    expect(chairmanNav).not.toContain("/users");
+    expect(chairmanNav).not.toContain("/settings");
     expect(adminNav).toContain("/admin");
     expect(adminNav).toContain("/users");
     expect(adminNav).toContain("/settings");
@@ -116,13 +132,30 @@ describe("role workspaces", () => {
     expect(investmentNav).toContain("/investment-workspace");
     expect(contractNav).toContain("/contract-workspace");
     expect(designNav).toContain("/design-workspace");
-    expect(contractorNav).toContain("/command-center");
+    expect(contractorNav).not.toContain("/command-center");
     expect(contractorNav).toContain("/contractor");
+    expect(consultantNav).not.toContain("/command-center");
+    expect(consultantNav).toContain("/consultant");
     expect(adminNav).toContain("/command-center");
     expect(viewerNav).toContain("/viewer");
     expect(viewerNav).not.toContain("/executive");
     expect(viewerNav).not.toContain("/documents/new");
     expect(viewerNav).not.toContain("/users");
+  });
+
+  it("derives role workspace navigation from the policy matrix", () => {
+    for (const role of Object.keys(ROLES) as Role[]) {
+      const policy = getNavigationPolicyForRole(role);
+      const workspaceNav = getPermittedNavItems(user(role))
+        .map((item) => item.href)
+        .filter((href): href is PolicyWorkspaceHref =>
+          policy.allPolicyWorkspaceHrefs.includes(href as PolicyWorkspaceHref),
+        );
+
+      expect(workspaceNav).toEqual(
+        role === "pending" ? [] : policy.allowedWorkspaceHrefs,
+      );
+    }
   });
 
   it("uses distinct navigation labels for command center, leadership and BO settings", () => {
@@ -134,7 +167,7 @@ describe("role workspaces", () => {
     expect(labelsByHref.get("/command-center?view=executive-dashboard")).toBe(
       "Lanh dao",
     );
-    expect(labelsByHref.get("/admin")).toBe("Quan tri Chu tich");
+    expect(labelsByHref.get("/admin")).toBe("Quan tri he thong");
     expect(labels).not.toContain("Tong quan");
     expect(labels).not.toContain("Quan tri");
   });
@@ -144,10 +177,27 @@ describe("role workspaces", () => {
       scopedPermissions: ["axis1.view"],
     }).map((item) => item.href);
 
-    expect(scopedNav).toContain("/command-center");
+    expect(scopedNav).toContain(
+      "/command-center?view=axis1-search-development",
+    );
     expect(scopedNav).toContain("/axis-1");
     expect(scopedNav).not.toContain("/settings");
     expect(scopedNav).not.toContain("/project-workbench");
+  });
+
+  it("keeps external roles out of command center even with scoped executive grants", () => {
+    const scopedExternalNav = getPermittedNavItems(
+      user("nha_thau", "scoped-contractor"),
+      {
+        scopedWorkspaceRoutes: ["/executive"],
+      },
+    ).map((item) => item.href);
+
+    expect(scopedExternalNav).toContain("/contractor");
+    expect(scopedExternalNav).not.toContain("/command-center");
+    expect(scopedExternalNav).not.toContain(
+      "/command-center?view=executive-dashboard",
+    );
   });
 
   it("keeps all-scope assignment selection scoped to the current user", () => {
@@ -184,6 +234,14 @@ describe("role workspaces", () => {
 
   it("blocks unauthorized direct workspace route access", () => {
     expect(canAccessWorkspaceRoute(user("admin"), "/admin")).toBe(true);
+    expect(canAccessWorkspaceRoute(user("chu_tich"), "/admin")).toBe(false);
+    expect(can(user("chu_tich"), "settings.manage")).toBe(false);
+    expect(can(user("chu_tich"), "user.view")).toBe(false);
+    expect(can(user("chu_tich"), "user.invite")).toBe(false);
+    expect(can(user("chu_tich"), "user.update_role")).toBe(false);
+    expect(can(user("super_admin"), "settings.manage")).toBe(true);
+    expect(can(user("super_admin"), "user.view")).toBe(true);
+    expect(canAccessWorkspaceRoute(user("chu_tich"), "/executive")).toBe(true);
     expect(canAccessWorkspaceRoute(user("admin"), "/executive")).toBe(true);
     expect(
       canAccessWorkspaceRoute(user("tong_giam_doc"), "/design-workspace"),

@@ -5,7 +5,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { PermissionUser } from "@/lib/permissions/can";
-import { createDecisionRecord } from "@/modules/executive/services/decision-record-service";
+import {
+  createDecisionRecord,
+  type DecisionRecordServiceDependencies
+} from "@/modules/executive/services/decision-record-service";
 import { JsonMeetingRepository } from "@/modules/meetings/services/meeting-repository";
 import { createMeeting, listDecisions } from "@/modules/meetings/services/meeting-service";
 import type { ProposalDetail } from "@/modules/proposals/types";
@@ -47,6 +50,16 @@ function dependencies(overrides: Parameters<typeof createDecisionRecord>[2] = {}
     idGenerator: () => `decision-${auditWrites.length + 1}`,
     ...overrides
   };
+}
+
+function dependenciesUsingDefaultPermissionCheck(
+  overrides: DecisionRecordServiceDependencies = {}
+) {
+  const serviceDependencies: DecisionRecordServiceDependencies = dependencies(overrides);
+
+  delete serviceDependencies.canCreateDecisionInScope;
+
+  return serviceDependencies;
 }
 
 function proposalDetail(overrides: Partial<ProposalDetail["proposal"]> = {}): ProposalDetail {
@@ -236,6 +249,95 @@ describe("decision record service", () => {
         dependencies({ getScopedProposal: async () => undefined })
       )
     ).rejects.toThrow(/nguon decision/i);
+  });
+
+  it("requires every project in multi-project scope to be authorized", async () => {
+    const projectA = await createProject({ name: "Scope A", status: "active" }, projectRepository);
+    const projectB = await createProject({ name: "Scope B", status: "active" }, projectRepository);
+
+    await expect(
+      createDecisionRecord(
+        {
+          content: "Cross-project decision.",
+          projectIds: [projectA.id, projectB.id]
+        },
+        actor,
+        dependenciesUsingDefaultPermissionCheck({
+          getScopedProject: async (_actor, projectId) =>
+            projectId === projectA.id ? projectA : undefined
+        })
+      )
+    ).rejects.toThrow(/quyen tao decision/i);
+
+    expect(await listDecisions({}, meetingRepository)).toHaveLength(0);
+    expect(auditWrites).toHaveLength(0);
+  });
+
+  it("blocks unscoped owners and unverified linked records before writes", async () => {
+    const project = await createProject({ name: "Scoped Owner", status: "active" }, projectRepository);
+
+    await expect(
+      createDecisionRecord(
+        {
+          content: "Owner has no project membership.",
+          projectId: project.id,
+          ownerId: "viewer"
+        },
+        actor,
+        dependencies()
+      )
+    ).rejects.toThrow(/nguoi phu trach/i);
+
+    await expect(
+      createDecisionRecord(
+        {
+          content: "Unverified linked meeting.",
+          projectId: project.id,
+          linkedRecords: [
+            {
+              type: "meeting",
+              id: "meeting-outside",
+              relationType: "context"
+            }
+          ]
+        },
+        actor,
+        dependencies({ getScopedMeeting: async () => undefined })
+      )
+    ).rejects.toThrow(/lien ket record/i);
+
+    await expect(
+      createDecisionRecord(
+        {
+          content: "Raw source id without source type.",
+          projectId: project.id,
+          sourceId: "proposal-a"
+        },
+        actor,
+        dependencies()
+      )
+    ).rejects.toThrow(/nguon decision/i);
+
+    expect(await listDecisions({}, meetingRepository)).toHaveLength(0);
+    expect(auditWrites).toHaveLength(0);
+  });
+
+  it("blocks source-linked decisions from overriding source module scope", async () => {
+    await expect(
+      createDecisionRecord(
+        {
+          content: "Misclassified proposal decision.",
+          sourceType: "proposal",
+          sourceId: "proposal-a",
+          moduleId: "meeting"
+        },
+        actor,
+        dependencies({ getScopedProposal: async () => proposalDetail() })
+      )
+    ).rejects.toThrow(/pham vi decision/i);
+
+    expect(await listDecisions({}, meetingRepository)).toHaveLength(0);
+    expect(auditWrites).toHaveLength(0);
   });
 
   it("blocks permission and owner scope failures before repository or audit writes", async () => {

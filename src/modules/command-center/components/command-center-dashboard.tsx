@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { getStaticRoleLabel } from "@/constants/roles";
+import { getDefaultScreenForRole, getStaticRoleLabel } from "@/constants/roles";
 import { logoutAction } from "@/lib/auth/actions";
 import type { AppSessionUser } from "@/lib/auth/session";
 import { AxisOneDashboard } from "@/modules/axis-1/components/axis-one-dashboard";
@@ -317,8 +317,8 @@ const executiveMockDecisionActions: Array<{
 ];
 
 const executiveActionRoles = new Set([
+  "chu_tich",
   "super_admin",
-  "admin",
   "tong_giam_doc",
   "pho_tong_giam_doc",
   "giam_doc_du_an",
@@ -345,6 +345,33 @@ const approvalActionReasons: Record<
 
 function canRunExecutiveActions(user: AppSessionUser) {
   return executiveActionRoles.has(user.role);
+}
+
+const defaultWorkspaceReturnLabels: Record<string, string> = {
+  "/project-workbench": "Ban du an",
+  "/legal-workspace": "khong gian phap ly",
+  "/design-workspace": "khong gian thiet ke",
+  "/technical-workspace": "khong gian ky thuat",
+  "/assistant-workspace": "khong gian tro ly",
+  "/viewer": "dashboard chi xem",
+  "/contractor": "cong nha thau",
+  "/consultant": "cong tu van",
+};
+
+function resolveWorkspaceReturnLink(user: AppSessionUser) {
+  const defaultScreen = getDefaultScreenForRole(user.role);
+
+  if (
+    defaultScreen.href === "/pending-access" ||
+    defaultScreen.href.startsWith("/command-center")
+  ) {
+    return undefined;
+  }
+
+  return {
+    href: defaultScreen.href,
+    label: defaultWorkspaceReturnLabels[defaultScreen.href] ?? defaultScreen.label,
+  };
 }
 
 function getExecutiveGlobalStatusItems(
@@ -376,7 +403,7 @@ function formatLeadershipDeadline(deadline: string) {
 }
 
 function buildCommandCenterQuickSwitchGroups(data: CommandCenterData) {
-  return [
+  const groups = [
     {
       label: "Command Center",
       options: [
@@ -402,6 +429,31 @@ function buildCommandCenterQuickSwitchGroups(data: CommandCenterData) {
       ),
     })),
   ];
+
+  return groups
+    .map((group) =>
+      group.label === "Command Center"
+        ? {
+            ...group,
+            options: group.options.filter((option) => {
+              if (option.viewKey === "overview") {
+                return data.availableViews.overview;
+              }
+
+              if (option.viewKey === "notifications") {
+                return data.availableViews.notifications;
+              }
+
+              if (option.viewKey === "settings") {
+                return data.availableViews.settings;
+              }
+
+              return true;
+            }),
+          }
+        : group,
+    )
+    .filter((group) => group.options.length > 0);
 }
 
 function resolveCommandCenterBreadcrumbs(
@@ -634,9 +686,9 @@ function resolveCommandCenterViewLabel(
 
 function collectCommandCenterViewKeys(data: CommandCenterData) {
   return new Set([
-    "overview",
-    "notifications",
-    "settings",
+    ...(data.availableViews.overview ? ["overview"] : []),
+    ...(data.availableViews.notifications ? ["notifications"] : []),
+    ...(data.availableViews.settings ? ["settings"] : []),
     ...data.axes.flatMap((axis) =>
       axis.items.flatMap((item) => [
         item.viewKey,
@@ -659,19 +711,42 @@ const knownExecutiveViewKeys = new Set([
   "executive-decision-log",
 ]);
 
+function resolveDefaultCommandCenterView(data: CommandCenterData) {
+  if (data.availableViews.overview) {
+    return "overview";
+  }
+
+  for (const axis of data.axes) {
+    for (const item of axis.items) {
+      return item.children?.[0]?.viewKey ?? item.viewKey;
+    }
+  }
+
+  if (data.availableViews.notifications) {
+    return "notifications";
+  }
+
+  if (data.availableViews.settings) {
+    return "settings";
+  }
+
+  return "overview";
+}
+
 function resolveInitialCommandCenterView(
   data: CommandCenterData,
   initialView?: string,
 ) {
   if (!initialView) {
-    return "overview";
+    return resolveDefaultCommandCenterView(data);
   }
 
   return collectCommandCenterViewKeys(data).has(initialView)
     ? initialView
-    : knownExecutiveViewKeys.has(initialView)
+    : knownExecutiveViewKeys.has(initialView) &&
+        (data.availableViews.notifications || Boolean(data.executivePrivateWorkspace))
       ? initialView
-      : "overview";
+      : resolveDefaultCommandCenterView(data);
 }
 
 function CommandCenterContextBar({
@@ -2451,6 +2526,10 @@ export function CommandCenterDashboard({
     [activeView, data],
   );
   const canAct = canRunExecutiveActions(user);
+  const workspaceReturnLink = useMemo(
+    () => resolveWorkspaceReturnLink(user),
+    [user],
+  );
 
   const handleViewSelect = (viewKey: CommandCenterViewKey) => {
     const nextView = resolveInitialCommandCenterView(data, viewKey);
@@ -2598,7 +2677,7 @@ export function CommandCenterDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
+    <main className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="border-r border-emerald-950/10 bg-[#073c34] text-emerald-50 lg:min-h-screen">
         <div className="flex items-center gap-3 border-b border-white/10 p-5">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500 text-slate-950">
@@ -2616,11 +2695,12 @@ export function CommandCenterDashboard({
           aria-label="Điều hướng 3 trục"
         >
           <button
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-semibold ${
+            className={`${data.availableViews.overview ? "flex" : "hidden"} w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-semibold ${
               activeView === "overview"
                 ? "bg-emerald-500 text-white"
                 : "text-slate-100 hover:bg-white/10"
             }`}
+            hidden={!data.availableViews.overview}
             onClick={() => handleViewSelect("overview")}
             type="button"
           >
@@ -2636,13 +2716,16 @@ export function CommandCenterDashboard({
               onSelect={handleViewSelect}
             />
           ))}
-          <div className="rounded-lg border border-white/10 p-3">
+          <div
+            className={`${data.availableViews.notifications || data.availableViews.settings ? "block" : "hidden"} rounded-lg border border-white/10 p-3`}
+          >
             <button
-              className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-white/10 ${
+              className={`${data.availableViews.notifications ? "flex" : "hidden"} w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-white/10 ${
                 activeView === "notifications"
                   ? "bg-white/10 text-white"
                   : "text-slate-200"
               }`}
+              hidden={!data.availableViews.notifications}
               onClick={() => handleViewSelect("notifications")}
               type="button"
             >
@@ -2653,11 +2736,12 @@ export function CommandCenterDashboard({
               </span>
             </button>
             <button
-              className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-white/10 ${
+              className={`${data.availableViews.settings ? "flex" : "hidden"} w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-white/10 ${
                 activeView === "settings"
                   ? "bg-white/10 text-white"
                   : "text-slate-200"
               }`}
+              hidden={!data.availableViews.settings}
               onClick={() => handleViewSelect("settings")}
               type="button"
             >
@@ -2678,6 +2762,14 @@ export function CommandCenterDashboard({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {workspaceReturnLink ? (
+              <Link
+                className="rounded-md border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                href={workspaceReturnLink.href}
+              >
+                Quay lai {workspaceReturnLink.label}
+              </Link>
+            ) : null}
             <Bell className="h-5 w-5 text-slate-500" aria-hidden="true" />
             <MessageCircle
               className="h-5 w-5 text-slate-500"
@@ -2722,7 +2814,7 @@ export function CommandCenterDashboard({
             <CommandCenterGlobalStatusStrip data={executiveWorkspace} />
           ) : null}
 
-          {activeView === "overview" ? (
+          {activeView === "overview" && data.availableViews.overview ? (
             <>
               <section className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
@@ -3087,7 +3179,8 @@ export function CommandCenterDashboard({
               onApprovalAction={handleApprovalAction}
               onDirectiveStatusChange={handleDirectiveStatusChange}
             />
-          ) : activeView === "operations-dashboard" ? (
+          ) : activeView === "operations-dashboard" &&
+            data.availableViews.operationsDashboard ? (
             <CommandCenterOperationsPanel data={data.operationsDashboard} />
           ) : activeView === "axis1-search-development" ? (
             <CommandCenterAxisOnePanel data={data.axisOneDashboard} />
@@ -3096,6 +3189,6 @@ export function CommandCenterDashboard({
           )}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

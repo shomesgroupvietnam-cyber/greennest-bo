@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 const requiredRoles = [
+  "chu_tich",
   "super_admin",
   "admin",
   "tong_giam_doc",

@@ -656,7 +656,7 @@ async function resolveLeadershipScopeAssignments(
 
   if (!selectedScopeActive) {
     return options.selectedScopeId === "all" &&
-      ["super_admin", "admin", "tong_giam_doc"].includes(user.role)
+      ["chu_tich", "super_admin", "admin", "tong_giam_doc"].includes(user.role)
       ? []
       : allScopeAssignments;
   }

@@ -8,6 +8,7 @@ import {
   type PermissionInput,
   type PermissionResource,
 } from "@/lib/permissions/can";
+import { canOpenBoRoute } from "@/lib/permissions/navigation-policy";
 import {
   canAccessScopedAction,
   hasAnyScopedActionGrant,
@@ -142,6 +143,29 @@ export async function requireAuthenticatedSession(
       session,
     });
   }
+
+  return session;
+}
+
+export async function requireBoRoute(route: string, existingSession?: AppSession) {
+  const session =
+    existingSession ?? (await requireAuthenticatedSession({ route }));
+
+  if (!canOpenBoRoute(session.user, route)) {
+    await denyWithAudit({
+      action: "access.denied",
+      reason: `bo_route_forbidden:${route}`,
+      route,
+      session,
+    });
+  }
+
+  await auditAccessEvent({
+    action: "access.allowed",
+    reason: "bo_route_allowed",
+    route,
+    session,
+  });
 
   return session;
 }

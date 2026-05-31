@@ -22,7 +22,7 @@ describe("WorkspaceRoutePage", () => {
       new Error("forbidden"),
     );
 
-    await expect(WorkspaceRoutePage({ route: "/executive" })).rejects.toThrow(
+    await expect(WorkspaceRoutePage({ route: "/admin" })).rejects.toThrow(
       "forbidden",
     );
     expect(getRoleWorkspaceData).not.toHaveBeenCalled();

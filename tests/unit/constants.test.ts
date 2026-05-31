@@ -11,6 +11,7 @@ import {
 } from "@/constants/statuses";
 
 const expectedRoleKeys = [
+  "chu_tich",
   "super_admin",
   "admin",
   "tong_giam_doc",

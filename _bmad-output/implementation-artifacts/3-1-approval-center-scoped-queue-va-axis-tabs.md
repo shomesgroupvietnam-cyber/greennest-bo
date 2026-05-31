@@ -1,6 +1,6 @@
 # Story 3.1: Approval Center Scoped Queue Va Axis Tabs
 
-Status: review
+Status: done
 
 Ghi chu tao story: Ultimate context engine analysis completed - comprehensive developer guide created. Story nay mo Epic 3 va chi tao Approval Center queue/read surface cho Module 1. Pham vi la tabs Truc 1/2/3, scoped queue, category grouping, placeholder ro cho Truc 2/3, permission/no-leak va responsive/a11y co ban. Khong implement approval detail day du, approve/reject/return/forward action, configurable approval engine production-grade, risk CRUD, decision center, meeting engine CRUD hay module chuyen mon sau.
 
@@ -99,6 +99,21 @@ so that toi xu ly dung request trong pham vi cua minh.
   - [x] Them viewport toi thieu 360, 390, 768, 1280 cho Approval Center; assert `document.documentElement.scrollWidth <= window.innerWidth + 8`.
   - [x] Assert viewer/direct unauthorized executive approvals flow 403 va khong render approval title/finance sentinel.
   - [x] Chay `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e`.
+
+### Review Findings
+
+- [x] [Review][Patch] Approval Center read path queues escalation notifications/audit [src/modules/proposals/services/approval-center-service.ts:930]
+- [x] [Review][Patch] Approval Center scope model lets reviewer roles fall back to global proposal queue [src/modules/proposals/services/approval-center-service.ts:218]
+- [x] [Review][Patch] Legacy executive approvals are still serialized when Approval Center permission is denied [src/modules/command-center/services/command-center-service.ts:755]
+- [x] [Review][Patch] Linked source DTOs expose related record ids/hrefs without per-entity permission checks [src/modules/proposals/services/approval-center-service.ts:421]
+- [x] [Review][Patch] Contract proposals are mapped to phap_ly instead of tai_chinh_chi [src/modules/proposals/services/approval-center-service.ts:128]
+- [x] [Review][Patch] Approval queue ordering omits the required updatedAt tie-breaker [src/modules/proposals/services/approval-center-service.ts:1151]
+- [x] [Review][Patch] Approval Center card rendered amountLabel even when financialAccess was no_permission [src/modules/executive/components/approval-center.tsx:207]
+- [x] [Review][Patch] Approval Center queue cards omitted owner/approver/risk/policy metadata required by AC2 [src/modules/executive/components/approval-center.tsx:104]
+- [x] [Review][Patch] Dashboard root lost the main landmark and Approval Center tabs/detail links had weak keyboard/accessibility affordances [src/modules/command-center/components/command-center-dashboard.tsx:2601]
+- [x] [Review][Patch] Approval Center e2e drill test still targeted stale `Open detail` accessible name [tests/e2e/mvp-smoke.spec.ts:240]
+- [x] [Review][Patch] Approval Center route/data/nav is gated by executive dashboard access, blocking scoped proposal approvers [src/modules/command-center/services/command-center-service.ts:810]
+- [x] [Review][Patch] Proposal-backed approval items omit the current approver/reviewer label [src/modules/proposals/services/approval-center-service.ts:1160]
 
 ## Dev Notes
 
@@ -342,6 +357,7 @@ GPT-5 Codex
 - 2026-05-29: Static validation green: `npm run typecheck`, `npm run lint`.
 - 2026-05-29: Full unit green: `npm test` => 51 files, 307 tests passed.
 - 2026-05-29: Full e2e green: `npm run test:e2e` => 43 passed.
+- 2026-05-31: Code review patches green: `npm test -- tests/unit/approval-center-service.test.ts tests/unit/command-center-service.test.ts tests/unit/navigation-policy.test.ts tests/unit/command-center-page.test.tsx tests/unit/workspaces.test.ts`, `npm test -- tests/unit/command-center-dashboard.test.tsx`, `npm run typecheck`, `npm run lint`.
 
 ### Completion Notes List
 

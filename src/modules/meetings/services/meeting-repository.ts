@@ -542,7 +542,7 @@ export class SupabaseMeetingRepository implements MeetingRepository {
     }
 
     if (filters.projectId && filters.projectId !== "all") {
-      query = query.eq("project_id", filters.projectId);
+      query = query.or(`project_id.eq.${filters.projectId},project_ids.cs.{${filters.projectId}}`);
     }
 
     if (filters.ownerId && filters.ownerId !== "all") {

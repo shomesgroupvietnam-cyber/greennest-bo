@@ -22,7 +22,8 @@ set name = excluded.name,
 
 insert into public.users (id, auth_user_id, full_name, email, role, status)
 values
-  ('20000000-0000-4000-8000-000000000101', null, 'Nguyen Thanh Binh', 'chairman@greennest.vn', 'super_admin', 'active'),
+  ('20000000-0000-4000-8000-000000000101', null, 'Nguyen Thanh Binh', 'chairman@greennest.vn', 'chu_tich', 'active'),
+  ('20000000-0000-4000-8000-000000000111', null, 'Tran Quan Tri He Thong', 'super.admin@greennest.vn', 'super_admin', 'active'),
   ('20000000-0000-4000-8000-000000000102', null, 'Nguyen Minh Anh', 'admin@greennest.vn', 'admin', 'active'),
   ('20000000-0000-4000-8000-000000000103', null, 'Dang Quoc Bao', 'ceo@greennest.vn', 'tong_giam_doc', 'active'),
   ('20000000-0000-4000-8000-000000000104', null, 'Hoang Gia Khanh', 'director@greennest.vn', 'giam_doc_du_an', 'active'),
@@ -46,7 +47,8 @@ where id = '10000000-0000-4000-8000-000000000101';
 
 insert into public.workspace_members (id, workspace_id, user_id, role)
 values
-  ('21000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000101', 'super_admin'),
+  ('21000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000101', 'chu_tich'),
+  ('21000000-0000-4000-8000-000000000108', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000111', 'super_admin'),
   ('21000000-0000-4000-8000-000000000102', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000103', 'tong_giam_doc'),
   ('21000000-0000-4000-8000-000000000103', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000104', 'giam_doc_du_an'),
   ('21000000-0000-4000-8000-000000000104', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000105', 'to_truong'),
@@ -318,7 +320,7 @@ values
   ('policy-approval-under-20m', 'approval_under_20m', 'Duoi 20 trieu', 'general', 0, 19999999.99, 'VND', 'DEPARTMENT_HEAD', 'dau_tu_phat_trien', 'proposal.review', array['high','critical']::text[], true, 100),
   ('policy-approval-20m-200m', 'approval_20m_200m', '20 trieu den 200 trieu', 'general', 20000000, 199999999.99, 'VND', 'PROJECT_DIRECTOR', 'quan_ly_tai_chinh', 'proposal.approve', array['high','critical']::text[], true, 110),
   ('policy-approval-200m-2b', 'approval_200m_2b', '200 trieu den 2 ty', 'general', 200000000, 1999999999.99, 'VND', 'CEO', 'tong_giam_doc', 'proposal.approve', array['critical']::text[], true, 120),
-  ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty', 'general', 2000000000, null, 'VND', 'CHAIRMAN', 'super_admin', 'proposal.approve', array['high','critical']::text[], true, 130)
+  ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty', 'general', 2000000000, null, 'VND', 'CHAIRMAN', 'chu_tich', 'proposal.approve', array['high','critical']::text[], true, 130)
 on conflict (policy_key) do update
 set label_vi = excluded.label_vi,
     target_type = excluded.target_type,
@@ -381,7 +383,7 @@ insert into public.proposals (
   ai_review_summary
 )
 values
-  ('proposal-demo-overdue-approval', 'DX-OVERDUE-DEMO', 'De xuat phe duyet ngan sach bo sung Riverside qua han', 'finance', '30000000-0000-4000-8000-000000000101', 'finance', '20000000-0000-4000-8000-000000000108', '20000000-0000-4000-8000-000000000108', null, null, '20000000-0000-4000-8000-000000000103', 'proposal-step-demo-overdue-approval', 'in_review', 'urgent', 2100000000, date '2026-05-22', 'Approval qua han de verify queue, escalation va finance visibility.', 'warning', 'Vuot nguong 2 ty, can Chu tich/Super Admin phe duyet.'),
+  ('proposal-demo-overdue-approval', 'DX-OVERDUE-DEMO', 'De xuat phe duyet ngan sach bo sung Riverside qua han', 'finance', '30000000-0000-4000-8000-000000000101', 'finance', '20000000-0000-4000-8000-000000000108', '20000000-0000-4000-8000-000000000108', null, null, '20000000-0000-4000-8000-000000000103', 'proposal-step-demo-overdue-approval', 'in_review', 'urgent', 2100000000, date '2026-05-22', 'Approval qua han de verify queue, escalation va finance visibility.', 'warning', 'Vuot nguong 2 ty, can Chu tich phe duyet.'),
   ('proposal-axis-2-placeholder', 'DX-AXIS2-DEMO', 'Placeholder approval Axis 2', 'general', '30000000-0000-4000-8000-000000000104', 'axis-2', '20000000-0000-4000-8000-000000000110', '20000000-0000-4000-8000-000000000110', null, null, null, null, 'draft', 'normal', 10000000, null, 'Fixture placeholder cho Approval Center Axis 2.', 'not_checked', null),
   ('proposal-axis-3-placeholder', 'DX-AXIS3-DEMO', 'Placeholder approval Axis 3', 'general', '30000000-0000-4000-8000-000000000104', 'axis-3', '20000000-0000-4000-8000-000000000110', '20000000-0000-4000-8000-000000000110', null, null, null, null, 'draft', 'normal', 15000000, null, 'Fixture placeholder cho Approval Center Axis 3.', 'not_checked', null),
   ('proposal-demo-on-behalf-ceo', 'DX-ONBEHALF-DEMO', 'Thu ky tao de xuat thay CEO trong scope Riverside', 'general', '30000000-0000-4000-8000-000000000101', 'proposal', '20000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000106', '20000000-0000-4000-8000-000000000103', '33000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000103', null, 'draft', 'high', 18000000, null, 'Fixture positive delegation: assistant duoc tao proposal thay CEO nhung khong duoc approve.', 'not_checked', null)
@@ -418,7 +420,7 @@ values (
   'proposal-step-demo-overdue-approval',
   'proposal-demo-overdue-approval',
   1,
-  'super_admin',
+  'chu_tich',
   'in_review'
 )
 on conflict (id) do update
@@ -473,7 +475,8 @@ begin
       updated_by
     )
     values
-      ('32000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000101', 'super_admin', null, null, null, null, null, array['project.view','task.view','document.view','legal.view','meeting.view','finance.view','proposal.view','proposal.approve','settings.manage','delegation.manage','audit.view'], 'global', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),
+      ('32000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000101', 'chu_tich', null, null, null, null, null, array['axis1.view','project.view','project.create','project.update','project.archive','project.assign_member','task.view','task.create','task.update','task.archive','document.view','document.create','document.update','document.approve','document.archive','legal.view','legal.update','legal.approve','meeting.view','meeting.create','meeting.update','decision.create','decision.approve','knowledge.view','knowledge.create','knowledge.review','knowledge.approve','report.view','report.create','design.view','design.review','construction.view','finance.view','finance.approve','payment.approve','proposal.view','proposal.create','proposal.update','proposal.review','proposal.approve','proposal.reject','proposal.request_change','proposal.archive','investment.view','investment.create','investment.update','investment.review','investment.approve','contract.view','contract.create','contract.update','contract.review','contract.approve','contract.archive','hr.view','hr.review','hr.approve','qa.view','qa.update','qa.approve','safety.view','safety.update','safety.approve','compliance.view','compliance.review','internal_audit.view','internal_audit.review','audit.view','ai.use','ai.view_insight','ai.confirm_action','knowledge.create_candidate','knowledge.promote','ai.ask','ai.use_rag','ai.create_draft','ai.propose_action'], 'global', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),
+      ('32000000-0000-4000-8000-000000000108', '20000000-0000-4000-8000-000000000111', 'super_admin', null, null, null, null, null, array['axis1.view','project.view','project.create','project.update','project.archive','project.assign_member','task.view','task.create','task.update','task.update_own','task.archive','document.view','document.create','document.update','document.approve','document.archive','legal.view','legal.update','legal.approve','legal.configure_template','meeting.view','meeting.create','meeting.update','decision.create','decision.approve','knowledge.view','knowledge.create','knowledge.create_candidate','knowledge.promote','knowledge.review','knowledge.approve','knowledge.manage_source_registry','report.view','report.create','design.view','design.create','design.update','design.review','design.approve_change','construction.view','construction.update','site_diary.create','quality.update','acceptance.approve','finance.view','finance.create','finance.update','finance.approve','payment.request','payment.approve','proposal.view','proposal.create','proposal.update','proposal.review','proposal.approve','proposal.reject','proposal.request_change','proposal.configure_flow','proposal.archive','investment.view','investment.create','investment.update','investment.review','investment.approve','contract.view','contract.create','contract.update','contract.review','contract.approve','contract.archive','hr.view','hr.create','hr.update','hr.review','hr.approve','qa.view','qa.update','qa.approve','safety.view','safety.update','safety.approve','compliance.view','compliance.review','internal_audit.view','internal_audit.review','user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view','ai.use','ai.ask','ai.use_rag','ai.view_insight','ai.create_draft','ai.propose_action','ai.confirm_action','ai.configure'], 'global', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),
       ('32000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000103', 'tong_giam_doc', null, null, 'axis-1', null, null, array['project.view','task.view','document.view','legal.view','finance.view','proposal.view','proposal.approve'], 'scoped', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),
       ('32000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000104', 'giam_doc_du_an', null, '30000000-0000-4000-8000-000000000101', 'axis-1', null, null, array['project.view','task.view','document.view','legal.view','finance.view','proposal.view','proposal.create','proposal.review'], 'scoped', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),
       ('32000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000105', 'to_truong', null, '30000000-0000-4000-8000-000000000102', 'axis-1', null, null, array['project.view','task.view','document.view','legal.view'], 'scoped', true, '20000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000102'),

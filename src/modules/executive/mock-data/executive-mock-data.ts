@@ -317,8 +317,8 @@ export const executiveAxisDefinitions: ExecutiveAxisDefinition[] = [
 export const executiveScopeRules: ExecutiveScopeRule[] = [
   {
     id: "super-admin-all-organizations",
-    description: "SUPER_ADMIN có thể kiểm tra toàn bộ organization/project.",
-    roles: ["super_admin"],
+    description: "Chu tich va Super Admin co the kiem tra toan bo organization/project.",
+    roles: ["chu_tich", "super_admin"],
     operatingRole: "CHAIRMAN",
     scopeType: "global",
     organizationIds: "all",

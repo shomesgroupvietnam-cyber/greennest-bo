@@ -230,6 +230,22 @@ function delegation(overrides: Partial<LeadershipDelegation> = {}): LeadershipDe
   };
 }
 
+function scopeAssignment(overrides: Partial<ScopeAssignment> = {}): ScopeAssignment {
+  return {
+    active: true,
+    axisId: "axis-1",
+    createdAt: "",
+    id: "scope-a",
+    permissionKeys: ["proposal.view", "proposal.review"],
+    projectId: "project-a",
+    roleKey: "dau_tu_phat_trien",
+    scopeType: "scoped",
+    updatedAt: "",
+    userId: "scoped-approver",
+    ...overrides,
+  };
+}
+
 describe("approval center service", () => {
   it("builds Axis 1 queue categories and placeholder tabs without approval actions", async () => {
     const repository = new InMemoryProposalRepository([
@@ -286,6 +302,81 @@ describe("approval center service", () => {
     });
   });
 
+  it("maps contract proposals into the finance spend category", async () => {
+    const repository = new InMemoryProposalRepository([
+      proposal({ id: "contract", title: "Contract payment approval", type: "contract" }),
+    ]);
+
+    const data = await getApprovalCenterData(approver, {
+      leadershipApprovals: [],
+      now: new Date("2026-05-29T00:00:00+07:00"),
+      repository,
+    });
+
+    expect(data.tabs[0].items[0]).toMatchObject({
+      category: "tai_chinh_chi",
+      sourceId: "contract",
+    });
+  });
+
+  it("surfaces the current proposal approver in queue metadata", async () => {
+    const repository = new InMemoryProposalRepository([
+      proposal({
+        currentStepId: "current-review-step",
+        id: "reviewer-metadata",
+        title: "Proposal with reviewer metadata",
+      }),
+    ]);
+    await repository.addStep({
+      approvalLevel: "CEO",
+      approverRole: "tong_giam_doc",
+      createdAt: "2026-05-20T00:00:00.000Z",
+      id: "current-review-step",
+      proposalId: "reviewer-metadata",
+      requiredPermission: "proposal.approve",
+      status: "in_review",
+      stepOrder: 1,
+      updatedAt: "2026-05-20T00:00:00.000Z",
+    });
+
+    const data = await getApprovalCenterData(approver, {
+      leadershipApprovals: [],
+      now: new Date("2026-05-29T00:00:00+07:00"),
+      repository,
+    });
+
+    expect(data.tabs[0].items[0]).toMatchObject({
+      reviewerLabel: "tong_giam_doc",
+      sourceId: "reviewer-metadata",
+    });
+  });
+
+  it("uses updatedAt as the deterministic tie-breaker after due date", async () => {
+    const repository = new InMemoryProposalRepository([
+      proposal({
+        id: "older",
+        title: "Older update",
+        updatedAt: "2026-05-20T00:00:00.000Z",
+      }),
+      proposal({
+        id: "newer",
+        title: "Newer update",
+        updatedAt: "2026-05-21T00:00:00.000Z",
+      }),
+    ]);
+
+    const data = await getApprovalCenterData(approver, {
+      leadershipApprovals: [],
+      now: new Date("2026-05-29T00:00:00+07:00"),
+      repository,
+    });
+
+    expect(data.tabs[0].items.map((item) => item.sourceId)).toEqual([
+      "newer",
+      "older",
+    ]);
+  });
+
   it("filters queue DTOs by selected scope before returning JSON", async () => {
     const repository = new InMemoryProposalRepository([
       proposal({
@@ -332,6 +423,29 @@ describe("approval center service", () => {
     expect(data.tabs[0].items).toHaveLength(1);
   });
 
+  it("does not let reviewer roles fall back to the global proposal queue without scope", async () => {
+    const repository = new InMemoryProposalRepository([
+      proposal({
+        code: "DX-GLOBAL-LEAK",
+        id: "global-leak",
+        projectId: "project-b",
+        title: "GLOBAL_REVIEWER_LEAK_SENTINEL",
+      }),
+    ]);
+
+    const data = await getApprovalCenterData(
+      { id: "investment-reviewer", role: "dau_tu_phat_trien" },
+      {
+        leadershipApprovals: [],
+        repository,
+      },
+    );
+
+    expect(data.permissions.canView).toBe(false);
+    expect(JSON.stringify(data)).not.toContain("GLOBAL_REVIEWER_LEAK_SENTINEL");
+    expect(data.tabs[0].items).toEqual([]);
+  });
+
   it("redacts finance data for users without finance.view before rendering", async () => {
     const repository = new InMemoryProposalRepository([
       proposal({
@@ -347,6 +461,15 @@ describe("approval center service", () => {
       { id: "qa-user", role: "qa_qc_chat_luong" },
       {
         leadershipApprovals: [],
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [
+          scopeAssignment({
+            permissionKeys: ["proposal.view", "proposal.review"],
+            roleKey: "qa_qc_chat_luong",
+            userId: "qa-user",
+          }),
+        ],
         repository,
       },
     );
@@ -404,6 +527,7 @@ describe("approval center service", () => {
       leadershipApprovals: [],
       notificationRepository: notifications,
       now: new Date("2026-05-29T00:00:00+07:00"),
+      queueEscalationNotifications: true,
       repository,
     };
 
@@ -532,7 +656,7 @@ describe("approval center service", () => {
     });
     expect(item.escalation).toMatchObject({
       required: true,
-      status: "queued",
+      status: "none",
       trigger: "critical_overdue",
     });
     expect(item.escalation?.targets).toEqual(
@@ -542,12 +666,8 @@ describe("approval center service", () => {
         expect.objectContaining({ kind: "delegate", userId: "assistant-01" }),
       ]),
     );
-    expect(await notifications.list()).toHaveLength(1);
-    expect(audits[0]).toMatchObject({
-      action: "approval.escalation_queued",
-      entityId: "leadership-overdue",
-      entityType: "approval",
-    });
+    expect(await notifications.list()).toHaveLength(0);
+    expect(audits).toHaveLength(0);
   });
 
   it("does not borrow an unrelated first policy for leadership escalation", async () => {

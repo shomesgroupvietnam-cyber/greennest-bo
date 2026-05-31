@@ -25,6 +25,7 @@ type RolePermissionCatalogStore = {
 };
 
 const roleScopes = {
+  chu_tich: "system",
   super_admin: "system",
   admin: "system",
   tong_giam_doc: "system",

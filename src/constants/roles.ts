@@ -1,7 +1,11 @@
 export const ROLES = {
+  chu_tich: {
+    label: "Chu tich",
+    description: "Dieu hanh cap Chu tich, phe duyet va quyet dinh nghiep vu",
+  },
   super_admin: {
-    label: "Chủ tịch/Super Admin",
-    description: "Chủ hệ thống kỹ thuật và quản trị khẩn cấp",
+    label: "Super Admin",
+    description: "Quan tri he thong ky thuat, BO va ho tro khan cap",
   },
   admin: {
     label: "Quản trị",
@@ -111,9 +115,10 @@ export function isKnownRole(role: string): role is Role {
 }
 
 export const BASIC_ROLE_GROUPS = {
+  CHAIRMAN: ["chu_tich"],
   SUPER_ADMIN: ["super_admin"],
   COMPANY_ADMIN: ["admin"],
-  LEADER: ["tong_giam_doc", "pho_tong_giam_doc"],
+  LEADER: ["chu_tich", "tong_giam_doc", "pho_tong_giam_doc"],
   LEGAL: ["phap_ly"],
   DESIGN: ["thiet_ke", "ky_thuat"],
   CONSTRUCTION: ["thi_cong", "qa_qc_chat_luong", "an_toan_lao_dong"],
@@ -125,8 +130,9 @@ export const ROLE_DEFAULT_SCREENS: Record<
   Role,
   { label: string; href: string }
 > = {
+  chu_tich: { label: "Tong quan Truc 1", href: "/command-center" },
   super_admin: { label: "Tong quan Truc 1", href: "/command-center" },
-  admin: { label: "Quan tri Chu tich", href: "/admin" },
+  admin: { label: "Quan tri he thong", href: "/admin" },
   tong_giam_doc: { label: "Lanh dao", href: "/command-center?view=executive-dashboard" },
   pho_tong_giam_doc: {
     label: "Lanh dao - danh muc duoc giao",

@@ -72,6 +72,7 @@ This status register is the canonical current-state summary. The roadmap explain
 | Architecture overview | `docs/architecture/ARCHITECTURE_OVERVIEW.md` |
 | Design standard | `docs/design/DESIGN_STANDARD.md` |
 | AI agent context packs | `docs/context/README.md` |
+| Team working principles | `docs/operations/WORKING_PRINCIPLES_BMAD.md` |
 | Deployment | `docs/deployment/README.md` |
 | Supabase validation | `docs/deployment/SUPABASE_STAGING_VALIDATION.md` |
 

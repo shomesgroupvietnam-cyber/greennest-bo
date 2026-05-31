@@ -3,7 +3,8 @@
 
 insert into public.roles (key, label_vi, description, scope)
 values
-  ('super_admin', 'Chủ tịch/Super Admin', 'Technical/system owner, emergency administration', 'system'),
+  ('chu_tich', 'Chu tich', 'Executive chairman business leadership and approvals', 'system'),
+  ('super_admin', 'Super Admin', 'Technical/system owner, BO administration and emergency support', 'system'),
   ('admin', 'Quản trị', 'System configuration, users, roles and master data', 'system'),
   ('tong_giam_doc', 'CEO', 'Executive control across company/project portfolio', 'system'),
   ('pho_tong_giam_doc', 'Phó tổng giám đốc', 'Executive oversight for assigned domains/projects', 'system'),
@@ -30,6 +31,7 @@ set label_vi = excluded.label_vi,
 
 insert into public.permissions (key, module, description)
 values
+  ('axis1.view', 'axis1', 'View Axis 1 portfolio command overview'),
   ('project.view', 'project', 'View projects'),
   ('project.create', 'project', 'Create projects'),
   ('project.update', 'project', 'Update projects'),
@@ -99,35 +101,51 @@ set module = excluded.module,
 
 with role_permission_seed(role_key, permission_keys) as (
   values
+    ('chu_tich', array[
+      'axis1.view',
+      'project.view','project.create','project.update','project.archive','project.assign_member',
+      'task.view','task.create','task.update','task.archive',
+      'document.view','document.create','document.update','document.approve','document.archive',
+      'legal.view','legal.update','legal.approve',
+      'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
+      'report.view','report.create',
+      'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
+      'design.view','design.review','construction.view',
+      'finance.view','finance.approve','payment.approve',
+      'audit.view','ai.use','ai.view_insight','ai.confirm_action'
+    ]),
     ('super_admin', array[
+      'axis1.view',
       'project.view','project.create','project.update','project.archive','project.assign_member',
       'task.view','task.create','task.update','task.update_own','task.archive',
       'document.view','document.create','document.update','document.approve','document.archive',
       'legal.view','legal.update','legal.approve','legal.configure_template',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
       'report.view','report.create',
-      'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
+      'knowledge.view','knowledge.create','knowledge.create_candidate','knowledge.promote','knowledge.review','knowledge.approve','knowledge.manage_source_registry',
       'design.view','design.create','design.update','design.review','design.approve_change',
       'construction.view','construction.update','site_diary.create','quality.update','acceptance.approve',
       'finance.view','finance.create','finance.update','finance.approve','payment.request','payment.approve',
       'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
-      'ai.use','ai.view_insight','ai.confirm_action'
+      'ai.use','ai.ask','ai.use_rag','ai.view_insight','ai.create_draft','ai.propose_action','ai.confirm_action','ai.configure'
     ]),
     ('admin', array[
+      'axis1.view',
       'project.view','project.create','project.update','project.archive','project.assign_member',
       'task.view','task.create','task.update','task.update_own','task.archive',
       'document.view','document.create','document.update','document.approve','document.archive',
       'legal.view','legal.update','legal.approve','legal.configure_template',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
       'report.view','report.create',
-      'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
-      'design.view','design.create','design.update','design.review','design.approve_change',
-      'construction.view','construction.update','site_diary.create','quality.update','acceptance.approve',
+      'knowledge.view','knowledge.create','knowledge.review',
+      'design.view','design.create','design.update','design.review',
+      'construction.view','construction.update','site_diary.create','quality.update',
       'finance.view','payment.request',
       'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
       'ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('tong_giam_doc', array[
+      'axis1.view',
       'project.view','project.create','project.update','project.archive','project.assign_member',
       'task.view','task.create','task.update','task.archive',
       'document.view','legal.view','legal.approve',
@@ -296,6 +314,14 @@ set module = excluded.module,
 
 with enterprise_role_permission_seed(role_key, permission_keys) as (
   values
+    ('chu_tich', array[
+      'proposal.view','proposal.create','proposal.update','proposal.review','proposal.approve','proposal.reject','proposal.request_change','proposal.archive',
+      'investment.view','investment.create','investment.update','investment.review','investment.approve',
+      'contract.view','contract.create','contract.update','contract.review','contract.approve','contract.archive',
+      'hr.view','hr.review','hr.approve',
+      'qa.view','qa.update','qa.approve','safety.view','safety.update','safety.approve',
+      'compliance.view','compliance.review','internal_audit.view','internal_audit.review'
+    ]),
     ('super_admin', array[
       'proposal.view','proposal.create','proposal.update','proposal.review','proposal.approve','proposal.reject','proposal.request_change','proposal.configure_flow','proposal.archive',
       'investment.view','investment.create','investment.update','investment.review','investment.approve',
@@ -305,11 +331,11 @@ with enterprise_role_permission_seed(role_key, permission_keys) as (
       'compliance.view','compliance.review','internal_audit.view','internal_audit.review'
     ]),
     ('admin', array[
-      'proposal.view','proposal.create','proposal.update','proposal.review','proposal.approve','proposal.reject','proposal.request_change','proposal.configure_flow','proposal.archive',
-      'investment.view','investment.create','investment.update','investment.review','investment.approve',
-      'contract.view','contract.create','contract.update','contract.review','contract.approve','contract.archive',
-      'hr.view','hr.create','hr.update','hr.review','hr.approve',
-      'qa.view','qa.update','qa.approve','safety.view','safety.update','safety.approve',
+      'proposal.view','proposal.create','proposal.update','proposal.review','proposal.configure_flow','proposal.archive',
+      'investment.view','investment.create','investment.update','investment.review',
+      'contract.view','contract.create','contract.update','contract.review','contract.archive',
+      'hr.view','hr.create','hr.update','hr.review',
+      'qa.view','qa.update','safety.view','safety.update',
       'compliance.view','compliance.review','internal_audit.view','internal_audit.review'
     ]),
     ('dau_tu_phat_trien', array[
@@ -418,6 +444,23 @@ where rp.role_id = r.id
   and r.key = 'admin'
   and p.key = denied.permission_key;
 
+with chairman_bo_denies(permission_key) as (
+  values
+    ('settings.manage'),
+    ('user.view'),
+    ('user.invite'),
+    ('user.update_role'),
+    ('delegation.manage'),
+    ('knowledge.manage_source_registry'),
+    ('ai.configure')
+)
+delete from public.role_permissions rp
+using public.roles r, public.permissions p, chairman_bo_denies denied
+where rp.role_id = r.id
+  and rp.permission_id = p.id
+  and r.key = 'chu_tich'
+  and p.key = denied.permission_key;
+
 do $$
 begin
   if to_regclass('public.approval_threshold_policies') is not null then
@@ -456,7 +499,7 @@ begin
           ('policy-approval-under-20m', 'approval_under_20m', 'Duoi 20 trieu', 'general', 0::numeric(18, 2), 19999999.99::numeric(18, 2), 'VND', 'DEPARTMENT_HEAD', 'dau_tu_phat_trien', 'proposal.review', array['high', 'critical']::text[], true, 100),
           ('policy-approval-20m-200m', 'approval_20m_200m', '20 trieu den 200 trieu', 'general', 20000000::numeric(18, 2), 199999999.99::numeric(18, 2), 'VND', 'PROJECT_DIRECTOR', 'quan_ly_tai_chinh', 'proposal.approve', array['high', 'critical']::text[], true, 110),
           ('policy-approval-200m-2b', 'approval_200m_2b', '200 trieu den 2 ty', 'general', 200000000::numeric(18, 2), 1999999999.99::numeric(18, 2), 'VND', 'CEO', 'tong_giam_doc', 'proposal.approve', array['critical']::text[], true, 120),
-          ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty hoac quyet dinh chien luoc', 'general', 2000000000::numeric(18, 2), null::numeric(18, 2), 'VND', 'CHAIRMAN', 'super_admin', 'proposal.approve', array['high', 'critical']::text[], true, 130)
+          ('policy-approval-over-2b', 'approval_over_2b', 'Tren 2 ty hoac quyet dinh chien luoc', 'general', 2000000000::numeric(18, 2), null::numeric(18, 2), 'VND', 'CHAIRMAN', 'chu_tich', 'proposal.approve', array['high', 'critical']::text[], true, 130)
       ) as seed(
         id,
         policy_key,
@@ -481,7 +524,19 @@ begin
           and p.key = seed.required_permission_key
           and r.is_active = true
       )
-      on conflict (policy_key) do nothing
+      on conflict (policy_key) do update
+      set label_vi = excluded.label_vi,
+          target_type = excluded.target_type,
+          amount_min = excluded.amount_min,
+          amount_max = excluded.amount_max,
+          currency = excluded.currency,
+          approval_level = excluded.approval_level,
+          approver_role_key = excluded.approver_role_key,
+          required_permission_key = excluded.required_permission_key,
+          escalate_on_risk_levels = excluded.escalate_on_risk_levels,
+          is_active = excluded.is_active,
+          priority = excluded.priority,
+          updated_at = now()
     $policy_settings_seed$;
   end if;
 

@@ -265,6 +265,22 @@ function delegation(overrides: Partial<LeadershipDelegation> = {}): LeadershipDe
   };
 }
 
+function scopeAssignment(overrides: Partial<ScopeAssignment> = {}): ScopeAssignment {
+  return {
+    active: true,
+    axisId: "axis-1",
+    createdAt: "",
+    id: "scope-a",
+    permissionKeys: ["proposal.view", "proposal.review"],
+    projectId: "demo-project-riverside",
+    roleKey: "qa_qc_chat_luong",
+    scopeType: "scoped",
+    updatedAt: "",
+    userId: "qa-reviewer",
+    ...overrides,
+  };
+}
+
 describe("approval center detail service", () => {
   it.each<[ProposalType, string]>([
     ["document", "ho_so_van_ban"],
@@ -308,6 +324,14 @@ describe("approval center detail service", () => {
       approver,
       {
         repository,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [
+          scopeAssignment({
+            permissionKeys: ["proposal.view", "project.view"],
+            roleKey: "tong_giam_doc",
+            userId: "approver-01",
+          }),
+        ],
         selectedScopeId: "scope-a",
       },
     );
@@ -357,11 +381,6 @@ describe("approval center detail service", () => {
           label: "Linked source: Project demo-project-riverside",
           status: "source",
         }),
-        expect.objectContaining({
-          kind: "link",
-          label: "Linked source: axis-2-specialist-module future-module-record",
-          status: "evidence",
-        }),
       ]),
     );
     expect(JSON.stringify(detail)).not.toContain('"amount":');
@@ -403,7 +422,49 @@ describe("approval center detail service", () => {
     });
   });
 
-  it("includes overdue escalation summary on proposal detail and queues one mock alert", async () => {
+  it("redacts linked source ids and hrefs when the source is outside scope", async () => {
+    const source = proposal({
+      id: "linked-source-scope",
+      title: "Linked source scope detail",
+    });
+    const repository = new InMemoryProposalRepository(
+      [source],
+      [
+        {
+          createdAt: "2026-05-20T00:00:00.000Z",
+          entityId: "project-outside-scope",
+          entityType: "project",
+          id: "restricted-project-link",
+          proposalId: source.id,
+          relationType: "source",
+        },
+      ],
+      [step(source.id)],
+      [decision(source.id)],
+    );
+
+    const detail = await getApprovalCenterDetailData(
+      { sourceId: source.id, sourceType: "proposal" },
+      qaReviewer,
+      {
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [scopeAssignment()],
+      },
+    );
+    const serialized = JSON.stringify(detail);
+
+    expect(detail?.linkedSources[0]).toMatchObject({
+      entityId: "restricted",
+      href: undefined,
+      state: "no_permission",
+    });
+    expect(serialized).not.toContain("project-outside-scope");
+    expect(detail?.history.some((item) => item.kind === "link")).toBe(false);
+  });
+
+  it("includes overdue escalation summary on proposal detail and queues one mock alert when enabled", async () => {
     const source = proposal({
       dueDate: "2026-05-25",
       id: "overdue-detail",
@@ -435,6 +496,7 @@ describe("approval center detail service", () => {
         delegations: [delegation({ principalUserId: "requester-01" })],
         notificationRepository: notifications,
         now: new Date("2026-05-29T00:00:00+07:00"),
+        queueEscalationNotifications: true,
         repository,
       },
     );
@@ -500,6 +562,14 @@ describe("approval center detail service", () => {
       approver,
       {
         repository,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [
+          scopeAssignment({
+            permissionKeys: ["proposal.view"],
+            roleKey: "tong_giam_doc",
+            userId: "approver-01",
+          }),
+        ],
         selectedScopeId: "scope-a",
       },
     );
@@ -688,6 +758,9 @@ describe("approval center detail service", () => {
     ];
     const options = {
       auditLogs,
+      requireScopeAssignments: true,
+      rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+      scopeAssignments: [scopeAssignment()],
       repository: new InMemoryProposalRepository(
         [source],
         [],
@@ -730,7 +803,12 @@ describe("approval center detail service", () => {
     const reviewerDetail = await getApprovalCenterDetailData(
       { sourceId: source.id, sourceType: "proposal" },
       qaReviewer,
-      { repository },
+      {
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [scopeAssignment()],
+      },
     );
 
     expect(approverDetail?.permissions.availableActions).toEqual(
@@ -764,7 +842,12 @@ describe("approval center detail service", () => {
     const detail = await getApprovalCenterDetailData(
       { sourceId: source.id, sourceType: "proposal" },
       qaReviewer,
-      { repository },
+      {
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [scopeAssignment()],
+      },
     );
     const serialized = JSON.stringify(detail);
 
@@ -826,6 +909,14 @@ describe("approval center detail service", () => {
     const data = await getApprovalCenterData(approver, {
       leadershipApprovals: [],
       repository,
+      rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+      scopeAssignments: [
+        scopeAssignment({
+          permissionKeys: ["proposal.view"],
+          roleKey: "tong_giam_doc",
+          userId: "approver-01",
+        }),
+      ],
       selectedScopeId: "scope-a",
     });
 

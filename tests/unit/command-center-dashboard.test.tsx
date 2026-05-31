@@ -20,6 +20,14 @@ const executiveUser: AppSessionUser = {
   status: "active",
 };
 
+const projectDirectorUser: AppSessionUser = {
+  email: "project-director@example.test",
+  fullName: "Tran Du An",
+  id: "project-director-without-scope",
+  role: "giam_doc_du_an",
+  status: "active",
+};
+
 async function buildCommandCenterData() {
   return getCommandCenterData({
     id: executiveUser.id,
@@ -30,17 +38,66 @@ async function buildCommandCenterData() {
 function renderDashboard(
   data: CommandCenterData,
   initialView = "executive-dashboard",
+  user = executiveUser,
 ) {
   return render(
     <CommandCenterDashboard
       data={data}
       initialView={initialView}
-      user={executiveUser}
+      user={user}
     />,
   );
 }
 
 describe("CommandCenterDashboard executive dashboard", () => {
+  it("shows a role workspace return link for project roles entering Command Center", async () => {
+    const data = await getCommandCenterData(
+      { id: projectDirectorUser.id, role: projectDirectorUser.role },
+      {
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [],
+      },
+    );
+
+    renderDashboard(data, "axis1-search-development", projectDirectorUser);
+
+    const returnLink = screen.getByRole("link", {
+      name: /Quay lai Ban du an/i,
+    });
+
+    expect(returnLink).toHaveAttribute("href", "/project-workbench");
+  });
+
+  it("disables mock executive approval actions for admin", async () => {
+    const adminUser: AppSessionUser = {
+      email: "admin@example.test",
+      fullName: "Admin User",
+      id: "admin-01",
+      role: "admin",
+      status: "active",
+    };
+    const data = await getCommandCenterData(
+      { id: adminUser.id, role: adminUser.role },
+      {
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [],
+      },
+    );
+    const legacyData = {
+      ...data,
+      executiveDashboard: undefined,
+    } as unknown as CommandCenterData;
+
+    renderDashboard(legacyData, "executive-dashboard", adminUser);
+
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Return" })).toBeDisabled();
+    expect(
+      screen.getByText(/khong co approval authority/i),
+    ).toBeInTheDocument();
+  });
+
   it("renders the executive morning briefing view from scoped briefing data", async () => {
     const data = await buildCommandCenterData();
     const briefing = data.executiveMorningBriefing;
@@ -902,6 +959,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
               items: [
                 {
                   ...firstItem,
+                  amountLabel: "9,999,000,000 VND",
                   escalation: {
                     policyLabel: "Policy queue sentinel",
                     reason: "Qua han 4 ngay theo Policy queue sentinel.",
@@ -918,6 +976,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
                     thresholdDays: 3,
                     trigger: "long_overdue",
                   },
+                  financialAccess: "no_permission",
+                  href: "/proposals/approval-center-test",
+                  ownerName: "record-owner-queue",
                   overdue: {
                     daysOverdue: 4,
                     isOverdue: true,
@@ -926,6 +987,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
                     reason: "Qua han 4 ngay theo Policy queue sentinel.",
                     severity: "critical",
                   },
+                  policyLabel: "Policy queue sentinel",
+                  reviewerLabel: "reviewer-queue",
+                  riskLevel: "critical",
                 },
                 ...tab.items.slice(1),
               ],
@@ -936,6 +1000,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data, "executive-approvals");
 
+    expect(screen.getByRole("main")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Approval Center" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Truc 1/ })).toHaveAttribute(
       "aria-selected",
@@ -945,6 +1010,15 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(screen.getAllByText("Ho so / Van ban").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Tai chinh / Chi").length).toBeGreaterThan(0);
     expect(screen.getAllByText("critical").length).toBeGreaterThan(0);
+    expect(screen.getByText("Owner: record-owner-queue")).toBeInTheDocument();
+    expect(screen.getByText("Approver: reviewer-queue")).toBeInTheDocument();
+    expect(screen.getByText("Risk: critical")).toBeInTheDocument();
+    expect(screen.getByText("Policy: Policy queue sentinel")).toBeInTheDocument();
+    expect(screen.getByText("Tai chinh han che quyen")).toBeInTheDocument();
+    expect(screen.queryByText("9,999,000,000 VND")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: `Mo chi tiet ${firstItem.title}` }),
+    ).toHaveAttribute("href", "/proposals/approval-center-test");
     expect(
       screen.getAllByText(/Kiem tra escalation queue va nang cap theo policy\./).length,
     ).toBeGreaterThan(0);
@@ -952,12 +1026,15 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(screen.getByText("Targets: assistant-queue")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /approve|reject|duyet|tu choi/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: /Truc 2/ }));
+    fireEvent.keyDown(screen.getByRole("tab", { name: /Truc 1/ }), {
+      key: "ArrowRight",
+    });
 
     expect(screen.getByRole("tab", { name: /Truc 2/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    expect(screen.getByRole("tab", { name: /Truc 2/ })).toHaveFocus();
     expect(screen.getByText("Placeholder MVP")).toBeInTheDocument();
     expect(screen.getByText(/Chua co flow chi tiet cho Truc 2/)).toBeInTheDocument();
   });

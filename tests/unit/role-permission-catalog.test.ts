@@ -20,6 +20,16 @@ let tempDir: string;
 let repository: JsonRolePermissionCatalogRepository;
 
 const settingsManager = { id: "settings-manager", role: "admin" } as const;
+const chairman = { id: "chairman-01", role: "chu_tich" } as const;
+const chairmanBoDeniedPermissions = [
+  "settings.manage",
+  "user.view",
+  "user.invite",
+  "user.update_role",
+  "delegation.manage",
+  "knowledge.manage_source_registry",
+  "ai.configure",
+] satisfies PermissionAction[];
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(tmpdir(), "greennest-role-catalog-"));
@@ -38,6 +48,7 @@ describe("role permission catalog service", () => {
 
     expect(catalog.roles.map((role) => role.key)).toEqual(
       expect.arrayContaining([
+        "chu_tich",
         "super_admin",
         "admin",
         "tong_giam_doc",
@@ -53,6 +64,30 @@ describe("role permission catalog service", () => {
     });
     expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
       "proposal.approve",
+    );
+    expect(catalog.roles.find((role) => role.key === "chu_tich")?.permissionKeys).toEqual(
+      expect.arrayContaining(["proposal.approve", "finance.view", "decision.approve"]),
+    );
+    const chairmanPermissions = catalog.roles.find((role) => role.key === "chu_tich")?.permissionKeys ?? [];
+    const superAdminPermissions = catalog.roles.find((role) => role.key === "super_admin")?.permissionKeys ?? [];
+    for (const permission of chairmanBoDeniedPermissions) {
+      expect(chairmanPermissions).not.toContain(permission);
+      expect(superAdminPermissions).toContain(permission);
+    }
+    for (const permission of chairmanPermissions) {
+      expect(superAdminPermissions).toContain(permission);
+    }
+    expect(catalog.roles.find((role) => role.key === "super_admin")?.permissionKeys).toEqual(
+      expect.arrayContaining([
+        "settings.manage",
+        "user.invite",
+        "user.update_role",
+        "delegation.manage",
+        "document.approve",
+        "legal.approve",
+        "decision.approve",
+        "ai.confirm_action",
+      ]),
     );
   });
 
@@ -150,6 +185,17 @@ describe("role permission catalog service", () => {
           scope: "system",
         },
         { id: "viewer", role: "viewer" },
+        repository,
+      ),
+    ).rejects.toThrow(/quyen|permission/i);
+
+    await expect(
+      updateRolePermissionMapping(
+        {
+          roleKey: "viewer",
+          permissionKeys: ["project.view"],
+        },
+        chairman,
         repository,
       ),
     ).rejects.toThrow(/quyen|permission/i);

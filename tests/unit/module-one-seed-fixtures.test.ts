@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { getMockCurrentUser } from "@/lib/auth/mock-session";
+import { getRolePermissions } from "@/lib/permissions/can";
 import { getDashboardData } from "@/modules/dashboard/services/dashboard-service";
 import { JsonDocumentRequirementRepository } from "@/modules/documents/services/document-requirement-repository";
 import { JsonDocumentRepository } from "@/modules/documents/services/document-repository";
@@ -27,6 +28,13 @@ import acceptanceFixture from "../fixtures/module-one-acceptance.json";
 const execFileAsync = promisify(execFile);
 const projectRoot = process.cwd();
 const createdTempDirs: string[] = [];
+const chairmanBoDeniedPermissions = [
+  "settings.manage",
+  "user.view",
+  "user.invite",
+  "user.update_role",
+  "delegation.manage",
+] as const;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -139,8 +147,46 @@ describe("Module 1 acceptance seed contract", () => {
       expect(rolesByKey.has(persona.role)).toBe(true);
     }
 
-    expect(getMockCurrentUser("super_admin").id).toBe("chairman-01");
-    expect(getMockCurrentUser("super_admin").email).toBe("chairman@greennest.vn");
+    expect(usersById.get("chairman-01")).toMatchObject({
+      id: "chairman-01",
+      email: "chairman@greennest.vn",
+      role: "chu_tich",
+    });
+    expect(usersById.get("super-admin-01")).toMatchObject({
+      id: "super-admin-01",
+      email: "super.admin@greennest.vn",
+      role: "super_admin",
+    });
+    const chairmanPermissions = rolesByKey.get("chu_tich")?.permissionKeys ?? [];
+    const superAdminPermissions = rolesByKey.get("super_admin")?.permissionKeys ?? [];
+
+    expect(chairmanPermissions).toEqual(
+      expect.arrayContaining(["proposal.approve", "finance.view", "decision.approve"]),
+    );
+    for (const permission of chairmanBoDeniedPermissions) {
+      expect(chairmanPermissions).not.toContain(permission);
+      expect(superAdminPermissions).toContain(permission);
+    }
+    for (const permission of chairmanPermissions) {
+      expect(superAdminPermissions).toContain(permission);
+    }
+    expect(superAdminPermissions).toEqual(
+      expect.arrayContaining([
+        "settings.manage",
+        "user.invite",
+        "user.update_role",
+        "delegation.manage",
+        "document.approve",
+        "legal.approve",
+        "decision.approve",
+        "ai.confirm_action",
+      ]),
+    );
+
+    expect(getMockCurrentUser("chu_tich").id).toBe("chairman-01");
+    expect(getMockCurrentUser("chu_tich").email).toBe("chairman@greennest.vn");
+    expect(getMockCurrentUser("super_admin").id).toBe("super-admin-01");
+    expect(getMockCurrentUser("super_admin").email).toBe("super.admin@greennest.vn");
     expect(getMockCurrentUser("tong_giam_doc").id).toBe("ceo-01");
     expect(getMockCurrentUser("giam_doc_du_an").id).toBe("project-director-01");
     expect(getMockCurrentUser("to_truong").id).toBe("department-head-01");
@@ -167,6 +213,8 @@ describe("Module 1 acceptance seed contract", () => {
         amountMin?: number;
         amountMax?: number;
         active: boolean;
+        approvalLevel: string;
+        approverRoleKey: string;
         requiredPermissionKey: string;
       }>;
       riskGroups: Array<{ riskKey: string; active: boolean; defaultSeverity: string }>;
@@ -184,9 +232,24 @@ describe("Module 1 acceptance seed contract", () => {
     }>(outputDir, "leadership-delegations.json");
 
     const rolesByKey = new Map(catalog.roles.map((role) => [role.key, role]));
-    expect(rolesByKey.get("admin")?.permissionKeys).not.toEqual(
-      expect.arrayContaining(["proposal.approve", "proposal.reject", "proposal.request_change"]),
+    const adminPermissions = rolesByKey.get("admin")?.permissionKeys ?? [];
+    const chairmanPermissions = rolesByKey.get("chu_tich")?.permissionKeys ?? [];
+    const superAdminPermissions = rolesByKey.get("super_admin")?.permissionKeys ?? [];
+
+    for (const permission of ["proposal.approve", "proposal.reject", "proposal.request_change"] as const) {
+      expect(adminPermissions).not.toContain(permission);
+    }
+    expect(chairmanPermissions).toEqual(
+      expect.arrayContaining(["proposal.approve", "proposal.reject", "proposal.request_change", "finance.view"]),
     );
+    for (const permission of chairmanBoDeniedPermissions) {
+      expect(chairmanPermissions).not.toContain(permission);
+      expect(superAdminPermissions).toContain(permission);
+    }
+    for (const permission of getRolePermissions("chu_tich")) {
+      expect(chairmanPermissions).toContain(permission);
+      expect(superAdminPermissions).toContain(permission);
+    }
     expect(rolesByKey.get("thu_ky_tro_ly")?.permissionKeys).not.toEqual(
       expect.arrayContaining([
         "proposal.approve",
@@ -204,10 +267,24 @@ describe("Module 1 acceptance seed contract", () => {
     expect(scopes.assignments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ userId: "chairman-01", active: true }),
+        expect.objectContaining({ userId: "super-admin-01", active: true }),
         expect.objectContaining({ userId: "project-director-01", projectId: "demo-project-riverside" }),
         expect.objectContaining({ userId: "department-head-01", projectId: "demo-project-garden" }),
       ]),
     );
+    const scopesByUser = new Map(scopes.assignments.map((scope) => [scope.userId, scope]));
+    expect(scopesByUser.get("chairman-01")).toMatchObject({
+      roleKey: "chu_tich",
+      scopeType: "global",
+      active: true,
+    });
+    expect(scopesByUser.get("chairman-01")?.permissionKeys).toEqual(getRolePermissions("chu_tich"));
+    expect(scopesByUser.get("super-admin-01")).toMatchObject({
+      roleKey: "super_admin",
+      scopeType: "global",
+      active: true,
+    });
+    expect(scopesByUser.get("super-admin-01")?.permissionKeys).toEqual(getRolePermissions("super_admin"));
     expect(scopes.assignments.find((scope) => scope.userId === "assistant-01")?.permissionKeys).not.toContain(
       "finance.view",
     );
@@ -222,6 +299,20 @@ describe("Module 1 acceptance seed contract", () => {
     }
     expect(generalPolicies.map((policy) => policy.requiredPermissionKey)).toEqual(
       expect.arrayContaining(["proposal.review", "proposal.approve"]),
+    );
+    const chairmanPolicy = generalPolicies.find((policy) => policy.approvalLevel === "CHAIRMAN");
+    expect(chairmanPolicy).toMatchObject({
+      policyKey: "approval_over_2b",
+      approverRoleKey: "chu_tich",
+      requiredPermissionKey: "proposal.approve",
+    });
+    expect(generalPolicies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          approvalLevel: "CHAIRMAN",
+          approverRoleKey: "super_admin",
+        }),
+      ]),
     );
     expect(policies.riskGroups).toEqual(
       expect.arrayContaining([
@@ -354,7 +445,11 @@ describe("Module 1 acceptance seed contract", () => {
     };
 
     const chairman = await getDashboardData(
-      { id: "chairman-01", role: "super_admin" },
+      { id: "chairman-01", role: "chu_tich" },
+      commonOptions,
+    );
+    const superAdmin = await getDashboardData(
+      { id: "super-admin-01", role: "super_admin" },
       commonOptions,
     );
     const director = await getDashboardData(
@@ -373,6 +468,8 @@ describe("Module 1 acceptance seed contract", () => {
     expect(chairman.summary.totalProjects).toBe(4);
     expect(chairman.permissions.canViewFinance).toBe(true);
     expect(chairman.overdueTasks.map((task) => task.id)).toContain("demo-task-overdue-legal");
+    expect(superAdmin.summary.totalProjects).toBe(4);
+    expect(superAdmin.permissions.canViewFinance).toBe(true);
 
     expect(director.projects.map((project) => project.id)).toEqual(["demo-project-riverside"]);
     expect(director.permissions.canViewFinance).toBe(true);

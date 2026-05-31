@@ -5,8 +5,20 @@ on conflict (key) do update
 set module = excluded.module,
     description = excluded.description;
 
+insert into public.roles (key, label_vi, description, scope, is_active)
+values
+  ('chu_tich', 'Chu tich', 'Executive chairman business leadership and approvals', 'system', true),
+  ('super_admin', 'Super Admin', 'Technical/system owner, BO administration and emergency support', 'system', true)
+on conflict (key) do update
+set label_vi = excluded.label_vi,
+    description = excluded.description,
+    scope = excluded.scope,
+    is_active = excluded.is_active,
+    updated_at = now();
+
 with axis1_role_permissions(role_key, permission_key) as (
   values
+    ('chu_tich', 'axis1.view'),
     ('super_admin', 'axis1.view'),
     ('admin', 'axis1.view'),
     ('tong_giam_doc', 'axis1.view'),

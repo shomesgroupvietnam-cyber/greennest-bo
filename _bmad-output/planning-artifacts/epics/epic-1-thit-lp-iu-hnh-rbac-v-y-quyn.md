@@ -165,3 +165,54 @@ AC3:
 **Test Expectations:** Unit tests hoặc fixture tests xác nhận seed data bao phủ role/scope/policy/delegation cần cho các story sau.
 
 **Dependencies:** Story 1.1, Story 1.2, Story 1.3, Story 1.4.
+
+## Story 1.6: Separate Chairman Role From Super Admin
+
+**Requirements Covered:** FR-091, FR-092, FR-093, FR-096, NFR-005, NFR-006, NFR-008.
+
+As a system owner quan ly RBAC Module 1,
+I want role Chu tich dieu hanh duoc tach rieng khoi Super Admin ky thuat/BO,
+So that Chu tich co quyen dieu hanh nghiep vu nhung khong mac dinh nam giu quyen quan tri he thong, user, settings va role catalog.
+
+**Acceptance Criteria:**
+
+AC1:
+**Given** static role catalog va role-permission catalog load
+**When** system liet ke roles
+**Then** co role moi `chu_tich` label "Chu tich" va default route `/command-center`
+**And** `super_admin` co meaning technical/business super admin, khong con dong nghia Chu tich/Super Admin.
+
+AC2:
+**Given** user role `chu_tich`
+**When** runtime permission check chay
+**Then** role co quyen dieu hanh dashboard, approval, decision, risk, meeting va finance-sensitive visibility/approval neu can
+**And** role khong co BO permissions nhu `settings.manage`, `user.invite`, `user.update_role`, `user.view`, role catalog config hoac BO-level `delegation.manage`.
+
+AC3:
+**Given** user role `super_admin`
+**When** permission/nav/default route duoc resolve
+**Then** role co toan bo quyen cua `chu_tich` cong BO/system permissions
+**And** default route khuyen nghi van la `/command-center`, BO la menu/workspace rieng.
+
+AC4:
+**Given** seed/demo data duoc tao
+**When** mock/file-backed hoac local/staging Supabase seed duoc doc
+**Then** `chairman-01` co role `chu_tich`
+**And** co `super-admin-01` role `super_admin`.
+
+AC5:
+**Given** role `chu_tich`
+**When** sidebar/default route/direct routes render
+**Then** user thay "Tong quan Truc 1" va "Lanh dao"
+**And** khong thay/khong vao `/admin`, `/settings`, `/users`.
+
+AC6:
+**Given** tests chay
+**When** RBAC, seed, navigation va e2e smoke duoc validate
+**Then** tests cover `chu_tich` allow/deny matrix, `super_admin` superset, seed persona mapping va direct BO route denial cho Chu tich.
+
+**Files/Modules:** `src/constants/roles.ts`, `src/lib/permissions`, `src/modules/settings`, `src/modules/workspaces`, `src/modules/executive`, `src/modules/command-center`, `src/lib/auth`, `scripts/seed-demo.mjs`, `database/seeds`, `database/verification`, `tests/unit`, `tests/e2e`.
+
+**Test Expectations:** Unit tests cho role catalog/permissions/navigation/default route/seed fixtures va e2e smoke cho Chu tich/Super Admin split.
+
+**Dependencies:** Story 1.1, Story 1.5, Story 2.9.

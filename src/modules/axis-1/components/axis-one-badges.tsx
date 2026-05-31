@@ -1,3 +1,5 @@
+import React from "react";
+
 import {
   AXIS_ONE_DOCUMENT_STATUS_LABELS,
   AXIS_ONE_DOCUMENT_STATUS_TONES,

@@ -9,8 +9,10 @@ import type { PermissionAction } from "@/lib/permissions/can";
 import {
   requireAuthenticatedSession,
   requireAnyPermission,
+  requireBoRoute,
   requirePermission,
 } from "@/lib/permissions/guard";
+import { isBoPolicyHref } from "@/lib/permissions/navigation-policy";
 import { getNavigationShellData } from "@/lib/permissions/navigation-context";
 import { listActiveDelegationsForDelegate } from "@/modules/settings/services/leadership-delegation-service";
 
@@ -26,9 +28,7 @@ type DashboardRoutePolicy = {
 
 const dashboardRoutePolicies: DashboardRoutePolicy[] = [
   { path: "/axis-1", match: "prefix", permission: "axis1.view" },
-  { path: "/users", match: "prefix", permission: "user.view" },
   { path: "/ai", match: "prefix", permission: "ai.ask" },
-  { path: "/settings", match: "prefix", permissions: ["settings.manage", "delegation.manage"] },
   { path: "/projects/new", match: "exact", permission: "project.create" },
   { path: "/projects", match: "prefix", permission: "project.view" },
   { path: "/tasks/new", match: "exact", permission: "task.create" },
@@ -65,6 +65,11 @@ async function enforceDashboardRoutePolicy(
   pathname?: string | null,
 ) {
   if (!pathname) {
+    return;
+  }
+
+  if (isBoPolicyHref(pathname)) {
+    await requireBoRoute(pathname, session);
     return;
   }
 

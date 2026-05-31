@@ -1,5 +1,15 @@
 import { can, type PermissionAction, type PermissionUser } from "./can";
 import {
+  canOpenBoRoute,
+  canOpenCommandCenter,
+  commandCenterViewForHref,
+  getCommandCenterLandingHref,
+  getNavigationPolicyForRole,
+  isBoPolicyHref,
+  isCommandCenterHref,
+  isPolicyWorkspaceHref,
+} from "@/lib/permissions/navigation-policy";
+import {
   canAccessWorkspaceRoute,
   WORKSPACE_DEFINITIONS,
   type WorkspaceRoute,
@@ -31,6 +41,7 @@ export type NavigationItem = {
 };
 
 export type NavigationAccessContext = {
+  delegatedPermissions?: readonly PermissionAction[];
   scopedPermissions?: readonly PermissionAction[];
   scopedWorkspaceRoutes?: readonly string[];
 };
@@ -48,16 +59,11 @@ export type ShellContext = {
   workspaceOptions: ShellOption[];
 };
 
-const externalRoles: string[] = ["nha_thau", "tu_van"];
 const workspaceRoutes = new Set(
   Object.keys(WORKSPACE_DEFINITIONS),
 ) as Set<WorkspaceRoute>;
 
 function workspaceRouteForNavItem(item: NavigationItem) {
-  if (item.href === "/command-center?view=executive-dashboard") {
-    return "/executive" satisfies WorkspaceRoute;
-  }
-
   const path = item.href.split("?")[0] as WorkspaceRoute;
 
   return workspaceRoutes.has(path) ? path : undefined;
@@ -66,7 +72,7 @@ function workspaceRouteForNavItem(item: NavigationItem) {
 export const NAV_ITEMS: readonly NavigationItem[] = [
   {
     href: "/admin",
-    label: "Quan tri Chu tich",
+    label: "Quan tri he thong",
     icon: "users",
     roles: ["super_admin", "admin"],
     permissions: ["settings.manage", "delegation.manage", "user.view", "audit.view"],
@@ -93,6 +99,7 @@ export const NAV_ITEMS: readonly NavigationItem[] = [
       "decision.approve",
     ],
     roles: [
+      "chu_tich",
       "super_admin",
       "admin",
       "tong_giam_doc",
@@ -292,11 +299,15 @@ export const NAV_ITEMS: readonly NavigationItem[] = [
   },
 ];
 
-function hasScopedPermission(
+function hasContextPermission(
   context: NavigationAccessContext | undefined,
   permission: PermissionAction,
 ) {
-  return context?.scopedPermissions?.includes(permission) ?? false;
+  return (
+    context?.scopedPermissions?.includes(permission) ||
+    context?.delegatedPermissions?.includes(permission) ||
+    false
+  );
 }
 
 function hasPermissionOrGrant(
@@ -304,7 +315,7 @@ function hasPermissionOrGrant(
   permission: PermissionAction,
   context?: NavigationAccessContext,
 ) {
-  return can(user, permission) || hasScopedPermission(context, permission);
+  return can(user, permission) || hasContextPermission(context, permission);
 }
 
 function hasWorkspaceRouteAccess(
@@ -318,46 +329,124 @@ function hasWorkspaceRouteAccess(
   );
 }
 
+function withResolvedCommandCenterHref(
+  item: NavigationItem,
+  user: PermissionUser,
+  context?: NavigationAccessContext,
+) {
+  if (item.href !== "/command-center") {
+    return item;
+  }
+
+  const landingHref = getCommandCenterLandingHref(user, context);
+
+  return {
+    ...item,
+    href:
+      landingHref === "/command-center?view=axis1-search-development" ||
+      landingHref === "/command-center?view=executive-approvals"
+        ? landingHref
+        : item.href,
+  };
+}
+
 export function getPermittedNavItems(
   user: PermissionUser,
   context?: NavigationAccessContext,
 ) {
-  return NAV_ITEMS.filter((item) => {
+  return NAV_ITEMS.flatMap((item) => {
+    const policy = getNavigationPolicyForRole(user.role);
+    const include = (navItem: NavigationItem) => [
+      withResolvedCommandCenterHref(navItem, user, context),
+    ];
+
     if (user.role === "pending") {
-      return item.href === "/pending-access";
+      return item.href === "/pending-access" ? include(item) : [];
     }
 
-    if (item.common) {
-      return true;
+    if (isBoPolicyHref(item.href)) {
+      return canOpenBoRoute(user, item.href) ? include(item) : [];
+    }
+
+    if (isCommandCenterHref(item.href)) {
+      return canOpenCommandCenter(
+        user,
+        commandCenterViewForHref(item.href),
+        context,
+      )
+        ? include(item)
+        : [];
+    }
+
+    if (
+      isPolicyWorkspaceHref(item.href) &&
+      policy.allowedWorkspaceHrefs.includes(item.href)
+    ) {
+      const workspaceRoute = workspaceRouteForNavItem(item);
+
+      return workspaceRoute
+        ? hasWorkspaceRouteAccess(user, workspaceRoute, context)
+          ? include(item)
+          : []
+        : include(item);
     }
 
     const workspaceRoute = workspaceRouteForNavItem(item);
 
-    if (workspaceRoute) {
-      return hasWorkspaceRouteAccess(user, workspaceRoute, context);
+    if (
+      isPolicyWorkspaceHref(item.href) &&
+      workspaceRoute &&
+      (context?.scopedWorkspaceRoutes?.includes(workspaceRoute) ?? false)
+    ) {
+      return include(item);
     }
 
     if (
-      externalRoles.includes(user.role) &&
-      !context?.scopedPermissions?.length
+      item.href === "/axis-1" &&
+      policy.businessNavigation !== "none" &&
+      hasContextPermission(context, "axis1.view")
     ) {
-      return item.roles?.includes(user.role) ?? false;
+      return include(item);
+    }
+
+    if (isPolicyWorkspaceHref(item.href)) {
+      return [];
+    }
+
+    if (policy.businessNavigation === "none") {
+      if (item.permission) {
+        return hasContextPermission(context, item.permission) ? include(item) : [];
+      }
+
+      if (item.permissions) {
+        return item.permissions.some((permission) =>
+          hasContextPermission(context, permission),
+        )
+          ? include(item)
+          : [];
+      }
+
+      return [];
     }
 
     if (item.roles?.includes(user.role)) {
-      return true;
+      return include(item);
     }
 
     if (item.permission) {
-      return hasPermissionOrGrant(user, item.permission, context);
+      return hasPermissionOrGrant(user, item.permission, context)
+        ? include(item)
+        : [];
     }
 
     if (item.permissions) {
       return item.permissions.some((permission) =>
         hasPermissionOrGrant(user, permission, context),
-      );
+      )
+        ? include(item)
+        : [];
     }
 
-    return false;
+    return [];
   });
 }

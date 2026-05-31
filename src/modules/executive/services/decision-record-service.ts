@@ -4,10 +4,13 @@ import {
   requiresAssignmentScopeForRole
 } from "@/lib/permissions/access-scope";
 import {
+  getScopedDocument as defaultGetScopedDocument,
   getScopedMeeting as defaultGetScopedMeeting,
   getScopedProject as defaultGetScopedProject,
-  getScopedProposal as defaultGetScopedProposal
+  getScopedProposal as defaultGetScopedProposal,
+  getScopedTask as defaultGetScopedTask
 } from "@/lib/permissions/scoped-resources";
+import type { Document } from "@/modules/documents/types";
 import { createAuditLog } from "@/modules/users/services/user-service";
 import { userRepository, type UserRepository } from "@/modules/users/services/user-repository";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
@@ -24,6 +27,7 @@ import type {
 import { createDecisionRecordInputSchema } from "@/modules/meetings/validation";
 import { meetingRepository, type MeetingRepository } from "@/modules/meetings/services/meeting-repository";
 import type { Project } from "@/modules/projects/types";
+import type { Task } from "@/modules/tasks/types";
 import type { AuditLog } from "@/modules/users/types";
 
 type AuditWriter = (input: Omit<AuditLog, "id" | "createdAt">) => Promise<unknown>;
@@ -31,10 +35,12 @@ type ScopePermissionChecker = (actor: PermissionUser, scope: DecisionScopeInput)
 
 export type DecisionRecordServiceDependencies = {
   repository?: MeetingRepository;
-  userRepository?: Pick<UserRepository, "listProjectMemberships">;
+  userRepository?: Pick<UserRepository, "getUser" | "listProjectMemberships">;
+  getScopedDocument?: (actor: PermissionUser, documentId: string) => Promise<Document | undefined>;
   getScopedMeeting?: (actor: PermissionUser, meetingId: string) => Promise<Meeting | undefined>;
   getScopedProposal?: (actor: PermissionUser, proposalId: string) => Promise<ProposalDetail | undefined>;
   getScopedProject?: (actor: PermissionUser, projectId: string) => Promise<Project | undefined>;
+  getScopedTask?: (actor: PermissionUser, taskId: string) => Promise<Task | undefined>;
   canCreateDecisionInScope?: ScopePermissionChecker;
   auditWriter?: AuditWriter;
   idGenerator?: () => string;
@@ -93,6 +99,18 @@ function hasAnyScope(scope: DecisionScopeInput) {
   );
 }
 
+function normalizeAxisId(axisId: string | undefined) {
+  if (!axisId) {
+    return axisId;
+  }
+
+  if (axisId === "axis-1" || axisId === "axis1") {
+    return "project_management";
+  }
+
+  return axisId;
+}
+
 function scopeFromInput(input: ReturnType<typeof createDecisionRecordInputSchema.parse>) {
   return normalizeScope({
     organizationId: input.scope?.organizationId ?? input.organizationId,
@@ -124,8 +142,22 @@ function assertCompatibleScope(sourceScope: DecisionScopeInput, requestedScope: 
     throw new Error("Pham vi decision khong khop voi nguon da chon.");
   }
 
-  if (sourceScope.axisId && requestedScope.axisId && sourceScope.axisId !== requestedScope.axisId) {
+  if (
+    sourceScope.axisId &&
+    requestedScope.axisId &&
+    normalizeAxisId(sourceScope.axisId) !== normalizeAxisId(requestedScope.axisId)
+  ) {
     throw new Error("Pham vi decision khong khop voi nguon da chon.");
+  }
+
+  for (const key of ["workstreamId", "moduleId"] as const) {
+    if (
+      sourceScope[key] &&
+      requestedScope[key] &&
+      sourceScope[key] !== requestedScope[key]
+    ) {
+      throw new Error("Pham vi decision khong khop voi nguon da chon.");
+    }
   }
 }
 
@@ -149,6 +181,10 @@ function mergeSourceAndRequestedScope(sourceScope: DecisionScopeInput, requested
 function sourceFromInput(input: ReturnType<typeof createDecisionRecordInputSchema.parse>) {
   const sourceType = input.source?.type ?? input.sourceType ?? "independent";
   const sourceId = input.source?.id ?? input.sourceId;
+
+  if (sourceType === "independent" && sourceId) {
+    throw new Error("Nguon decision thieu loai tham chieu.");
+  }
 
   return { sourceType, sourceId };
 }
@@ -249,7 +285,7 @@ async function defaultCanCreateDecisionInScope(
 
     const scopedProjects = await Promise.all(projectIds.map((projectId) => getScopedProject(actor, projectId)));
 
-    return scopedProjects.some(Boolean);
+    return scopedProjects.every(Boolean);
   }
 
   const [scopeAssignments, rolePermissionCatalog] = await Promise.all([
@@ -257,7 +293,7 @@ async function defaultCanCreateDecisionInScope(
     listRolePermissionCatalog()
   ]);
 
-  return scopeTargets(scope).some((target) =>
+  return scopeTargets(scope).every((target) =>
     canAccessScopedAction(actor, "decision.create", target, {
       rolePermissionCatalog,
       scopeAssignments
@@ -269,10 +305,16 @@ async function assertOwnerWithinScope(
   ownerId: string | undefined,
   actor: PermissionUser,
   scope: DecisionScopeInput,
-  users: Pick<UserRepository, "listProjectMemberships">
+  users: Pick<UserRepository, "getUser" | "listProjectMemberships">
 ) {
   if (!ownerId || ownerId === actor.id) {
     return;
+  }
+
+  const owner = await users.getUser(ownerId);
+
+  if (!owner) {
+    throw new Error("Nguoi phu trach khong ton tai.");
   }
 
   const projectIds = projectIdsForScope(scope);
@@ -284,8 +326,61 @@ async function assertOwnerWithinScope(
   const memberships = await users.listProjectMemberships();
   const ownerMemberships = memberships.filter((membership) => membership.userId === ownerId);
 
-  if (ownerMemberships.length > 0 && !ownerMemberships.some((membership) => projectIds.includes(membership.projectId))) {
+  if (!ownerMemberships.some((membership) => projectIds.includes(membership.projectId))) {
     throw new Error("Nguoi phu trach khong thuoc pham vi decision.");
+  }
+}
+
+async function assertLinkedRecordsReadable(
+  actor: PermissionUser,
+  linkedRecords: DecisionLinkedRecord[],
+  dependencies: Required<
+    Pick<
+      DecisionRecordServiceDependencies,
+      | "getScopedDocument"
+      | "getScopedMeeting"
+      | "getScopedProject"
+      | "getScopedProposal"
+      | "getScopedTask"
+    >
+  >
+) {
+  for (const record of linkedRecords) {
+    if (record.relationType === "source") {
+      throw new Error("Lien ket source phai duoc tao tu nguon decision da xac thuc.");
+    }
+
+    if (
+      record.type === "risk" ||
+      record.type === "custom"
+    ) {
+      throw new Error("Loai linked record chua duoc ho tro kiem tra quyen doc.");
+    }
+
+    let readable: unknown;
+
+    switch (record.type) {
+      case "project":
+        readable = await dependencies.getScopedProject(actor, record.id);
+        break;
+      case "meeting":
+        readable = await dependencies.getScopedMeeting(actor, record.id);
+        break;
+      case "proposal":
+      case "approval":
+        readable = await dependencies.getScopedProposal(actor, record.id);
+        break;
+      case "task":
+        readable = await dependencies.getScopedTask(actor, record.id);
+        break;
+      case "document":
+        readable = await dependencies.getScopedDocument(actor, record.id);
+        break;
+    }
+
+    if (!readable) {
+      throw new Error("Ban khong co quyen lien ket record nay vao decision.");
+    }
   }
 }
 
@@ -319,9 +414,11 @@ export async function createDecisionRecord(
 ) {
   const repository = dependencies.repository ?? meetingRepository;
   const users = dependencies.userRepository ?? userRepository;
+  const getScopedDocument = dependencies.getScopedDocument ?? defaultGetScopedDocument;
   const getScopedMeeting = dependencies.getScopedMeeting ?? defaultGetScopedMeeting;
   const getScopedProposal = dependencies.getScopedProposal ?? defaultGetScopedProposal;
   const getScopedProject = dependencies.getScopedProject ?? defaultGetScopedProject;
+  const getScopedTask = dependencies.getScopedTask ?? defaultGetScopedTask;
   const auditWriter = dependencies.auditWriter ?? createAuditLog;
   const idGenerator = dependencies.idGenerator ?? createId;
   const timestamp = (dependencies.now ?? now)();
@@ -347,6 +444,13 @@ export async function createDecisionRecord(
   }
 
   await assertOwnerWithinScope(parsedInput.ownerId, actor, scope, users);
+  await assertLinkedRecordsReadable(actor, parsedInput.linkedRecords, {
+    getScopedDocument,
+    getScopedMeeting,
+    getScopedProject,
+    getScopedProposal,
+    getScopedTask
+  });
 
   const decisionText = parsedInput.content ?? parsedInput.decisionText ?? "";
   const title = parsedInput.title ?? compactText(decisionText);
