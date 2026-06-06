@@ -1,5 +1,5 @@
 # generated: 2026-05-23T16:00:49+07:00
-# last_updated: 2026-05-31T13:43:59+07:00
+# last_updated: 2026-06-04T18:14:31+07:00
 # project: green_nest_buider_web
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-23T16:00:49+07:00
-last_updated: 2026-05-31T13:43:59+07:00
+last_updated: 2026-06-04T18:14:31+07:00
 project: green_nest_buider_web
 project_key: NOKEY
 tracking_system: file-system
@@ -71,34 +71,34 @@ development_status:
   epic-3-retrospective: optional
   epic-4: in-progress
   4-1-decision-record-tu-approval-meeting-hoac-doc-lap: done
-  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: in-progress
-  4-3-version-history-khi-sua-decision-quan-trong: backlog
-  4-4-decision-assignment-center-ui: backlog
+  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: done
+  4-3-version-history-khi-sua-decision-quan-trong: done
+  4-4-decision-assignment-center-ui: done
   epic-4-retrospective: optional
-  epic-5: backlog
-  5-1-risk-levels-categories-va-status-suggestion: backlog
-  5-2-risk-map-va-drill-down-matrix: backlog
-  5-3-tao-va-cap-nhat-risk-blocker-theo-quyen: backlog
-  5-4-override-va-dong-risk-blocker-co-audit: backlog
-  5-5-risk-alert-overdue-escalation-va-draft-suggestions: backlog
+  epic-5: in-progress
+  5-1-risk-levels-categories-va-status-suggestion: done
+  5-2-risk-map-va-drill-down-matrix: done
+  5-3-tao-va-cap-nhat-risk-blocker-theo-quyen: done
+  5-4-override-va-dong-risk-blocker-co-audit: done
+  5-5-risk-alert-overdue-escalation-va-draft-suggestions: done
   epic-5-retrospective: optional
-  epic-6: backlog
-  6-1-meeting-engine-types-scope-va-repository-contract: backlog
-  6-2-meeting-list-filters-va-executive-visibility: backlog
-  6-3-tao-va-sua-meeting-voi-related-records: backlog
-  6-4-minutes-attachments-va-ai-summary-draft: backlog
-  6-5-follow-up-actions-lien-ket-related-tasks: backlog
-  6-6-decision-tracking-sau-hop: backlog
+  epic-6: in-progress
+  6-1-meeting-engine-types-scope-va-repository-contract: done
+  6-2-meeting-list-filters-va-executive-visibility: done
+  6-3-tao-va-sua-meeting-voi-related-records: done
+  6-4-minutes-attachments-va-ai-summary-draft: done
+  6-5-follow-up-actions-lien-ket-related-tasks: done
+  6-6-decision-tracking-sau-hop: done
   epic-6-retrospective: optional
-  epic-7: backlog
-  7-1-history-archive-center-service: backlog
-  7-2-search-filter-va-timeline-ui: backlog
-  7-3-export-theo-permission-va-audit: backlog
-  7-4-history-export-states-va-qa-nghiem-thu: backlog
+  epic-7: in-progress
+  7-1-history-archive-center-service: done
+  7-2-search-filter-va-timeline-ui: done
+  7-3-export-theo-permission-va-audit: done
+  7-4-history-export-states-va-qa-nghiem-thu: done
   epic-7-retrospective: optional
-  epic-8: backlog
-  8-1-ai-gateway-voi-permission-context-va-citation: backlog
-  8-2-executive-ai-summary-draft-trong-workspace: backlog
-  8-3-ai-approval-assistant-voi-action-proposal: backlog
-  8-4-ai-meeting-summary-va-future-ai-placeholders: backlog
-  epic-8-retrospective: optional
+  epic-8: done
+  8-1-ai-gateway-voi-permission-context-va-citation: done
+  8-2-executive-ai-summary-draft-trong-workspace: done
+  8-3-ai-approval-assistant-voi-action-proposal: done
+  8-4-ai-meeting-summary-va-future-ai-placeholders: done
+SS  epic-8-retrospective: optional

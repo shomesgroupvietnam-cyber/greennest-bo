@@ -272,6 +272,7 @@ function assignmentGrantsAction(
       role: assignment.roleKey,
       permissions: assignment.permissionKeys,
       permissionsMode: "replace",
+      roleActive: user.roleActive,
     },
     action,
   );
@@ -293,13 +294,14 @@ function assignmentGrantsAction(
             role: String(role.key),
             permissions: role.permissionKeys,
             permissionsMode: "replace",
+            roleActive: user.roleActive,
           },
           action,
         ),
     );
   }
 
-  return can({ id: user.id, role: assignment.roleKey }, action);
+  return can({ id: user.id, role: assignment.roleKey, roleActive: user.roleActive }, action);
 }
 
 export function canAccessScopedAction(
@@ -510,6 +512,10 @@ export function canReadMeetingInScope(
   >,
   scope: AccessScope,
 ) {
+  if (meeting.hostId === scope.userId || meeting.createdBy === scope.userId || meeting.participants?.includes(scope.userId)) {
+    return true;
+  }
+
   if (usesAssignmentModel(scope)) {
     const projectIds = [
       meeting.projectId,
@@ -545,10 +551,6 @@ export function canReadMeetingInScope(
   }
 
   if (!hasLimitedScope(scope)) {
-    return true;
-  }
-
-  if (meeting.hostId === scope.userId || meeting.createdBy === scope.userId || meeting.participants?.includes(scope.userId)) {
     return true;
   }
 

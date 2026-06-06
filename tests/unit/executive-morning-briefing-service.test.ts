@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { getExecutiveMorningBriefingData } from "@/modules/dashboard/services/executive-morning-briefing-service";
+import type { AiAskInput } from "@/modules/ai/types";
+import {
+  getExecutiveMorningBriefingData,
+} from "@/modules/dashboard/services/executive-morning-briefing-service";
 import type { ExecutiveDashboardSourceItem } from "@/modules/dashboard/types";
 import { JsonMeetingRepository } from "@/modules/meetings/services/meeting-repository";
 import type { Decision, Meeting } from "@/modules/meetings/types";
@@ -160,7 +163,7 @@ describe("executive morning briefing service", () => {
     });
     expect(briefing.permissions.canDrillDown).toBe(true);
     expect(briefing.summary.status).toBe("placeholder");
-    expect(briefing.summary.text).toContain("Ban tom tat goi y");
+    expect(briefing.summary.text).toContain("Bản tóm tắt gợi ý");
     expect(briefing.kpisToday.length).toBeGreaterThan(0);
     expect(briefing.topRisks.length).toBeGreaterThan(0);
     expect(briefing.projectHealth.total).toBeGreaterThan(0);
@@ -215,7 +218,11 @@ describe("executive morning briefing service", () => {
       projectRepository,
     );
     const briefing = await getExecutiveMorningBriefingData(
-      { id: "project-only-briefing", role: "pending" },
+      {
+        id: "project-only-briefing",
+        role: "pending",
+        permissions: ["ai.create_draft"],
+      },
       {
         repositories: {
           meetings: meetingRepository,
@@ -314,6 +321,119 @@ describe("executive morning briefing service", () => {
         item.sourceType === "decision" || item.sourceType === "executive_action",
       ),
     ).toBe(true);
+  });
+
+  it("uses the AI pipeline when explicitly enabled and keeps app-generated citations", async () => {
+    let capturedInput: AiAskInput | undefined;
+    const briefing = await getExecutiveMorningBriefingData(
+      { id: "ceo-01", role: "tong_giam_doc" },
+      {
+        aiSummary: {
+          enabled: true,
+          runAi: async (input) => {
+            capturedInput = input;
+            const ref = input.resourceRefs?.[0] ?? {
+              entityId: "demo-project-riverside",
+              entityType: "project",
+            };
+
+            return {
+              interaction: {
+                id: "interaction-morning-ai",
+                requestedBy: "ceo-01",
+                module: "general",
+                intent: "Executive AI Summary",
+                mode: "fast",
+                promptSummary: "Executive AI Summary",
+                responseText: "Morning AI draft tu provider [CIT-001]",
+                modelProvider: "mock",
+                modelName: "mock-summary",
+                status: "succeeded",
+                scopeSnapshot: {
+                  userId: "ceo-01",
+                  role: "tong_giam_doc",
+                  permissions: [],
+                  scopeKind: "internal_full",
+                  module: "general",
+                  resourceRefs: input.resourceRefs ?? [],
+                  capturedAt: "2026-06-04T10:00:00.000Z",
+                },
+                createdAt: "2026-06-04T10:00:00.000Z",
+                updatedAt: "2026-06-04T10:01:00.000Z",
+                completedAt: "2026-06-04T10:01:00.000Z",
+              },
+              job: {
+                id: "job-morning-ai",
+                interactionId: "interaction-morning-ai",
+                requestedBy: "ceo-01",
+                module: "general",
+                intent: "Executive AI Summary",
+                mode: "fast",
+                priority: "normal",
+                status: "succeeded",
+                scopeSnapshot: {
+                  userId: "ceo-01",
+                  role: "tong_giam_doc",
+                  permissions: [],
+                  scopeKind: "internal_full",
+                  module: "general",
+                  resourceRefs: input.resourceRefs ?? [],
+                  capturedAt: "2026-06-04T10:00:00.000Z",
+                },
+                rateLimitKey: "ai:ceo-01",
+                payload: {
+                  intent: "Executive AI Summary",
+                  knowledgeModule: "general",
+                  prompt: input.prompt,
+                  useRag: false,
+                  wantsActionProposal: false,
+                },
+                createdAt: "2026-06-04T10:00:00.000Z",
+                updatedAt: "2026-06-04T10:01:00.000Z",
+                finishedAt: "2026-06-04T10:01:00.000Z",
+              },
+              citations: [
+                {
+                  id: "citation-morning-ai",
+                  interactionId: "interaction-morning-ai",
+                  jobId: "job-morning-ai",
+                  citationType: "internal_record",
+                  entityType: ref.entityType,
+                  entityId: ref.entityId,
+                  title: "AI generated source citation",
+                  module: "project",
+                  createdAt: "2026-06-04T10:01:00.000Z",
+                },
+              ],
+              actionProposals: [],
+            };
+          },
+          useProvider: true,
+        },
+        repositories: {
+          meetings: meetingRepository,
+          projects: projectRepository,
+          proposals: proposalRepository,
+        },
+        requireScopeAssignments: false,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [],
+        today: new Date("2026-05-24T00:00:00.000Z"),
+      },
+    );
+
+    expect(briefing.summary).toMatchObject({
+      status: "draft",
+      text: "Morning AI draft tu provider [CIT-001]",
+      interactionId: "interaction-morning-ai",
+      jobId: "job-morning-ai",
+    });
+    expect(briefing.summary.citations).toEqual([
+      expect.objectContaining({
+        sourceId: capturedInput?.resourceRefs?.[0]?.entityId,
+        sourceType: capturedInput?.resourceRefs?.[0]?.entityType,
+      }),
+    ]);
   });
 
   it("keeps selected scope data visible without leaking hidden finance values", async () => {

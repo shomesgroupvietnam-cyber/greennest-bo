@@ -31,7 +31,7 @@ export async function createTaskAction(formData: FormData) {
     throw new Error("Bạn không có quyền tạo công việc cho dự án này.");
   }
 
-  const task = await createTask(input);
+  const task = await createTask(input, undefined, undefined, { createdBy: currentUser.id });
 
   revalidatePath("/tasks");
   revalidatePath(`/projects/${task.projectId}`);

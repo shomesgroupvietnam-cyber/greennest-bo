@@ -49,6 +49,11 @@ import {
 } from "@/modules/dashboard/components/executive-morning-briefing";
 import { ApprovalCenter } from "@/modules/executive/components/approval-center";
 import {
+  DecisionAssignmentCenter,
+  DecisionAssignmentCenterNoAccessState,
+} from "@/modules/executive/components/decision-assignment-center";
+import { HistoryArchiveCenter } from "@/modules/reports/components/history-archive-center";
+import {
   ExecutivePrivateWorkspace,
   ExecutivePrivateWorkspaceNoAccessState,
 } from "@/modules/workspaces/components/executive-private-workspace";
@@ -709,6 +714,7 @@ const knownExecutiveViewKeys = new Set([
   "executive-meetings",
   "executive-approvals",
   "executive-decision-log",
+  "executive-history",
 ]);
 
 function resolveDefaultCommandCenterView(data: CommandCenterData) {
@@ -747,6 +753,22 @@ function resolveInitialCommandCenterView(
         (data.availableViews.notifications || Boolean(data.executivePrivateWorkspace))
       ? initialView
       : resolveDefaultCommandCenterView(data);
+}
+
+function commandCenterViewUrl(viewKey: CommandCenterViewKey) {
+  const params = new URLSearchParams(
+    typeof window === "undefined" ? "" : window.location.search,
+  );
+
+  if (viewKey === "overview") {
+    params.delete("view");
+  } else {
+    params.set("view", viewKey);
+  }
+
+  const query = params.toString();
+
+  return query ? `/command-center?${query}` : "/command-center";
 }
 
 function CommandCenterContextBar({
@@ -1896,8 +1918,10 @@ function CommandCenterExecutivePanel({
   approvalCenter,
   canAct,
   data,
+  decisionAssignmentCenter,
   executiveCommonCenter,
   executiveDashboard,
+  historyArchiveCenter,
   executiveMorningBriefing,
   executivePrivateWorkspace,
   onApprovalAction,
@@ -1907,8 +1931,10 @@ function CommandCenterExecutivePanel({
   approvalCenter: CommandCenterData["approvalCenter"];
   canAct: boolean;
   data: CommandCenterData["executiveWorkspace"];
+  decisionAssignmentCenter: CommandCenterData["decisionAssignmentCenter"];
   executiveCommonCenter: CommandCenterData["executiveCommonCenter"];
   executiveDashboard: CommandCenterData["executiveDashboard"];
+  historyArchiveCenter: CommandCenterData["historyArchiveCenter"];
   executiveMorningBriefing: CommandCenterData["executiveMorningBriefing"];
   executivePrivateWorkspace: CommandCenterData["executivePrivateWorkspace"];
   onApprovalAction: (
@@ -2316,6 +2342,29 @@ function CommandCenterExecutivePanel({
   }
 
   if (activeView === "executive-decision-log") {
+    return decisionAssignmentCenter ? (
+      <DecisionAssignmentCenter data={decisionAssignmentCenter} />
+    ) : (
+      <DecisionAssignmentCenterNoAccessState />
+    );
+  }
+
+  if (activeView === "executive-history") {
+    return historyArchiveCenter ? (
+      <HistoryArchiveCenter data={historyArchiveCenter} />
+    ) : (
+      <section className="rounded-md border border-dashed bg-white p-8 text-center">
+        <h2 className="text-base font-semibold text-slate-950">
+          Khong co quyen xem History & Archive
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">
+          Current permissions do not allow reading the executive history archive.
+        </p>
+      </section>
+    );
+  }
+
+  if (activeView === "__legacy-executive-decision-log-disabled") {
     return (
       <section className="space-y-5">
         <div className="rounded-lg border bg-white p-5 shadow-sm">
@@ -2534,21 +2583,21 @@ export function CommandCenterDashboard({
   const handleViewSelect = (viewKey: CommandCenterViewKey) => {
     const nextView = resolveInitialCommandCenterView(data, viewKey);
 
-    setActiveView(nextView);
-
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
+      const nextUrl = commandCenterViewUrl(nextView);
 
-      if (nextView === "overview") {
-        params.delete("view");
-      } else {
-        params.set("view", nextView);
+      if (nextView === "executive-history" && !data.historyArchiveCenter) {
+        window.location.assign(nextUrl);
+        return;
       }
 
-      const query = params.toString();
-      const nextUrl = query ? `/command-center?${query}` : "/command-center";
+      setActiveView(nextView);
       window.history.replaceState(null, "", nextUrl);
+
+      return;
     }
+
+    setActiveView(nextView);
   };
 
   const handleApprovalAction = (
@@ -3172,8 +3221,10 @@ export function CommandCenterDashboard({
               approvalCenter={data.approvalCenter}
               canAct={canAct}
               data={executiveWorkspace}
+              decisionAssignmentCenter={data.decisionAssignmentCenter}
               executiveCommonCenter={data.executiveCommonCenter}
               executiveDashboard={data.executiveDashboard}
+              historyArchiveCenter={data.historyArchiveCenter}
               executiveMorningBriefing={data.executiveMorningBriefing}
               executivePrivateWorkspace={data.executivePrivateWorkspace}
               onApprovalAction={handleApprovalAction}

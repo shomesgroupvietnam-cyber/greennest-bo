@@ -1,6 +1,6 @@
 # Story 4.2: Assignment/Task Từ Decision Cho Nhiều Người
 
-Status: in-progress
+Status: done
 
 Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này phụ thuộc Story 4.1 để có official decision record. Phạm vi là service/action/persistence contract cho việc tạo nhiều assignment/task từ một decision hợp lệ, validate target theo scope, link task về decision và audit mutation. Không xây full Decision & Assignment Center UI, không làm version/history khi sửa decision và không thêm bước người nhận xác nhận đã nhận việc.
 
@@ -54,65 +54,75 @@ so that chỉ đạo được chuyển thành hành động theo dõi được.
 
 ## Tasks / Subtasks
 
-- [ ] Xác nhận dependency Story 4.1 trước khi code (AC: 1, 3, 6)
-  - [ ] Kiểm tra code đã có official decision record/service từ Story 4.1 chưa; nếu chưa có, không xây Story 4.2 trên legacy meeting-only `Decision`.
-  - [ ] Nếu Story 4.1 đã tạo `src/modules/executive/services/decision-service.ts` hoặc repository riêng, đặt assignment service cạnh contract đó.
-  - [ ] Nếu Story 4.1 mở rộng `src/modules/meetings` để làm official decision repository, thêm thin executive-facing service cho assignment thay vì tạo repository song song.
-  - [ ] Giữ `src/modules/meetings/services/meeting-service.ts#convertDecisionToTask` backward compatible cho action item một task.
+- [x] Xác nhận dependency Story 4.1 trước khi code (AC: 1, 3, 6)
+  - [x] Kiểm tra code đã có official decision record/service từ Story 4.1 chưa; nếu chưa có, không xây Story 4.2 trên legacy meeting-only `Decision`.
+  - [x] Nếu Story 4.1 đã tạo `src/modules/executive/services/decision-service.ts` hoặc repository riêng, đặt assignment service cạnh contract đó.
+  - [x] Nếu Story 4.1 mở rộng `src/modules/meetings` để làm official decision repository, thêm thin executive-facing service cho assignment thay vì tạo repository song song.
+  - [x] Giữ `src/modules/meetings/services/meeting-service.ts#convertDecisionToTask` backward compatible cho action item một task.
 
-- [ ] Thiết kế domain contract cho decision assignment (AC: 1, 2, 5)
-  - [ ] Thêm type như `DecisionAssignment`, `DecisionAssignmentInput`, `CreateDecisionAssignmentsInput`, `DecisionAssignmentStatus`.
-  - [ ] Field tối thiểu: `id`, `decisionId`, `taskId?`, `projectId`, `assigneeType`, `assigneeId?`, `departmentId?`, `title`, `description?`, `kpi?`, `dueDate?`, `priority`, `status`, `createdBy`, `createdAt`, `updatedAt`.
-  - [ ] Không lưu assignment chỉ bằng array nhúng trong decision nếu cần list/filter ở Story 4.4; dùng child repository/table hoặc relation có thể query theo `decisionId`, `projectId`, `assigneeId`, `status`.
-  - [ ] Nếu `departmentId` chưa có entity/table rõ, chỉ lưu như metadata trên assignment; không invent module phòng ban mới trong story này.
-  - [ ] Nếu assignee là department/project-only, task có thể để `assigneeId` undefined nhưng assignment metadata phải đủ để UI Story 4.4 hiển thị.
+- [x] Thiết kế domain contract cho decision assignment (AC: 1, 2, 5)
+  - [x] Thêm type như `DecisionAssignment`, `DecisionAssignmentInput`, `CreateDecisionAssignmentsInput`, `DecisionAssignmentStatus`.
+  - [x] Field tối thiểu: `id`, `decisionId`, `taskId?`, `projectId`, `assigneeType`, `assigneeId?`, `departmentId?`, `title`, `description?`, `kpi?`, `dueDate?`, `priority`, `status`, `createdBy`, `createdAt`, `updatedAt`.
+  - [x] Không lưu assignment chỉ bằng array nhúng trong decision nếu cần list/filter ở Story 4.4; dùng child repository/table hoặc relation có thể query theo `decisionId`, `projectId`, `assigneeId`, `status`.
+  - [x] Nếu `departmentId` chưa có entity/table rõ, chỉ lưu như metadata trên assignment; không invent module phòng ban mới trong story này.
+  - [x] Nếu assignee là department/project-only, task có thể để `assigneeId` undefined nhưng assignment metadata phải đủ để UI Story 4.4 hiển thị.
 
-- [ ] Mở rộng Task linkage contract an toàn (AC: 1, 5, 6)
-  - [ ] `database/migrations/202605160001_create_mvp_core_schema.sql` đã có `tasks.linked_entity_type` và `linked_entity_id`; thêm domain fields tương ứng vào `src/modules/tasks/types.ts` nếu chưa có.
-  - [ ] Update `TaskInput`, `taskInputSchema`, JSON/Supabase task repository mapping để preserve `linkedEntityType: "decision"` và `linkedEntityId: decision.id`.
-  - [ ] Không đổi ý nghĩa `Task.status`; task tạo từ decision dùng `todo` mặc định trừ khi input hợp lệ chỉ định status khác.
-  - [ ] Category nên dùng key ổn định như `decision`, không dùng label tiếng Việt làm machine key nếu service cần filter.
+- [x] Mở rộng Task linkage contract an toàn (AC: 1, 5, 6)
+  - [x] `database/migrations/202605160001_create_mvp_core_schema.sql` đã có `tasks.linked_entity_type` và `linked_entity_id`; thêm domain fields tương ứng vào `src/modules/tasks/types.ts` nếu chưa có.
+  - [x] Update `TaskInput`, `taskInputSchema`, JSON/Supabase task repository mapping để preserve `linkedEntityType: "decision"` và `linkedEntityId: decision.id`.
+  - [x] Không đổi ý nghĩa `Task.status`; task tạo từ decision dùng `todo` mặc định trừ khi input hợp lệ chỉ định status khác.
+  - [x] Category nên dùng key ổn định như `decision`, không dùng label tiếng Việt làm machine key nếu service cần filter.
 
-- [ ] Persistence và migration parity (AC: 1, 5)
-  - [ ] Thêm migration incremental mới sau `202605290003_*`; không sửa migration cũ.
-  - [ ] Tạo bảng/contract `decision_assignments` hoặc relation tương đương với FK tới `decisions`, `tasks`, `projects`, `users` khi có.
-  - [ ] Index theo `decision_id`, `task_id`, `project_id`, `assignee_id`, `status`, `due_date`.
-  - [ ] Thêm JSON repository hoặc mở rộng repository official decision từ Story 4.1; tránh ghi trực tiếp vào nhiều file khi có thể validate trước.
-  - [ ] Nếu JSON write dùng file mới hoặc `.mock-data/meetings-decisions.json`, cân nhắc temp-file + retry như `JsonUserRepository` để tránh race trên Windows khi Vitest chạy song song.
-  - [ ] Supabase adapter phải map snake_case/camelCase đầy đủ: `decision_id` -> `decisionId`, `task_id` -> `taskId`, `assignee_id` -> `assigneeId`, `due_date` -> `dueDate`.
+- [x] Persistence và migration parity (AC: 1, 5)
+  - [x] Thêm migration incremental mới sau `202605290003_*`; không sửa migration cũ.
+  - [x] Tạo bảng/contract `decision_assignments` hoặc relation tương đương với FK tới `decisions`, `tasks`, `projects`, `users` khi có.
+  - [x] Index theo `decision_id`, `task_id`, `project_id`, `assignee_id`, `status`, `due_date`.
+  - [x] Thêm JSON repository hoặc mở rộng repository official decision từ Story 4.1; tránh ghi trực tiếp vào nhiều file khi có thể validate trước.
+  - [x] Nếu JSON write dùng file mới hoặc `.mock-data/meetings-decisions.json`, cân nhắc temp-file + retry như `JsonUserRepository` để tránh race trên Windows khi Vitest chạy song song.
+  - [x] Supabase adapter phải map snake_case/camelCase đầy đủ: `decision_id` -> `decisionId`, `task_id` -> `taskId`, `assignee_id` -> `assigneeId`, `due_date` -> `dueDate`.
 
-- [ ] Service orchestration và batch validation (AC: 1, 2, 3, 4)
-  - [ ] Tạo service như `createDecisionAssignments(input, actor, options)` với repository dependencies inject được trong tests.
-  - [ ] Service phải load decision qua scoped helper/service từ Story 4.1; decision `cancelled` bị chặn, decision `done` chỉ được tạo thêm assignment nếu nghiệp vụ đã cho phép rõ.
-  - [ ] Permission check: actor phải có quyền phù hợp cho decision assignment mutation và `task.create` trong từng target project; không chỉ dựa vào UI disabled state.
-  - [ ] Validate toàn bộ batch trước write: item rỗng, trùng lặp vô nghĩa, project missing/archived/out-of-scope, assignee missing/inactive/out-of-scope, priority/date invalid đều fail cả batch.
-  - [ ] Với decision có một `projectId`, assignment có thể default project đó; với multi-project hoặc organization-only decision, mỗi item phải chỉ định `projectId` hợp lệ.
-  - [ ] Khi tạo task, dùng `createTask` hoặc task repository/service contract hiện có; caller phải chịu trách nhiệm permission vì `createTask` hiện chỉ validate project tồn tại.
-  - [ ] Sau khi tasks tạo xong, persist assignment records với `taskId`; nếu persistence fail, không được cập nhật decision là đã assigned hoàn chỉnh.
+- [x] Service orchestration và batch validation (AC: 1, 2, 3, 4)
+  - [x] Tạo service như `createDecisionAssignments(input, actor, options)` với repository dependencies inject được trong tests.
+  - [x] Service phải load decision qua scoped helper/service từ Story 4.1; decision `cancelled` bị chặn, decision `done` chỉ được tạo thêm assignment nếu nghiệp vụ đã cho phép rõ.
+  - [x] Permission check: actor phải có quyền phù hợp cho decision assignment mutation và `task.create` trong từng target project; không chỉ dựa vào UI disabled state.
+  - [x] Validate toàn bộ batch trước write: item rỗng, trùng lặp vô nghĩa, project missing/archived/out-of-scope, assignee missing/inactive/out-of-scope, priority/date invalid đều fail cả batch.
+  - [x] Với decision có một `projectId`, assignment có thể default project đó; với multi-project hoặc organization-only decision, mỗi item phải chỉ định `projectId` hợp lệ.
+  - [x] Khi tạo task, dùng `createTask` hoặc task repository/service contract hiện có; caller phải chịu trách nhiệm permission vì `createTask` hiện chỉ validate project tồn tại.
+  - [x] Sau khi tasks tạo xong, persist assignment records với `taskId`; nếu persistence fail, không được cập nhật decision là đã assigned hoàn chỉnh.
 
-- [ ] Server action và revalidation tối thiểu (AC: 1, 3, 4)
-  - [ ] Thêm action trong `src/modules/executive/actions.ts` nếu official decision actions nằm ở executive; nếu 4.1 đặt action trong meetings, giữ boundary nhất quán.
-  - [ ] Parse FormData/batch payload bằng Zod; không parse JSON tự do từ client mà không schema.
-  - [ ] Action gọi `getCurrentUser`, assert permission server-side, gọi service, ghi audit hoặc để service gọi injected audit writer theo pattern đã chọn.
-  - [ ] Revalidate các route liên quan: `/tasks`, decision detail/log route, `/command-center`, project detail nếu có task mới.
-  - [ ] Nếu redirect sau mutation, gọi `revalidatePath` trước `redirect`.
+- [x] Server action và revalidation tối thiểu (AC: 1, 3, 4)
+  - [x] Thêm action trong `src/modules/executive/actions.ts` nếu official decision actions nằm ở executive; nếu 4.1 đặt action trong meetings, giữ boundary nhất quán.
+  - [x] Parse FormData/batch payload bằng Zod; không parse JSON tự do từ client mà không schema.
+  - [x] Action gọi `getCurrentUser`, assert permission server-side, gọi service, ghi audit hoặc để service gọi injected audit writer theo pattern đã chọn.
+  - [x] Revalidate các route liên quan: `/tasks`, decision detail/log route, `/command-center`, project detail nếu có task mới.
+  - [x] Nếu redirect sau mutation, gọi `revalidatePath` trước `redirect`.
 
-- [ ] Audit và RLS/security (AC: 3, 4, 5)
-  - [ ] Dùng `createAuditLog` hoặc injected `auditWriter`; audit action đề xuất `decision.assignments_created`.
-  - [ ] Audit `newValue` chỉ chứa safe summary: `decisionId`, `assignmentCount`, `taskIds`, `projectIds`, `assigneeIds`, `departmentIds`, `status`.
-  - [ ] Không audit thành công cho permission-denied/validation fail trừ khi đã có security-audit pattern riêng.
-  - [ ] RLS cho `decision_assignments` phải bật trên public table; SELECT dùng scoped decision/project permission, INSERT dùng `with check` tương ứng `decision.create`/`task.create` và project scope.
-  - [ ] Nếu task linked fields được thêm vào domain, task RLS hiện có vẫn phải enforce `task.create` theo `project_id`.
+- [x] Audit và RLS/security (AC: 3, 4, 5)
+  - [x] Dùng `createAuditLog` hoặc injected `auditWriter`; audit action đề xuất `decision.assignments_created`.
+  - [x] Audit `newValue` chỉ chứa safe summary: `decisionId`, `assignmentCount`, `taskIds`, `projectIds`, `assigneeIds`, `departmentIds`, `status`.
+  - [x] Không audit thành công cho permission-denied/validation fail trừ khi đã có security-audit pattern riêng.
+  - [x] RLS cho `decision_assignments` phải bật trên public table; SELECT dùng scoped decision/project permission, INSERT dùng `with check` tương ứng `decision.create`/`task.create` và project scope.
+  - [x] Nếu task linked fields được thêm vào domain, task RLS hiện có vẫn phải enforce `task.create` theo `project_id`.
 
-- [ ] Tests (AC: 1-6)
-  - [ ] Unit test tạo nhiều assignments từ một decision project-bound, sinh nhiều tasks và link đúng `decisionId`.
-  - [ ] Unit test initial assignment status `assigned` và task status `todo`; không có acknowledge fields/action.
-  - [ ] Unit test batch validation all-or-nothing: một item out-of-scope hoặc invalid assignee thì không tạo assignment/task nào.
-  - [ ] Unit test decision multi-project/organization-only yêu cầu `projectId` explicit và chỉ cho project hợp lệ trong scope.
-  - [ ] Unit test audit chỉ ghi sau successful batch và payload không chứa raw decision/source content.
-  - [ ] Repository mapping tests cho JSON và Supabase row parity, bao gồm task linked entity fields.
-  - [ ] Regression tests cho `tests/unit/meeting-service.test.ts` hiện có: create decision under meeting và convert decision/action item to task.
-  - [ ] Run tối thiểu `npm run typecheck`, `npm run lint`, `npm run test`; chạy `npm run test:e2e` nếu thêm route/form UI có thể tương tác.
+- [x] Tests (AC: 1-6)
+  - [x] Unit test tạo nhiều assignments từ một decision project-bound, sinh nhiều tasks và link đúng `decisionId`.
+  - [x] Unit test initial assignment status `assigned` và task status `todo`; không có acknowledge fields/action.
+  - [x] Unit test batch validation all-or-nothing: một item out-of-scope hoặc invalid assignee thì không tạo assignment/task nào.
+  - [x] Unit test decision multi-project/organization-only yêu cầu `projectId` explicit và chỉ cho project hợp lệ trong scope.
+  - [x] Unit test audit chỉ ghi sau successful batch và payload không chứa raw decision/source content.
+  - [x] Repository mapping tests cho JSON và Supabase row parity, bao gồm task linked entity fields.
+  - [x] Regression tests cho `tests/unit/meeting-service.test.ts` hiện có: create decision under meeting và convert decision/action item to task.
+  - [x] Run tối thiểu `npm run typecheck`, `npm run lint`, `npm run test`; chạy `npm run test:e2e` nếu thêm route/form UI có thể tương tác.
+
+### Review Findings
+
+- [x] [Review][Patch] Assignment creation is not atomic after tasks are written [src/modules/executive/services/decision-assignment-service.ts:328]
+- [x] [Review][Patch] User assignee with no project membership or readable scope is accepted [src/modules/executive/services/decision-assignment-service.ts:199]
+- [x] [Review][Patch] Scoped decision-assignment authority is checked once for any decision scope, not per target project [src/modules/executive/services/decision-assignment-service.ts:123]
+- [x] [Review][Patch] Updating a task can drop or mutate decision linkage and creator metadata in mock mode [src/modules/tasks/services/task-service.ts:138]
+- [x] [Review][Patch] Task linked entity input allows half-linked records and exposes creator metadata as mutable input [src/modules/tasks/validation.ts:29]
+- [x] [Review][Patch] Decision assignment RLS allows missing task linkage and overly broad updates [database/migrations/202605310001_create_decision_assignments.sql:100]
+- [x] [Review][Patch] Due dates accept arbitrary parseable strings instead of date-only `YYYY-MM-DD` [src/modules/meetings/validation.ts:71]
 
 ## Dev Notes
 
@@ -313,10 +323,48 @@ npm run test:e2e
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
+- `npm run test -- tests/unit/decision-assignment-service.test.ts tests/unit/executive-actions.test.ts tests/unit/task-service.test.ts tests/unit/task-repository.test.ts tests/unit/meeting-service.test.ts tests/unit/decision-rls-policy.test.ts`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run test -- tests/unit/decision-rls-policy.test.ts`
+- `npm run lint`
+- `npm run test -- tests/unit/task-service.test.ts tests/unit/decision-assignment-service.test.ts tests/unit/decision-rls-policy.test.ts tests/unit/task-repository.test.ts`
+
 ### Completion Notes List
 
+- Implemented `createDecisionAssignments` as an executive-facing service that loads official decisions via scoped helpers, validates the whole batch before writes, creates linked tasks, persists child assignment records, and writes safe audit summaries only after success.
+- Added `decision_assignments` JSON/Supabase repository parity, migration/RLS policy coverage, and task linked entity domain/repository mapping.
+- Kept legacy meeting decision/action item flow backward-compatible; `convertDecisionToTask` still uses one `Decision.taskId` while adding linked metadata to the created task.
+- Applied code review patches for rollback, per-target decision permission, assignee visibility, immutable task linkage, date-only due dates, and stricter decision assignment RLS.
+- E2E was not run because Story 4.2 adds service/action/data contracts only and no visible route/form UI.
+
 ### File List
+
+- `database/migrations/202605310001_create_decision_assignments.sql`
+- `database/policies/001_mvp_rls.sql`
+- `src/modules/executive/actions.ts`
+- `src/modules/executive/services/decision-assignment-service.ts`
+- `src/modules/meetings/services/meeting-repository.ts`
+- `src/modules/meetings/services/meeting-service.ts`
+- `src/modules/meetings/types.ts`
+- `src/modules/meetings/validation.ts`
+- `src/modules/tasks/services/task-repository.ts`
+- `src/modules/tasks/services/task-service.ts`
+- `src/modules/tasks/types.ts`
+- `src/modules/tasks/validation.ts`
+- `tests/unit/decision-assignment-service.test.ts`
+- `tests/unit/decision-rls-policy.test.ts`
+- `tests/unit/executive-actions.test.ts`
+- `tests/unit/meeting-service.test.ts`
+- `tests/unit/task-repository.test.ts`
+- `tests/unit/task-service.test.ts`
+
+### Change Log
+
+- 2026-05-31: Implemented Story 4.2 decision assignment/task service contract with persistence, RLS, action boundary, audit safety, and regression tests.
+- 2026-05-31: Applied review patches and moved Story 4.2 to done after typecheck, lint, targeted tests, and full unit suite passed.

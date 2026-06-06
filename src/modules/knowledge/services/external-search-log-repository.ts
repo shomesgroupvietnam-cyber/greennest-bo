@@ -15,7 +15,11 @@ const emptyStore: ExternalSearchLogStore = {
 
 export type ExternalSearchLogRepository = {
   createLog(log: ExternalSearchLog): Promise<ExternalSearchLog>;
-  listLogs(): Promise<ExternalSearchLog[]>;
+  listLogs(filters?: ExternalSearchLogListFilters): Promise<ExternalSearchLog[]>;
+};
+
+export type ExternalSearchLogListFilters = {
+  userId?: string;
 };
 
 export class JsonExternalSearchLogRepository implements ExternalSearchLogRepository {
@@ -29,10 +33,12 @@ export class JsonExternalSearchLogRepository implements ExternalSearchLogReposit
     return log;
   }
 
-  async listLogs() {
+  async listLogs(filters: ExternalSearchLogListFilters = {}) {
     const store = await this.readStore();
 
-    return store.logs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return store.logs
+      .filter((log) => !filters.userId || log.userId === filters.userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   private async readStore(): Promise<ExternalSearchLogStore> {
@@ -104,9 +110,15 @@ export class SupabaseExternalSearchLogRepository implements ExternalSearchLogRep
     return toExternalSearchLog(data as ExternalSearchLogRow);
   }
 
-  async listLogs() {
+  async listLogs(filters: ExternalSearchLogListFilters = {}) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.from("external_search_logs").select("*").order("created_at", { ascending: false });
+    let query = supabase.from("external_search_logs").select("*");
+
+    if (filters.userId) {
+      query = query.eq("user_id", filters.userId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(error.message);

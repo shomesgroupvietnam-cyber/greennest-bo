@@ -3,11 +3,13 @@
 import React, { useState } from "react";
 import {
   AlertTriangle,
+  Bot,
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
+  FileText,
   Lock,
   ShieldCheck,
 } from "lucide-react";
@@ -22,6 +24,7 @@ import type {
   ExecutivePrivateWorkspaceData,
   PrivateWorkspaceSectionItem,
 } from "@/modules/workspaces/types";
+import type { ExecutiveAiSummary } from "@/modules/ai/types";
 
 const toneClasses: Record<
   ExecutiveDashboardTone,
@@ -213,6 +216,105 @@ function WorkspaceSection({
           </p>
         )}
       </div>
+    </section>
+  );
+}
+
+const aiSummaryStatusLabels: Record<ExecutiveAiSummary["status"], string> = {
+  draft: "draft/goi y",
+  insufficient_context: "insufficient_context",
+  placeholder: "placeholder",
+  unavailable: "unavailable",
+};
+
+function WorkspaceAiSummaryPanel({
+  summary,
+}: {
+  summary: ExecutiveAiSummary;
+}) {
+  const isInsufficient = summary.status === "insufficient_context";
+  const proposals = (summary.actionProposals ?? []).filter(
+    (proposal) =>
+      proposal.status === "proposed" &&
+      (!proposal.workflowStatus || proposal.workflowStatus === "DRAFT"),
+  );
+
+  return (
+    <section
+      aria-label="Workspace AI Summary draft"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-slate-600" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">
+            Workspace AI Summary draft
+          </h2>
+        </div>
+        <span className="inline-flex w-fit rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800">
+          {aiSummaryStatusLabels[summary.status]}
+        </span>
+      </div>
+
+      {isInsufficient ? (
+        <p className="mt-3 text-sm font-semibold text-slate-800">
+          Khong co du lieu trong scope
+        </p>
+      ) : null}
+      <p className="mt-2 text-sm leading-6 text-slate-700">{summary.text}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        Cap nhat {formatGeneratedAt(summary.updatedAt)}. Ban tom tat nay la goi y noi bo, can kiem tra citation truoc khi quyet dinh.
+      </p>
+
+      {summary.citations.length ? (
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">
+            Citation noi bo
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {summary.citations.map((citation) => (
+              <span
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                key={citation.id}
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0">
+                  <span className="block truncate">{citation.title}</span>
+                  <span className="block text-[11px] font-normal text-slate-500">
+                    {citation.sourceType}: {citation.sourceId}
+                  </span>
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {proposals.length ? (
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">
+            De xuat hanh dong advisory
+          </p>
+          <div className="mt-2 space-y-2">
+            {proposals.map((proposal) => (
+              <article
+                className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+                key={proposal.id}
+              >
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="font-semibold">{proposal.title}</p>
+                  <span className="w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                    {proposal.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-amber-900">
+                  {proposal.actionKey} - {proposal.requiredPermission}. Chua thay doi du lieu nghiep vu.
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -630,6 +732,8 @@ export function ExecutivePrivateWorkspace({
           Khong co quyen xem tai chinh trong scope nay.
         </section>
       ) : null}
+
+      <WorkspaceAiSummaryPanel summary={data.aiSummary} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         {sections.map((section) => (

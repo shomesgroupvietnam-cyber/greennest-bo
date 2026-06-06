@@ -13,6 +13,11 @@ const basePermissions = {
   canViewProjects: true,
   canViewProposals: true,
   canViewRisk: true,
+  canCreateRisk: false,
+  canUpdateRisk: false,
+  canOverrideRisk: false,
+  canCloseRisk: false,
+  canCloseHighRisk: false,
 };
 
 describe("executive drill-down source helpers", () => {

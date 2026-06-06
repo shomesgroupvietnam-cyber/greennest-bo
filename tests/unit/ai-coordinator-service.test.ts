@@ -180,6 +180,33 @@ describe("AI Coordinator service", () => {
     expect(result.contextBlocks.some((block) => block.key === "knowledge")).toBe(true);
   });
 
+  it("keeps AI Approval Assistant context limited to approved resource refs", async () => {
+    const result = await runAiCoordinator(
+      buildJob({
+        module: "general",
+        projectId: "project-hidden",
+        intent: "AI Approval Assistant",
+        prompt: "Approval detail da duoc sanitize trong assistant service",
+        resourceRefs: [{ entityId: "approval-001", entityType: "proposal" }]
+      }),
+      contractor,
+      repositories
+    );
+
+    expect(result.contextBlocks).toEqual([]);
+    expect(result.ragContext).toBe("");
+    expect(result.citations).toEqual([
+      expect.objectContaining({
+        citationType: "internal_record",
+        entityId: "approval-001",
+        entityType: "proposal",
+        projectId: undefined,
+      }),
+    ]);
+    expect(JSON.stringify(result.promptPackage.messages)).not.toContain("Du an an");
+    expect(JSON.stringify(result)).not.toContain("project-hidden");
+  });
+
   it("creates proposed-only action plans without mutating task data", async () => {
     const beforeTasks = await taskRepository.listTasks();
     const result = await runAiCoordinator(
@@ -197,7 +224,85 @@ describe("AI Coordinator service", () => {
 
     expect(result.actionProposals).toHaveLength(1);
     expect(result.actionProposals[0]?.status).toBe("proposed");
+    expect(result.actionProposals[0]?.proposedPayload).not.toHaveProperty("sourcePrompt");
+    expect(JSON.stringify(result.actionProposals[0]?.proposedPayload)).not.toContain("De xuat task follow up");
     expect(afterTasks).toHaveLength(beforeTasks.length);
+  });
+
+  it("creates draft risk suggestions without storing raw prompt in the risk payload", async () => {
+    const riskCreator = {
+      ...admin,
+      permissions: ["risk.create" as const],
+    };
+    const result = await runAiCoordinator(
+      buildJob({
+        module: "project",
+        projectId: "project-assigned",
+        intent: "Canh bao risk blocker",
+        prompt: "Hay de xuat risk cho blocker phap ly qua han",
+        wantsActionProposal: true
+      }),
+      riskCreator,
+      repositories
+    );
+
+    expect(result.actionProposals).toHaveLength(1);
+    expect(result.actionProposals[0]).toMatchObject({
+      actionKey: "create_risk_record",
+      projectId: "project-assigned",
+      requiredPermission: "risk.create",
+      status: "proposed",
+      targetEntityType: "risk",
+      workflowStatus: "DRAFT",
+    });
+    expect(result.actionProposals[0]?.proposedPayload).toMatchObject({
+      categoryKey: "operation",
+      level: "medium",
+      ownerId: riskCreator.id,
+      projectId: "project-assigned",
+      recordType: "risk",
+    });
+    expect(result.actionProposals[0]?.proposedPayload).not.toHaveProperty("sourcePrompt");
+    expect(JSON.stringify(result.actionProposals[0]?.proposedPayload)).not.toContain("Canh bao risk blocker");
+    expect(JSON.stringify(result.actionProposals[0]?.proposedPayload)).not.toContain("Hay de xuat risk");
+  });
+
+  it("does not leak hidden project ids into action proposals", async () => {
+    const scopedProposer = {
+      ...contractor,
+      permissions: ["ai.ask" as const, "ai.propose_action" as const]
+    };
+    const result = await runAiCoordinator(
+      buildJob({
+        module: "project",
+        projectId: "project-hidden",
+        intent: "Canh bao risk blocker",
+        prompt: "Hay de xuat risk cho blocker cua du an an",
+        wantsActionProposal: true
+      }),
+      scopedProposer,
+      repositories
+    );
+
+    expect(result.actionProposals).toHaveLength(0);
+    expect(JSON.stringify(result)).not.toContain("project-hidden");
+  });
+
+  it("does not create risk proposals from negated risk wording", async () => {
+    const result = await runAiCoordinator(
+      buildJob({
+        module: "project",
+        projectId: "project-assigned",
+        intent: "Khong co risk",
+        prompt: "Khong co risk hay blocker nao, chi can de xuat task follow up",
+        wantsActionProposal: true
+      }),
+      admin,
+      repositories
+    );
+
+    expect(result.actionProposals).toHaveLength(1);
+    expect(result.actionProposals[0]?.actionKey).toBe("create_task");
   });
 });
 
@@ -405,6 +510,7 @@ function buildJob(input: {
   projectId?: string;
   intent: string;
   prompt: string;
+  resourceRefs?: AiJob["scopeSnapshot"]["resourceRefs"];
   useRag?: boolean;
   wantsActionProposal?: boolean;
 }): AiJob {
@@ -427,7 +533,7 @@ function buildJob(input: {
       scopeKind: "internal_full",
       module: input.module,
       projectId: input.projectId,
-      resourceRefs: [],
+      resourceRefs: input.resourceRefs ?? [],
       capturedAt: now
     },
     rateLimitKey: "test",

@@ -4,7 +4,12 @@ import path from "node:path";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { selectRepository } from "@/lib/db/repository-mode";
-import type { AuditLog, ProjectMembership, User } from "@/modules/users/types";
+import type {
+  AuditLog,
+  AuditLogListFilters,
+  ProjectMembership,
+  User,
+} from "@/modules/users/types";
 
 type UserStore = {
   users: User[];
@@ -93,7 +98,7 @@ export type UserRepository = {
     membership: ProjectMembership,
   ): Promise<ProjectMembership>;
   createAuditLog(auditLog: AuditLog): Promise<AuditLog>;
-  listAuditLogs(): Promise<AuditLog[]>;
+  listAuditLogs(filters?: AuditLogListFilters): Promise<AuditLog[]>;
 };
 
 export class JsonUserRepository implements UserRepository {
@@ -218,12 +223,15 @@ export class JsonUserRepository implements UserRepository {
     return auditLog;
   }
 
-  async listAuditLogs() {
+  async listAuditLogs(filters: AuditLogListFilters = {}) {
     const store = await this.readStore();
 
-    return store.auditLogs.sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    );
+    return store.auditLogs
+      .filter((auditLog) => !filters.action || auditLog.action === filters.action)
+      .filter((auditLog) => !filters.actorId || auditLog.actorId === filters.actorId)
+      .filter((auditLog) => !filters.entityId || auditLog.entityId === filters.entityId)
+      .filter((auditLog) => !filters.entityType || auditLog.entityType === filters.entityType)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   private async readStore(): Promise<UserStore> {
@@ -529,12 +537,27 @@ export class SupabaseUserRepository implements UserRepository {
     return toAuditLog(data as AuditLogRow);
   }
 
-  async listAuditLogs() {
+  async listAuditLogs(filters: AuditLogListFilters = {}) {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("audit_logs")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("audit_logs").select("*");
+
+    if (filters.action) {
+      query = query.eq("action", filters.action);
+    }
+
+    if (filters.actorId) {
+      query = query.eq("actor_id", filters.actorId);
+    }
+
+    if (filters.entityId) {
+      query = query.eq("entity_id", filters.entityId);
+    }
+
+    if (filters.entityType) {
+      query = query.eq("entity_type", filters.entityType);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(error.message);

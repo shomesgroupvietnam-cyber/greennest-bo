@@ -136,6 +136,7 @@ describe("AI job foundation", () => {
 
     expect(result.job.status).toBe("succeeded");
     expect(result.interaction.responseText).toContain("Phan hoi AI mock");
+    expect(result.interaction.responseText).toContain("[CIT-001]");
     expect(result.citations).toHaveLength(1);
     expect(result.citations[0]?.knowledgeItemId).toBe(item.id);
 

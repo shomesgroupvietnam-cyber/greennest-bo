@@ -28,9 +28,156 @@ export type ReportInput = {
   reportType: ReportType;
 };
 
+export type ReportExportTarget = "dashboard" | "approval_history" | "audit_log";
+export type ReportExportFormat = "json" | "csv";
+
+export type ReportExportRequest = {
+  target: ReportExportTarget;
+  format: ReportExportFormat;
+  filters?: HistoryArchiveFilters;
+  scopeId?: string;
+};
+
+export type ReportExportSummary = {
+  exportId: EntityId;
+  target: ReportExportTarget;
+  format: ReportExportFormat;
+  filters?: HistoryArchiveFilters;
+  scopeId?: string;
+  itemCount: number;
+  total?: number;
+  sensitiveIncluded: boolean;
+  redactedFields: string[];
+};
+
+export type ReportExportResult = {
+  exportId: EntityId;
+  target: ReportExportTarget;
+  format: ReportExportFormat;
+  filename: string;
+  mimeType: string;
+  content: string;
+  generatedAt: string;
+  summary: ReportExportSummary;
+};
+
 export type ReportListFilters = {
   projectId?: EntityId | "all";
   reportType?: ReportType | "all";
+};
+
+export const HISTORY_ARCHIVE_EVENT_TYPES = [
+  "approval",
+  "assignment",
+  "audit",
+  "decision",
+  "document_version",
+  "meeting",
+  "search"
+] as const;
+
+export const HISTORY_ARCHIVE_MODULES = [
+  "approvals",
+  "audit",
+  "decisions",
+  "documents",
+  "knowledge",
+  "meetings",
+  "reports"
+] as const;
+
+export const HISTORY_ARCHIVE_SEVERITIES = [
+  "info",
+  "warning",
+  "critical"
+] as const;
+
+export type HistoryArchiveEventType = (typeof HISTORY_ARCHIVE_EVENT_TYPES)[number];
+export type HistoryArchiveModule = (typeof HISTORY_ARCHIVE_MODULES)[number];
+export type HistoryArchiveSeverity = (typeof HISTORY_ARCHIVE_SEVERITIES)[number];
+
+export type HistoryArchiveScope = {
+  organizationId?: EntityId;
+  projectId?: EntityId;
+  projectIds?: EntityId[];
+  axisId?: string;
+  workstreamId?: string;
+  moduleId?: string;
+  recordId: EntityId;
+};
+
+export type HistoryArchiveSource = {
+  sourceType: string;
+  sourceId: EntityId;
+  sourceLabel?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+};
+
+export type HistoryArchiveEvent = {
+  id: EntityId;
+  type: HistoryArchiveEventType;
+  module: HistoryArchiveModule;
+  actorId?: EntityId;
+  occurredAt: string;
+  scope: HistoryArchiveScope;
+  summary: string;
+  status?: string;
+  source: HistoryArchiveSource;
+  severity?: HistoryArchiveSeverity;
+  href?: string;
+};
+
+export type HistoryArchiveFilters = {
+  projectId?: EntityId | "all";
+  module?: HistoryArchiveModule | "all";
+  type?: HistoryArchiveEventType | "all";
+  actorId?: EntityId | "all";
+  status?: string | "all";
+  severity?: HistoryArchiveSeverity | "all";
+  dateFrom?: string;
+  dateTo?: string;
+  query?: string;
+  limit?: number;
+};
+
+export type HistoryArchiveData = {
+  generatedAt: string;
+  filters: HistoryArchiveFilters;
+  permissions: {
+    canExport?: boolean;
+    canView: boolean;
+    canViewAudit: boolean;
+    canViewSearchHistory: boolean;
+    exportTargets?: ReportExportTarget[];
+  };
+  sourceCounts: Partial<Record<HistoryArchiveEventType, number>>;
+  total: number;
+  items: HistoryArchiveEvent[];
+};
+
+export type HistoryArchiveSelectOption<TValue extends string = string> = {
+  label: string;
+  value: TValue;
+};
+
+export type HistoryArchiveEntityOption = {
+  id: EntityId;
+  label: string;
+};
+
+export type HistoryArchiveFilterOptions = {
+  actors: HistoryArchiveEntityOption[];
+  modules: Array<HistoryArchiveSelectOption<HistoryArchiveModule>>;
+  projects: HistoryArchiveEntityOption[];
+  severities: Array<HistoryArchiveSelectOption<HistoryArchiveSeverity>>;
+  statuses: string[];
+  types: Array<HistoryArchiveSelectOption<HistoryArchiveEventType>>;
+};
+
+export type HistoryArchiveCenterData = {
+  archive: HistoryArchiveData;
+  filterOptions: HistoryArchiveFilterOptions;
+  preservedParams?: Record<string, string>;
 };
 
 export type ReportSnapshot = {

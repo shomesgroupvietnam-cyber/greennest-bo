@@ -4,6 +4,10 @@ import {
 } from "@/lib/permissions/access-scope";
 import { can, type PermissionAction, type PermissionUser } from "@/lib/permissions/can";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
+import {
+  buildExecutiveAiSummaryDraft,
+  type ExecutiveAiSummaryBuildOptions,
+} from "@/modules/ai/services/executive-ai-summary-service";
 import type {
   ExecutiveDashboardData,
   ExecutiveDashboardKpi,
@@ -57,6 +61,7 @@ export type ExecutivePrivateWorkspaceOptions = {
   requireScopeAssignments?: boolean;
   dashboardData?: ExecutiveDashboardData;
   executiveData?: ExecutiveLeadershipData | null;
+  aiSummary?: ExecutiveAiSummaryBuildOptions;
 };
 
 type DelegationWorkspaceState = {
@@ -71,6 +76,9 @@ const delegatedCreateActions = new Set<PermissionAction>([
   "meeting.create",
   "document.create",
   "task.create",
+  "risk.create",
+  "risk.update",
+  "risk.override",
 ]);
 
 const financeKeys = [
@@ -294,19 +302,7 @@ function healthLabel(status: string) {
 }
 
 function priorityLabelForRisk(item: ExecutiveRiskItem) {
-  if (item.severity === "critical") {
-    return "Critical";
-  }
-
-  if (item.severity === "high") {
-    return "High";
-  }
-
-  if (item.severity === "medium") {
-    return "Medium";
-  }
-
-  return "Low";
+  return item.severityLabel;
 }
 
 function priorityLabelForItem(item: ExecutiveDashboardSourceItem) {
@@ -375,16 +371,16 @@ function toUtcDay(value: string) {
 }
 
 function scoreItem(item: PrivateWorkspaceSectionItem, today: Date) {
-  if (item.priorityLabel === "Critical") {
+  if (item.priorityLabel === "Critical" || item.priorityLabel === "Nghiêm trọng") {
     return 100;
   }
 
-  if (item.priorityLabel === "High") {
+  if (item.priorityLabel === "High" || item.priorityLabel === "Cao") {
     return 90;
   }
 
   if (item.sourceType === "risk") {
-    if (item.priorityLabel === "Medium") {
+    if (item.priorityLabel === "Medium" || item.priorityLabel === "Trung bình") {
       return 60;
     }
 
@@ -570,6 +566,18 @@ function actionLabel(actionKey: PermissionAction) {
     return "Tao viec ho tro";
   }
 
+  if (actionKey === "risk.create") {
+    return "Tao risk/blocker thay lanh dao";
+  }
+
+  if (actionKey === "risk.update") {
+    return "Cap nhat risk/blocker thay lanh dao";
+  }
+
+  if (actionKey === "risk.override") {
+    return "Xac nhan/override risk thay lanh dao";
+  }
+
   return actionKey;
 }
 
@@ -610,11 +618,44 @@ function buildPermissions(
     can(user, "meeting.create") ||
     scoped("meeting.create") ||
     delegatedActions.some((action) => action.actionKey === "meeting.create");
+  const canCreateRisk =
+    dashboard.permissions.canCreateRisk ||
+    can(user, "risk.create") ||
+    scoped("risk.create") ||
+    delegatedActions.some((action) => action.actionKey === "risk.create");
+  const canUpdateRisk =
+    dashboard.permissions.canUpdateRisk ||
+    can(user, "risk.update") ||
+    scoped("risk.update") ||
+    delegatedActions.some((action) => action.actionKey === "risk.update");
+  const canOverrideRisk =
+    dashboard.permissions.canOverrideRisk ||
+    can(user, "risk.override") ||
+    scoped("risk.override") ||
+    delegatedActions.some((action) => action.actionKey === "risk.override");
+  const canCloseRisk =
+    dashboard.permissions.canCloseRisk ||
+    can(user, "risk.close") ||
+    scoped("risk.close");
+  const canCloseHighRisk =
+    dashboard.permissions.canCloseHighRisk ||
+    can(user, "risk.close_high") ||
+    scoped("risk.close_high");
   const directMutation =
     can(user, "proposal.create") ||
     can(user, "meeting.create") ||
+    can(user, "risk.create") ||
+    can(user, "risk.update") ||
+    can(user, "risk.override") ||
+    can(user, "risk.close") ||
+    can(user, "risk.close_high") ||
     scoped("proposal.create") ||
-    scoped("meeting.create");
+    scoped("meeting.create") ||
+    scoped("risk.create") ||
+    scoped("risk.update") ||
+    scoped("risk.override") ||
+    scoped("risk.close") ||
+    scoped("risk.close_high");
   const hasAnyView =
     dashboard.permissions.canViewProjects ||
     dashboard.permissions.canViewProposals ||
@@ -635,6 +676,11 @@ function buildPermissions(
   return {
     canCreateMeeting,
     canCreateProposal,
+    canCreateRisk,
+    canUpdateRisk,
+    canOverrideRisk,
+    canCloseRisk,
+    canCloseHighRisk,
     canDrillDown: dashboard.permissions.canDrillDown,
     canViewDecisions: dashboard.permissions.canViewDecisions,
     canViewFinance: dashboard.permissions.canViewFinance,
@@ -771,6 +817,11 @@ function emptyDashboard(
       canViewProjects: false,
       canViewProposals: false,
       canViewRisk: false,
+      canCreateRisk: false,
+      canUpdateRisk: false,
+      canOverrideRisk: false,
+      canCloseRisk: false,
+      canCloseHighRisk: false,
     },
     projectPortfolio: {
       active: 0,
@@ -788,6 +839,18 @@ function emptyDashboard(
       critical: 0,
       high: 0,
       items: [],
+      riskMap: {
+        affectedProjectCount: 0,
+        categories: [],
+        matrix: [],
+        total: 0,
+      },
+    },
+    riskMutationOptions: {
+      categories: [],
+      delegations: [],
+      owners: [],
+      projects: [],
     },
     scope: {
       axisIds: [],
@@ -822,6 +885,87 @@ function buildSourceCounts(
     ...dashboard.sourceCounts,
     delegations: delegations.length,
     priorityItems: priorityItems.length,
+  };
+}
+
+function sourceKey(item: Pick<ExecutiveDashboardSourceItem, "sourceId" | "sourceType">) {
+  return `${item.sourceType}:${item.sourceId}`;
+}
+
+function buildWorkspaceAiCitation(
+  item: PrivateWorkspaceSectionItem,
+) {
+  return {
+    href: item.href,
+    id: `workspace-ai-citation-${item.sourceType}-${item.sourceId}`,
+    projectId: item.projectId,
+    sourceId: item.sourceId,
+    sourceType: item.sourceType,
+    title: item.title,
+  };
+}
+
+function buildWorkspaceAiSource(input: {
+  approvalItems: PrivateWorkspaceSectionItem[];
+  assignedProjects: PrivateWorkspaceSectionItem[];
+  deadlineItems: PrivateWorkspaceSectionItem[];
+  decisionItems: PrivateWorkspaceSectionItem[];
+  meetingItems: PrivateWorkspaceSectionItem[];
+  priorityItems: PrivateWorkspaceSectionItem[];
+  riskItems: PrivateWorkspaceSectionItem[];
+  scopeLabel: string;
+  variant: ExecutivePrivateWorkspaceVariant;
+}) {
+  const candidates = [
+    ...input.priorityItems,
+    ...input.riskItems,
+    ...input.approvalItems,
+    ...input.deadlineItems,
+    ...input.decisionItems,
+    ...input.meetingItems,
+    ...input.assignedProjects,
+  ];
+  const seen = new Set<string>();
+  const visibleItems = candidates.filter((item) => {
+    const key = sourceKey(item);
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+
+  return {
+    citations: visibleItems.slice(0, 8).map(buildWorkspaceAiCitation),
+    generatedFrom: [
+      "ExecutivePrivateWorkspaceData.priorityItems",
+      "ExecutivePrivateWorkspaceData.riskItems",
+      "ExecutivePrivateWorkspaceData.approvalItems",
+      "ExecutivePrivateWorkspaceData.deadlineItems",
+      "ExecutivePrivateWorkspaceData.decisionItems",
+      "ExecutivePrivateWorkspaceData.meetingItems",
+      "ExecutivePrivateWorkspaceData.assignedProjects",
+    ],
+    sourceText: visibleItems.length
+      ? [
+          `Private Workspace ${input.variant} trong ${input.scopeLabel}.`,
+          `Priority: ${input.priorityItems.length}; approvals: ${input.approvalItems.length}; risks: ${input.riskItems.length}; deadlines: ${input.deadlineItems.length}; decisions: ${input.decisionItems.length}; meetings: ${input.meetingItems.length}.`,
+          ...visibleItems.slice(0, 8).map((item) =>
+            [
+              item.groupLabel,
+              item.priorityLabel,
+              item.title,
+              item.status,
+              item.deadline ? `deadline ${item.deadline}` : undefined,
+              item.reason,
+            ]
+              .filter(Boolean)
+              .join(" | "),
+          ),
+        ].join("\n")
+      : "",
   };
 }
 
@@ -932,14 +1076,31 @@ export async function getExecutivePrivateWorkspaceData(
       ...permissions,
       canCreateMeeting: false,
       canCreateProposal: false,
+      canCreateRisk: false,
+      canUpdateRisk: false,
+      canOverrideRisk: false,
+      canCloseRisk: false,
+      canCloseHighRisk: false,
       canDrillDown: false,
       mutationMode: "none",
     };
+    const aiSummary = await buildExecutiveAiSummaryDraft(
+      user,
+      {
+        citations: [],
+        generatedAt: dashboard.generatedAt,
+        generatedFrom: [],
+        sourceText: "",
+        view: "private_workspace",
+      },
+      options.aiSummary,
+    );
 
     return {
       approvalItems: [],
       assignedProjects: [],
       assistantSupport: emptyAssistantSupport(),
+      aiSummary,
       deadlineItems: [],
       decisionItems: [],
       emptyState: deriveEmptyState({
@@ -1063,11 +1224,32 @@ export async function getExecutivePrivateWorkspaceData(
           meetingItems,
         })
       : emptyAssistantSupport();
+  const workspaceAiSource = buildWorkspaceAiSource({
+    approvalItems,
+    assignedProjects,
+    deadlineItems,
+    decisionItems,
+    meetingItems,
+    priorityItems,
+    riskItems,
+    scopeLabel,
+    variant,
+  });
+  const aiSummary = await buildExecutiveAiSummaryDraft(
+    user,
+    {
+      ...workspaceAiSource,
+      generatedAt: dashboard.generatedAt,
+      view: "private_workspace",
+    },
+    options.aiSummary,
+  );
 
   return {
     approvalItems,
     assignedProjects,
     assistantSupport,
+    aiSummary,
     deadlineItems,
     decisionItems,
     emptyState: deriveEmptyState({

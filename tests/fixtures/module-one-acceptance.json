@@ -298,6 +298,7 @@
           "knowledge.approve",
           "report.view",
           "report.create",
+          "report.export",
           "design.view",
           "design.review",
           "construction.view",
@@ -305,6 +306,12 @@
           "finance.approve",
           "payment.approve",
           "proposal.view",
+          "risk.view",
+          "risk.create",
+          "risk.update",
+          "risk.override",
+          "risk.close",
+          "risk.close_high",
           "proposal.create",
           "proposal.update",
           "proposal.review",
@@ -387,6 +394,7 @@
           "knowledge.manage_source_registry",
           "report.view",
           "report.create",
+          "report.export",
           "design.view",
           "design.create",
           "design.update",
@@ -404,6 +412,12 @@
           "payment.request",
           "payment.approve",
           "proposal.view",
+          "risk.view",
+          "risk.create",
+          "risk.update",
+          "risk.override",
+          "risk.close",
+          "risk.close_high",
           "proposal.create",
           "proposal.update",
           "proposal.review",
@@ -476,6 +490,7 @@
           "meeting.update",
           "decision.create",
           "proposal.view",
+          "risk.view",
           "proposal.create",
           "proposal.update",
           "proposal.review",
@@ -502,6 +517,12 @@
           "decision.create",
           "finance.view",
           "proposal.view",
+          "risk.view",
+          "risk.create",
+          "risk.update",
+          "risk.override",
+          "risk.close",
+          "risk.close_high",
           "proposal.approve",
           "proposal.reject",
           "proposal.request_change",
@@ -536,6 +557,11 @@
           "proposal.update",
           "proposal.review",
           "report.view",
+          "risk.view",
+          "risk.create",
+          "risk.update",
+          "risk.override",
+          "risk.close",
           "ai.use"
         ]
       },
@@ -587,7 +613,8 @@
           "document.view",
           "legal.view",
           "meeting.view",
-          "report.view"
+          "report.view",
+          "risk.view"
         ]
       },
       {
@@ -603,7 +630,8 @@
           "proposal.create",
           "proposal.update",
           "proposal.review",
-          "finance.view"
+          "finance.view",
+          "risk.view"
         ]
       },
       {
@@ -772,6 +800,44 @@
         "actionType": "view"
       },
       {
+        "key": "risk.view",
+        "module": "risk",
+        "labelVi": "Xem risk dieu hanh",
+        "actionType": "view"
+      },
+      {
+        "key": "risk.create",
+        "module": "risk",
+        "labelVi": "Tao risk/blocker dieu hanh",
+        "actionType": "create"
+      },
+      {
+        "key": "risk.update",
+        "module": "risk",
+        "labelVi": "Cap nhat risk/blocker dieu hanh",
+        "actionType": "update"
+      },
+      {
+        "key": "risk.override",
+        "module": "risk",
+        "labelVi": "Xac nhan/override trang thai risk",
+        "actionType": "update"
+      },
+      {
+        "key": "risk.close",
+        "module": "risk",
+        "labelVi": "Dong risk/blocker",
+        "sensitive": true,
+        "actionType": "update"
+      },
+      {
+        "key": "risk.close_high",
+        "module": "risk",
+        "labelVi": "Dong high/critical risk/blocker",
+        "sensitive": true,
+        "actionType": "update"
+      },
+      {
         "key": "proposal.create",
         "module": "proposal",
         "labelVi": "Tao de xuat",
@@ -817,6 +883,12 @@
         "key": "report.create",
         "module": "report",
         "labelVi": "Tao bao cao",
+        "actionType": "create"
+      },
+      {
+        "key": "report.export",
+        "module": "report",
+        "labelVi": "Xuat du lieu/bao cao",
         "actionType": "export"
       },
       {
@@ -927,6 +999,7 @@
         "knowledge.approve",
         "report.view",
         "report.create",
+        "report.export",
         "design.view",
         "design.review",
         "construction.view",
@@ -934,6 +1007,12 @@
         "finance.approve",
         "payment.approve",
         "proposal.view",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+        "risk.override",
+        "risk.close",
+        "risk.close_high",
         "proposal.create",
         "proposal.update",
         "proposal.review",
@@ -1018,6 +1097,7 @@
         "knowledge.manage_source_registry",
         "report.view",
         "report.create",
+        "report.export",
         "design.view",
         "design.create",
         "design.update",
@@ -1035,6 +1115,12 @@
         "payment.request",
         "payment.approve",
         "proposal.view",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+        "risk.override",
+        "risk.close",
+        "risk.close_high",
         "proposal.create",
         "proposal.update",
         "proposal.review",
@@ -1099,6 +1185,7 @@
         "meeting.view",
         "finance.view",
         "proposal.view",
+        "risk.view",
         "settings.manage",
         "delegation.manage",
         "audit.view"
@@ -1118,6 +1205,12 @@
         "legal.view",
         "finance.view",
         "proposal.view",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+        "risk.override",
+        "risk.close",
+        "risk.close_high",
         "proposal.approve"
       ],
       "scopeType": "scoped",
@@ -1137,7 +1230,12 @@
         "finance.view",
         "proposal.view",
         "proposal.create",
-        "proposal.review"
+        "proposal.review",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+        "risk.override",
+        "risk.close"
       ],
       "scopeType": "scoped",
       "active": true
@@ -1184,7 +1282,8 @@
         "task.view",
         "document.view",
         "legal.view",
-        "meeting.view"
+        "meeting.view",
+        "risk.view"
       ],
       "scopeType": "scoped",
       "active": true
@@ -1323,6 +1422,20 @@
       "active": true,
       "startsAt": "2026-05-01T00:00:00.000Z",
       "note": "Thu ky tao/submit de xuat thay CEO trong scope Riverside."
+    },
+    {
+      "id": "delegation-assistant-ceo-riverside-risk-create-update",
+      "principalUserId": "ceo-01",
+      "delegateUserId": "assistant-01",
+      "projectId": "demo-project-riverside",
+      "moduleId": "risk",
+      "actionKeys": [
+        "risk.create",
+        "risk.update"
+      ],
+      "active": true,
+      "startsAt": "2026-05-01T00:00:00.000Z",
+      "note": "Thu ky tao/cap nhat risk blocker thay CEO trong scope Riverside."
     },
     {
       "id": "delegation-assistant-ceo-expired-negative",

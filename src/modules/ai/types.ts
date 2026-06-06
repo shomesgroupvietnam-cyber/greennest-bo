@@ -91,7 +91,10 @@ export type AiActionProposalKey =
   | "request_document_update"
   | "update_legal_note"
   | "create_legal_followup_task"
-  | "create_meeting_action_item";
+  | "create_meeting_action_item"
+  | "create_risk_record"
+  | "approval_request_change"
+  | "approval_ask_meeting";
 
 export type AiResourceRef = {
   entityType: string;
@@ -209,6 +212,134 @@ export type AiActionProposal = TimestampFields & {
   decidedAt?: string;
   decisionNotes?: string;
   executionResult?: unknown;
+};
+
+export type ExecutiveAiSummaryStatus =
+  | "draft"
+  | "placeholder"
+  | "insufficient_context"
+  | "unavailable";
+
+export type ExecutiveAiSummaryCitation = {
+  id: EntityId;
+  sourceType: string;
+  sourceId: EntityId;
+  projectId?: EntityId;
+  title: string;
+  href?: string;
+};
+
+export type ExecutiveAiSummaryActionProposal = {
+  id: EntityId;
+  actionKey: AiActionProposalKey | string;
+  targetEntityType: string;
+  projectId?: EntityId;
+  title: string;
+  rationale?: string;
+  requiredPermission: PermissionAction;
+  workflowStatus?: AiWorkflowStatus;
+  status: AiActionProposalStatus;
+};
+
+export type ExecutiveAiSummary = {
+  status: ExecutiveAiSummaryStatus;
+  text: string;
+  citations: ExecutiveAiSummaryCitation[];
+  generatedFrom: string[];
+  updatedAt: string;
+  interactionId?: EntityId;
+  jobId?: EntityId;
+  actionProposals?: ExecutiveAiSummaryActionProposal[];
+};
+
+export type AiApprovalAssistantStatus =
+  | "draft"
+  | "insufficient_context"
+  | "unavailable";
+
+export type AiApprovalAssistantCitation = {
+  id: EntityId;
+  sourceType: string;
+  sourceId: EntityId;
+  projectId?: EntityId;
+  title: string;
+  href?: string;
+};
+
+export type AiApprovalAssistantActionProposal = {
+  id: EntityId;
+  actionKey: AiActionProposalKey | string;
+  targetEntityType: string;
+  targetEntityId?: EntityId;
+  previewTitle: string;
+  returnToHref?: string;
+  approvalAction: "request_change" | "ask_meeting";
+  currentStatus?: string;
+  nextStatus?: string;
+  reason?: string;
+  agendaDraft?: string;
+  meetingType?: string;
+  affectedFields: string[];
+  sourceCitationIds: EntityId[];
+  rationale?: string;
+  requiredPermission: PermissionAction;
+  workflowStatus?: AiWorkflowStatus;
+  status: AiActionProposalStatus;
+};
+
+export type AiApprovalAssistant = {
+  status: AiApprovalAssistantStatus;
+  summaryText: string;
+  riskNotes: string[];
+  missingInformation: string[];
+  suggestedQuestions: string[];
+  citations: AiApprovalAssistantCitation[];
+  generatedFrom: string[];
+  updatedAt: string;
+  interactionId?: EntityId;
+  jobId?: EntityId;
+  actionProposals: AiApprovalAssistantActionProposal[];
+};
+
+export type AiMeetingSummaryStatus =
+  | "draft"
+  | "placeholder"
+  | "insufficient_context"
+  | "unavailable";
+
+export type AiMeetingSummaryCitation = {
+  id: EntityId;
+  sourceType: string;
+  sourceId: EntityId;
+  projectId?: EntityId;
+  title: string;
+  href?: string;
+};
+
+export type AiMeetingSummaryActionProposal = {
+  id: EntityId;
+  actionKey: AiActionProposalKey | string;
+  targetEntityType: string;
+  targetEntityId?: EntityId;
+  previewTitle: string;
+  returnToHref?: string;
+  affectedFields: string[];
+  sourceCitationIds: EntityId[];
+  rationale?: string;
+  requiredPermission: PermissionAction;
+  workflowStatus?: AiWorkflowStatus;
+  status: AiActionProposalStatus;
+};
+
+export type AiMeetingSummary = {
+  status: AiMeetingSummaryStatus;
+  text: string;
+  citations: AiMeetingSummaryCitation[];
+  generatedFrom: string[];
+  updatedAt: string;
+  interactionId?: EntityId;
+  jobId?: EntityId;
+  actionProposals: AiMeetingSummaryActionProposal[];
 };
 
 export type AiAskResult = {

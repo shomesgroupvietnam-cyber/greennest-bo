@@ -49,6 +49,17 @@ function renderDashboard(
   );
 }
 
+function fixtureRiskStatus(status: "green" | "yellow" | "red", labelVi: string) {
+  return {
+    confirmationState: "suggested" as const,
+    generatedAt: "2026-05-24T00:00:00.000Z",
+    labelVi,
+    reason: `Fixture risk status ${status}`,
+    sourceData: [],
+    status,
+  };
+}
+
 describe("CommandCenterDashboard executive dashboard", () => {
   it("shows a role workspace return link for project roles entering Command Center", async () => {
     const data = await getCommandCenterData(
@@ -144,7 +155,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
       screen.getByRole("region", { name: "AI Summary draft" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "KPI hom nay" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Top risk" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Risk ưu tiên" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Approval qua han" })).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Viec can quyet hom nay" }),
@@ -153,7 +164,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
       screen.getByRole("region", { name: "Du an do vang xanh" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Meeting Snapshot" })).toBeInTheDocument();
-    expect(screen.getByText(/Ban tom tat goi y/)).toBeInTheDocument();
+    expect(screen.getByText(/Bản tóm tắt gợi ý/)).toBeInTheDocument();
     expect(screen.getByText("Visible citation metadata")).toBeInTheDocument();
     expect(screen.getByText("decision: decision-visible-test")).toBeInTheDocument();
     expect(screen.queryByText("OPERATIONS_BRIEFING_SENTINEL")).not.toBeInTheDocument();
@@ -248,7 +259,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(
       screen.getByRole("region", { name: "Lich hop va su kien" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Risk tong" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Risk tổng" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Chien luoc" })).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Deadline vuot nguong qua han" }),
@@ -298,8 +309,94 @@ describe("CommandCenterDashboard executive dashboard", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the executive history archive view from permission-safe history data", async () => {
+    const data = await buildCommandCenterData();
+    const historyData = {
+      ...data,
+      historyArchiveCenter: {
+        archive: {
+          filters: {
+            limit: 100,
+            query: "DX-001",
+            severity: "critical",
+          },
+          generatedAt: "2026-06-03T08:00:00.000Z",
+          items: [
+            {
+              actorId: "leader-01",
+              href: "/approvals/proposal/proposal-01",
+              id: "approval:proposal-decision-01",
+              module: "approvals",
+              occurredAt: "2026-06-03T07:00:00.000Z",
+              scope: {
+                projectId: "project-a",
+                recordId: "proposal-01",
+              },
+              severity: "critical",
+              source: {
+                metadata: {
+                  approvalLevel: "CEO",
+                  forbiddenRawPayload: "RAW_AUDIT_SENTINEL",
+                },
+                sourceId: "proposal-01",
+                sourceLabel: "DX-001 - Budget approval",
+                sourceType: "proposal",
+              },
+              status: "approved",
+              summary: "De xuat DX-001 da duyet an toan.",
+              type: "approval",
+            },
+          ],
+          permissions: {
+            canView: true,
+            canViewAudit: true,
+            canViewSearchHistory: true,
+          },
+          sourceCounts: {
+            approval: 1,
+          },
+          total: 1,
+        },
+        filterOptions: {
+          actors: [{ id: "leader-01", label: "leader-01" }],
+          modules: [{ label: "Approvals", value: "approvals" }],
+          projects: [{ id: "project-a", label: "P-A - Green Nest A" }],
+          severities: [{ label: "Critical", value: "critical" }],
+          statuses: ["approved"],
+          types: [{ label: "Approval", value: "approval" }],
+        },
+      },
+    } as CommandCenterData & {
+      historyArchiveCenter: NonNullable<CommandCenterData["historyArchiveCenter"]>;
+    };
+
+    renderDashboard(historyData, "executive-history");
+
+    expect(
+      screen.getByRole("heading", { name: "History & Archive" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("search", { name: "Bo loc lich su" })).toBeInTheDocument();
+    expect(screen.getByText("DX-001")).toBeInTheDocument();
+
+    const timeline = screen.getByRole("list", { name: "Lich su dieu hanh" });
+    const items = within(timeline).getAllByRole("listitem");
+
+    expect(items).toHaveLength(1);
+    expect(within(items[0]).getByText("De xuat DX-001 da duyet an toan.")).toBeInTheDocument();
+    expect(within(items[0]).getByText("critical")).toBeInTheDocument();
+    expect(
+      within(items[0]).getByRole("link", { name: "Mo nguon DX-001 - Budget approval" }),
+    ).toHaveAttribute("href", "/approvals/proposal/proposal-01");
+    expect(screen.queryByText("RAW_AUDIT_SENTINEL")).not.toBeInTheDocument();
+  });
+
   it("renders the executive private workspace view from scoped DTO data", async () => {
     const data = await buildCommandCenterData();
+    const privateWorkspace = data.executivePrivateWorkspace;
+
+    if (!privateWorkspace) {
+      throw new Error("Expected executive private workspace data for leadership user");
+    }
 
     data.operationsDashboard.tasksDueThisWeek = [
       {
@@ -315,6 +412,34 @@ describe("CommandCenterDashboard executive dashboard", () => {
         updatedAt: "2026-05-20T00:00:00.000Z",
       },
     ];
+    data.executivePrivateWorkspace = {
+      ...privateWorkspace,
+      aiSummary: {
+        actionProposals: [
+          {
+            actionKey: "create_task",
+            id: "workspace-ai-proposal",
+            requiredPermission: "task.create",
+            status: "proposed",
+            targetEntityType: "task",
+            title: "Review AI proposal",
+            workflowStatus: "DRAFT",
+          },
+        ],
+        citations: [
+          {
+            id: "workspace-ai-citation",
+            sourceId: "decision-workspace-ai",
+            sourceType: "decision",
+            title: "Workspace AI citation",
+          },
+        ],
+        generatedFrom: ["ExecutivePrivateWorkspaceData.priorityItems"],
+        status: "draft",
+        text: "Workspace AI draft suggestion",
+        updatedAt: "2026-06-04T10:00:00.000Z",
+      },
+    };
 
     renderDashboard(data, "executive-private-workspace");
 
@@ -330,6 +455,11 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(screen.getByRole("region", { name: "Approval queue" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Escalation risk" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Assistant support" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Workspace AI Summary draft" })).toBeInTheDocument();
+    expect(screen.getByText("Workspace AI draft suggestion")).toBeInTheDocument();
+    expect(screen.getByText("Workspace AI citation")).toBeInTheDocument();
+    expect(screen.getByText("Review AI proposal")).toBeInTheDocument();
+    expect(screen.getByText(/proposed/)).toBeInTheDocument();
     expect(screen.queryByText("OPERATIONS_PRIVATE_WORKSPACE_SENTINEL")).not.toBeInTheDocument();
   });
 
@@ -506,7 +636,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
       screen.getByRole("region", { name: "Priority Queue" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Risk Summary" }),
+      screen.getByRole("region", { name: "Tổng hợp risk" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Deadline hom nay" }),
@@ -533,6 +663,14 @@ describe("CommandCenterDashboard executive dashboard", () => {
     if (risk) {
       expect(screen.getAllByText(risk.title).length).toBeGreaterThan(0);
     }
+
+    const riskRegion = screen.getByRole("region", { name: "Tổng hợp risk" });
+    expect(within(riskRegion).getByText("Risk map")).toBeInTheDocument();
+    expect(within(riskRegion).getByText("Ma tran risk")).toBeInTheDocument();
+    expect(within(riskRegion).getAllByText(/Khả năng/).length).toBeGreaterThan(0);
+    expect(
+      within(riskRegion).getAllByLabelText(/Risk map category/i).length,
+    ).toBeGreaterThan(0);
 
     if (deadline) {
       expect(screen.getAllByText(deadline.title).length).toBeGreaterThan(0);
@@ -614,6 +752,34 @@ describe("CommandCenterDashboard executive dashboard", () => {
       name: "Dong panel chi tiet",
     });
     await waitFor(() => expect(closeButton).toHaveFocus());
+  });
+
+  it("opens a risk drill-down panel with likelihood and impact matrix metadata", async () => {
+    const data = await buildCommandCenterData();
+    const selectedRisk = data.executiveDashboard?.riskSummary.items[0];
+
+    if (!selectedRisk) {
+      throw new Error("Expected at least one risk item");
+    }
+
+    renderDashboard(data);
+
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: `Xem chi tiet ${selectedRisk.title}`,
+      })[0],
+    );
+
+    const panel = screen.getByRole("dialog", {
+      name: "Chi tiet nguon dieu hanh",
+    });
+
+    expect(within(panel).getByRole("heading", { name: selectedRisk.title })).toBeInTheDocument();
+    expect(within(panel).getByText("Ma tran risk")).toBeInTheDocument();
+    expect(within(panel).getByText(selectedRisk.likelihoodLabel)).toBeInTheDocument();
+    expect(within(panel).getAllByText(selectedRisk.impactLabel).length).toBeGreaterThan(0);
+    expect(within(panel).getByText(selectedRisk.nextAction)).toBeInTheDocument();
+    expect(within(panel).getByText(selectedRisk.categoryLabel)).toBeInTheDocument();
   });
 
   it("renders enriched drill-down metadata, linked records, actions and timeline", async () => {
@@ -805,7 +971,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(
       screen.getByText("Khong co quyen xem lich hop trong scope hien tai."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Khong co quyen xem risk trong scope hien tai.")).toBeInTheDocument();
+    expect(screen.getByText("Không có quyền xem risk trong scope hiện tại.")).toBeInTheDocument();
   });
 
   it("keeps priority queue unique and labels risk/deadline priority accurately", async () => {
@@ -827,11 +993,22 @@ describe("CommandCenterDashboard executive dashboard", () => {
     };
     const mediumRisk = {
       ...approval,
+      category: "schedule",
+      categoryKey: "schedule",
+      categoryLabel: "Tiến độ",
       id: "medium-risk",
+      impact: "medium" as const,
+      impactLabel: "Trung binh",
+      likelihood: "medium" as const,
+      likelihoodLabel: "Kha nang trung binh",
+      matrixCellLabel: "Kha nang trung binh x Trung binh",
+      nextAction: "Review medium risk sentinel",
       reason: "Medium risk sentinel",
       severity: "medium" as const,
+      severityLabel: "Trung bình",
       sourceId: "medium-risk-source",
       sourceType: "risk" as const,
+      statusSuggestion: fixtureRiskStatus("yellow", "Vàng"),
       title: "MEDIUM_RISK_SENTINEL",
     };
     const overdueDeadline = {
@@ -860,13 +1037,22 @@ describe("CommandCenterDashboard executive dashboard", () => {
         items: [
           {
             ...mediumRisk,
-            category: "Schedule",
           },
           {
             ...duplicateSource,
-            category: "Finance",
+            category: "finance",
+            categoryKey: "finance",
+            categoryLabel: "Tài chính",
             id: "duplicate-risk",
+            impact: "high" as const,
+            impactLabel: "Cao",
+            likelihood: "high" as const,
+            likelihoodLabel: "Kha nang cao",
+            matrixCellLabel: "Kha nang cao x Cao",
+            nextAction: "Review duplicate risk",
             severity: "high" as const,
+            severityLabel: "Cao",
+            statusSuggestion: fixtureRiskStatus("red", "Đỏ"),
           },
         ],
       },
@@ -883,7 +1069,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
     expect(
       within(priorityQueue).getAllByText("DUPLICATE_SOURCE_SENTINEL"),
     ).toHaveLength(1);
-    expect(within(priorityQueue).getByText("Medium")).toBeInTheDocument();
+    expect(within(priorityQueue).getAllByText("Trung bình").length).toBeGreaterThan(0);
     expect(within(priorityQueue).getByText("Qua han")).toBeInTheDocument();
   });
 

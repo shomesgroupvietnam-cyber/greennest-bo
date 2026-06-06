@@ -148,18 +148,18 @@ function mergeThresholdBreaches(items: ExecutiveCommonCenterThresholdBreach[]) {
 
 function riskPriorityLabel(item: ExecutiveRiskItem) {
   if (item.severity === "critical") {
-    return "Critical";
+    return `${item.severityLabel} - ${item.statusSuggestion.labelVi}`;
   }
 
   if (item.severity === "high") {
-    return "High";
+    return `${item.severityLabel} - ${item.statusSuggestion.labelVi}`;
   }
 
   if (item.tone === "red") {
-    return "Do";
+    return item.statusSuggestion.labelVi;
   }
 
-  return "Risk";
+  return item.severityLabel;
 }
 
 function approvalPriorityLabel(item: ExecutiveApprovalItem, today: Date) {
@@ -185,7 +185,7 @@ function approvalPriorityLabel(item: ExecutiveApprovalItem, today: Date) {
 function buildRiskPriority(item: ExecutiveRiskItem): ExecutiveCommonCenterPriorityItem {
   return {
     ...item,
-    groupLabel: "Risk nghiem trong",
+    groupLabel: "Risk nghiêm trọng",
     priorityLabel: riskPriorityLabel(item),
     score: 80 + severityScore(item) + toneScore(item),
   };
@@ -559,9 +559,7 @@ function breachReasonForPriority(
   today: Date,
 ) {
   if (item.sourceType === "risk") {
-    return item.priorityLabel === "Critical"
-      ? "risk critical"
-      : "risk critical/high";
+    return item.tone === "red" ? "risk đỏ" : "risk cao/nghiêm trọng";
   }
 
   if (item.sourceType === "project") {
@@ -761,6 +759,14 @@ export async function getExecutiveCommonCenterData(
         ? dashboardData.riskSummary.critical
         : 0,
       high: dashboardData.permissions.canViewRisk ? dashboardData.riskSummary.high : 0,
+      riskMap: dashboardData.permissions.canViewRisk
+        ? dashboardData.riskSummary.riskMap
+        : {
+            affectedProjectCount: 0,
+            categories: [],
+            matrix: [],
+            total: 0,
+          },
       items: enrichedRiskItems,
     },
     scope: dashboardData.scope,

@@ -37,7 +37,6 @@ import {
   UserRound,
   UsersRound,
   XCircle,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -633,12 +632,6 @@ function AiExecutiveCopilotPanel({
   insights: ExecutiveAiInsight[];
   selectedProjectName: string;
 }) {
-  const [mode, setMode] = useState<"summary" | "risk" | "recommendation">(
-    "summary",
-  );
-  const [question, setQuestion] = useState(
-    "Tóm tắt các điểm cần lãnh đạo xử lý hôm nay",
-  );
   const primaryInsight = insights[0];
   const answerByMode = {
     summary:
@@ -652,6 +645,15 @@ function AiExecutiveCopilotPanel({
       primaryInsight?.recommendedAction ??
       "Tiếp tục theo dõi các đề xuất chờ duyệt và hồ sơ có blocker.",
   };
+  const previewItems = [
+    { key: "summary", label: "Summary preview", text: answerByMode.summary },
+    { key: "risk", label: "Risk preview", text: answerByMode.risk },
+    {
+      key: "recommendation",
+      label: "Recommendation preview",
+      text: answerByMode.recommendation,
+    },
+  ];
 
   if (!canUseAiPanel) {
     return (
@@ -684,29 +686,8 @@ function AiExecutiveCopilotPanel({
           </div>
         </div>
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-          Mô phỏng
+          Future enhancement
         </span>
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {[
-          { key: "summary" as const, label: "Summary" },
-          { key: "risk" as const, label: "Risk" },
-          { key: "recommendation" as const, label: "Recommend" },
-        ].map((item) => (
-          <button
-            className={`rounded-md px-2 py-2 text-xs font-semibold ${
-              mode === item.key
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-            key={item.key}
-            onClick={() => setMode(item.key)}
-            type="button"
-          >
-            {item.label}
-          </button>
-        ))}
       </div>
 
       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -717,27 +698,26 @@ function AiExecutiveCopilotPanel({
           {selectedProjectName}
         </p>
         <p className="mt-2 text-sm leading-6 text-slate-700">
-          {answerByMode[mode]}
+          AI Executive Copilot chua trien khai trong MVP. Khu vuc nay chi hien
+          thi preview noi dung dieu hanh de giu bo cuc san sang cho phase sau.
         </p>
       </div>
 
-      <form
-        className="mt-4 flex gap-2"
-        onSubmit={(event) => event.preventDefault()}
-      >
-        <input
-          className="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm"
-          onChange={(event) => setQuestion(event.target.value)}
-          value={question}
-        />
-        <button
-          className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          type="submit"
-        >
-          Ask
-          <Zap className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </form>
+      <div className="mt-4 grid gap-2">
+        {previewItems.map((item) => (
+          <div
+            className="rounded-md border border-slate-200 bg-white p-3"
+            key={item.key}
+          >
+            <p className="text-xs font-semibold uppercase text-slate-400">
+              {item.label}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              {item.text}
+            </p>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-4 space-y-3">
         {insights.slice(0, 2).map((insight) => (

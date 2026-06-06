@@ -6,8 +6,10 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { assertCan } from "@/lib/permissions/can";
 import { getScopedProject } from "@/lib/permissions/scoped-resources";
+import { exportReportData } from "@/modules/reports/services/report-export-service";
 import { generateReport } from "@/modules/reports/services/report-service";
 import type { ReportInput } from "@/modules/reports/types";
+import { parseReportExportRequestEntries } from "@/modules/reports/validation";
 import { createAuditLog } from "@/modules/users/services/user-service";
 
 export async function generateReportAction(formData: FormData) {
@@ -34,4 +36,13 @@ export async function generateReportAction(formData: FormData) {
   revalidatePath("/reports");
   revalidatePath(`/projects/${report.projectId}`);
   redirect(`/reports/${report.id}`);
+}
+
+export async function exportReportAction(formData: FormData) {
+  const currentUser = await getCurrentUser();
+  const request = parseReportExportRequestEntries(formData.entries());
+
+  return exportReportData(currentUser, request, {
+    auditWriter: createAuditLog,
+  });
 }

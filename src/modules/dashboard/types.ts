@@ -4,8 +4,15 @@ import type { PermissionAction } from "@/lib/permissions/can";
 import type { Project } from "@/modules/projects/types";
 import type { Task } from "@/modules/tasks/types";
 import type {
+  ExecutiveAiSummary,
+  ExecutiveAiSummaryCitation,
+  ExecutiveAiSummaryStatus,
+} from "@/modules/ai/types";
+import type {
   ApprovalEscalationState,
   ApprovalOverdueState,
+  ExecutiveRiskLevel,
+  RiskStatusSuggestion,
 } from "@/modules/executive/types";
 
 export type DashboardSummary = {
@@ -73,6 +80,7 @@ export type ExecutiveDrilldownLinkedRecordType =
   | ExecutiveDashboardSourceType
   | "document"
   | "legal"
+  | "module"
   | "task";
 
 export type ExecutiveDrilldownLinkedRecord = {
@@ -121,6 +129,7 @@ export type ExecutiveDashboardSourceItem = {
   tone: ExecutiveDashboardTone;
   owner?: string;
   deadline?: string;
+  moduleId?: string;
   reason?: string;
   overdue?: ApprovalOverdueState;
   escalation?: ApprovalEscalationState;
@@ -149,8 +158,37 @@ export type ExecutiveDashboardPermissions = {
   canViewMeetings: boolean;
   canViewDecisions: boolean;
   canViewRisk: boolean;
+  canCreateRisk: boolean;
+  canUpdateRisk: boolean;
+  canOverrideRisk: boolean;
+  canCloseRisk: boolean;
+  canCloseHighRisk: boolean;
   canViewFinance: boolean;
   canDrillDown: boolean;
+};
+
+export type ExecutiveRiskMutationOption = {
+  id: string;
+  label: string;
+};
+
+export type ExecutiveRiskDelegationOption = {
+  delegationId: string;
+  principalUserId: string;
+  label: string;
+  actionKeys: PermissionAction[];
+  organizationId?: string;
+  projectId?: string;
+  axisId?: string;
+  workstreamId?: string;
+  moduleId?: string;
+};
+
+export type ExecutiveRiskMutationOptions = {
+  categories: ExecutiveRiskMutationOption[];
+  projects: ExecutiveRiskMutationOption[];
+  owners: ExecutiveRiskMutationOption[];
+  delegations: ExecutiveRiskDelegationOption[];
 };
 
 export type ExecutiveProjectPortfolioItem = ExecutiveDashboardSourceItem & {
@@ -218,15 +256,60 @@ export type ExecutiveApprovalSummary = {
   items: ExecutiveApprovalItem[];
 };
 
+export type ExecutiveRiskLikelihood = "low" | "medium" | "high";
+
+export type ExecutiveRiskMapCategorySummary = {
+  categoryKey: string;
+  categoryLabel: string;
+  count: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  affectedProjectCount: number;
+  affectedProjectIds: string[];
+  nearestDeadline?: string;
+  owners: string[];
+  statusCounts: Record<"green" | "yellow" | "red", number>;
+};
+
+export type ExecutiveRiskMatrixCell = {
+  likelihood: ExecutiveRiskLikelihood;
+  likelihoodLabel: string;
+  impact: ExecutiveRiskLevel;
+  impactLabel: string;
+  count: number;
+  riskIds: string[];
+};
+
+export type ExecutiveRiskMap = {
+  total: number;
+  affectedProjectCount: number;
+  categories: ExecutiveRiskMapCategorySummary[];
+  matrix: ExecutiveRiskMatrixCell[];
+};
+
 export type ExecutiveRiskItem = ExecutiveDashboardSourceItem & {
-  severity: "low" | "medium" | "high" | "critical";
+  severity: ExecutiveRiskLevel;
+  severityLabel: string;
+  likelihood: ExecutiveRiskLikelihood;
+  likelihoodLabel: string;
+  impact: ExecutiveRiskLevel;
+  impactLabel: string;
+  matrixCellLabel: string;
+  nextAction: string;
+  ownerId?: string;
   category?: string;
+  categoryKey: string;
+  categoryLabel: string;
+  statusSuggestion: RiskStatusSuggestion;
 };
 
 export type ExecutiveRiskSummary = {
   critical: number;
   high: number;
   byCategory: Record<string, number>;
+  riskMap: ExecutiveRiskMap;
   items: ExecutiveRiskItem[];
 };
 
@@ -271,32 +354,28 @@ export type ExecutiveDashboardData = {
   financialSummary: ExecutiveFinancialSummary;
   approvalSummary: ExecutiveApprovalSummary;
   riskSummary: ExecutiveRiskSummary;
+  riskMutationOptions: ExecutiveRiskMutationOptions;
   todayDeadlines: ExecutiveDeadlineSummary;
   recentDecisions: ExecutiveRecentDecisions;
   meetingSnapshot: ExecutiveMeetingSnapshot;
   sourceCounts: ExecutiveDashboardSourceCounts;
 };
 
-export type ExecutiveMorningBriefingCitation = {
-  id: string;
+export type ExecutiveMorningBriefingCitation = Omit<
+  ExecutiveAiSummaryCitation,
+  "sourceType"
+> & {
   sourceType: ExecutiveDashboardSourceType;
-  sourceId: string;
-  projectId?: string;
-  title: string;
-  href?: string;
 };
 
-export type ExecutiveMorningBriefingSummaryStatus =
-  | "draft"
-  | "placeholder"
-  | "insufficient_context";
+export type ExecutiveMorningBriefingSummaryStatus = ExecutiveAiSummaryStatus;
 
-export type ExecutiveMorningBriefingSummary = {
+export type ExecutiveMorningBriefingSummary = Omit<
+  ExecutiveAiSummary,
+  "citations" | "status"
+> & {
   status: ExecutiveMorningBriefingSummaryStatus;
-  text: string;
   citations: ExecutiveMorningBriefingCitation[];
-  generatedFrom: string[];
-  updatedAt: string;
 };
 
 export type ExecutiveMorningBriefingProjectHealth = {
@@ -359,6 +438,7 @@ export type ExecutiveCommonCenterRiskOverview = {
   critical: number;
   high: number;
   byCategory: Record<string, number>;
+  riskMap: ExecutiveRiskMap;
   items: ExecutiveRiskItem[];
 };
 

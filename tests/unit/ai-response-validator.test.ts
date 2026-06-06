@@ -38,6 +38,28 @@ describe("AI response validator", () => {
     expect(result.reasons.some((reason) => reason.code === "citation_required")).toBe(true);
   });
 
+  it("blocks internal factual answers without citations when citable context exists", () => {
+    const result = validateAiResponse({
+      responseText: "Du an co mot task qua han can xu ly.",
+      module: "project",
+      promptPackage: promptWithCitation("project")
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.reasons.some((reason) => reason.code === "citation_required")).toBe(true);
+  });
+
+  it("blocks task-only internal factual answers without citations", () => {
+    const result = validateAiResponse({
+      responseText: "Cong viec can xu ly ngay.",
+      module: "tasks",
+      promptPackage: promptWithCitation("tasks")
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.reasons.some((reason) => reason.code === "citation_required")).toBe(true);
+  });
+
   it("does not block missing-data legal answers without citations", () => {
     const result = validateAiResponse({
       responseText: "Chua du du lieu duoc phep xem de ket luan. Can kiem tra them ho so phap ly.",
@@ -46,6 +68,17 @@ describe("AI response validator", () => {
     });
 
     expect(result.status).toBe("valid");
+  });
+
+  it("blocks mixed insufficient-data answers that also make uncited internal claims", () => {
+    const result = validateAiResponse({
+      responseText: "Chua du du lieu de ket luan day du, nhung du an co mot task qua han.",
+      module: "project",
+      promptPackage: promptWithCitation("project")
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.reasons.some((reason) => reason.code === "citation_required")).toBe(true);
   });
 
   it("blocks claims about unapproved sources", () => {

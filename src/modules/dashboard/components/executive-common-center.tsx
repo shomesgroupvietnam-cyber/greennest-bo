@@ -20,6 +20,7 @@ import type {
   ExecutiveCommonCenterStrategyItem,
   ExecutiveDashboardSourceItem,
   ExecutiveDashboardTone,
+  ExecutiveRiskItem,
 } from "@/modules/dashboard/types";
 
 const toneClasses: Record<ExecutiveDashboardTone, string> = {
@@ -115,6 +116,23 @@ function ApprovalMeta({ item }: { item: ExecutiveDashboardSourceItem }) {
   );
 }
 
+type RiskLabeledItem = ExecutiveDashboardSourceItem &
+  Pick<
+    ExecutiveRiskItem,
+    "categoryLabel" | "impactLabel" | "likelihoodLabel" | "severityLabel" | "statusSuggestion"
+  >;
+
+function isRiskLabeledItem(item: ExecutiveDashboardSourceItem): item is RiskLabeledItem {
+  return (
+    item.sourceType === "risk" &&
+    "categoryLabel" in item &&
+    "impactLabel" in item &&
+    "likelihoodLabel" in item &&
+    "severityLabel" in item &&
+    "statusSuggestion" in item
+  );
+}
+
 function SourceList<T extends ExecutiveDashboardSourceItem>({
   canDrillDown,
   emptyLabel,
@@ -141,6 +159,25 @@ function SourceList<T extends ExecutiveDashboardSourceItem>({
             <span className="mt-1 block text-xs leading-5 text-slate-600">
               {item.reason ?? item.status}
             </span>
+            {isRiskLabeledItem(item) ? (
+              <span className="mt-2 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-md bg-red-50 px-2 py-0.5 font-semibold text-red-800">
+                  {item.severityLabel}
+                </span>
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+                  {item.categoryLabel}
+                </span>
+                <span className="rounded-md bg-blue-50 px-2 py-0.5 font-semibold text-blue-800">
+                  {item.likelihoodLabel}
+                </span>
+                <span className="rounded-md bg-purple-50 px-2 py-0.5 font-semibold text-purple-800">
+                  {item.impactLabel}
+                </span>
+                <span className="rounded-md bg-white px-2 py-0.5 font-semibold text-slate-600 ring-1 ring-slate-200">
+                  Gợi ý {item.statusSuggestion.labelVi}
+                </span>
+              </span>
+            ) : null}
             <ApprovalMeta item={item} />
             <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
               {item.owner ? <span>Owner: {item.owner}</span> : null}
@@ -229,6 +266,22 @@ function PriorityArea({
                   <span className="rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                     {item.status}
                   </span>
+                  {isRiskLabeledItem(item) ? (
+                    <>
+                      <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800">
+                        {item.severityLabel}
+                      </span>
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                        {item.categoryLabel}
+                      </span>
+                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800">
+                        {item.likelihoodLabel}
+                      </span>
+                      <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800">
+                        {item.impactLabel}
+                      </span>
+                    </>
+                  ) : null}
                 </span>
                 <span className="mt-2 block break-words text-sm font-semibold text-slate-950">
                   {item.title}
@@ -356,16 +409,16 @@ function RiskOverview({
   return (
     <SectionShell
       icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
-      label="Risk tong"
+      label="Risk tổng"
     >
       <div className="grid grid-cols-2 gap-2 text-center text-xs">
         <div className="rounded-md border border-red-200 bg-red-50 p-2 text-red-800">
           <p className="font-semibold">{data.riskOverview.critical}</p>
-          <p>Critical</p>
+          <p>Nghiêm trọng</p>
         </div>
         <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-amber-800">
           <p className="font-semibold">{data.riskOverview.high}</p>
-          <p>High</p>
+          <p>Cao</p>
         </div>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">

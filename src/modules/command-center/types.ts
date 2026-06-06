@@ -18,6 +18,7 @@ import type {
   ExecutiveAccessibleScope,
   ExecutiveAccessPolicy,
   ApprovalCenterData,
+  DecisionAssignmentCenterData,
   ExecutiveAxisDefinition,
   ExecutiveCommandCenterSnapshot,
   ExecutiveDashboardLayer,
@@ -36,6 +37,7 @@ import type {
   LeadershipMeeting,
   StrategicInvestmentPlan,
 } from "@/modules/executive/types";
+import type { HistoryArchiveCenterData } from "@/modules/reports/types";
 
 export type CommandCenterTone =
   | "blue"
@@ -188,6 +190,8 @@ export type CommandCenterAxisOneDashboardData = {
 export type CommandCenterData = {
   axes: CommandCenterAxis[];
   approvalCenter: ApprovalCenterData | null;
+  decisionAssignmentCenter: DecisionAssignmentCenterData | null;
+  historyArchiveCenter: HistoryArchiveCenterData | null;
   availableViews: {
     notifications: boolean;
     operationsDashboard: boolean;

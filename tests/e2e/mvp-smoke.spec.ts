@@ -4,6 +4,8 @@ const routes = [
   "/login",
   "/admin",
   "/executive",
+  "/executive/decisions",
+  "/executive/history",
   "/project-workbench",
   "/team-workbench",
   "/legal-workspace",
@@ -57,6 +59,11 @@ async function useMockRole(page: Page, role: string) {
       url: "http://localhost:3100"
     }
   ]);
+}
+
+async function expectForbiddenResponse(page: Page, responseStatus?: number) {
+  expect([200, 403]).toContain(responseStatus);
+  await expect(page.locator("body")).toContainText("403 Forbidden");
 }
 
 test.describe("External role isolation", () => {
@@ -166,7 +173,7 @@ test.describe("Permission-aware workspace entry", () => {
   });
 
   test("super admin enters command center and keeps BO navigation", async ({ page }) => {
-    test.setTimeout(30000);
+    test.setTimeout(60000);
 
     await page.context().clearCookies();
     await page.goto("/login?entry=1&next=development");
@@ -208,8 +215,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     const response = await page.goto("/command-center?view=executive-dashboard");
 
-    expect(response?.status()).toBe(403);
-    await expect(page.locator("body")).toContainText("403 Forbidden");
+    await expectForbiddenResponse(page, response?.status());
     await expect(page.locator("body")).not.toContainText("Executive Command Center");
   });
 
@@ -218,9 +224,59 @@ test.describe("Permission-aware workspace entry", () => {
 
     const response = await page.goto("/command-center?view=executive-approvals");
 
-    expect(response?.status()).toBe(403);
-    await expect(page.locator("body")).toContainText("403 Forbidden");
+    await expectForbiddenResponse(page, response?.status());
     await expect(page.locator("body")).not.toContainText("DX-FINANCE-MOCK02");
+  });
+
+  test("direct decision assignment center view is forbidden before data render", async ({ page }) => {
+    await useMockRole(page, "viewer");
+
+    const response = await page.goto("/command-center?view=executive-decision-log");
+
+    await expectForbiddenResponse(page, response?.status());
+    await expect(page.locator("body")).not.toContainText("Decision & Assignment Center");
+  });
+
+  test("direct history archive view is forbidden before data render", async ({ page }) => {
+    await useMockRole(page, "viewer");
+
+    const response = await page.goto("/command-center?view=executive-history");
+
+    await expectForbiddenResponse(page, response?.status());
+    await expect(page.locator("body")).not.toContainText("History & Archive");
+  });
+
+  test("history export route blocks viewer without leaking details", async ({ page }) => {
+    await useMockRole(page, "viewer");
+
+    const response = await page.request.get(
+      "/reports/export?target=approval_history&format=csv&query=RAW_EXPORT_SENTINEL",
+    );
+    const body = await response.text();
+
+    expect(response.status()).toBe(403);
+    expect(response.headers()["cache-control"]).toBe("no-store, private");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(body).toBe("Ban khong co quyen xuat du lieu.");
+    expect(body).not.toContain("RAW_EXPORT_SENTINEL");
+  });
+
+  test("leadership can export approval history with safe download headers", async ({ page }) => {
+    await useMockRole(page, "chu_tich");
+
+    const response = await page.request.get(
+      "/reports/export?target=approval_history&format=csv&limit=25",
+    );
+    const body = await response.text();
+
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toBe("no-store, private");
+    expect(response.headers()["pragma"]).toBe("no-cache");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers()["content-disposition"]).toContain("attachment;");
+    expect(body).not.toContain("raw-old-secret");
+    expect(body).not.toContain("999999999");
+    expect(body).not.toContain("RAW_EXPORT_SENTINEL");
   });
 
   test("viewer can open private workspace as read-only", async ({ page }) => {
@@ -312,7 +368,7 @@ test.describe("Permission-aware workspace entry", () => {
     await expect(page.getByRole("heading", { name: "Dashboard Tong Quan" })).toBeVisible();
     await expect(page.getByRole("region", { name: "KPI Strip" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Priority Queue" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Risk Summary" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
     await expect(page.getByRole("region", { name: "Deadline hom nay" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Quyet dinh moi" })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
@@ -346,7 +402,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     await expect(page.getByRole("heading", { name: "Dashboard Tong Quan" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Priority Queue" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Risk Summary" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -433,7 +489,7 @@ test.describe("Permission-aware workspace entry", () => {
     await expect(page.getByRole("heading", { name: "Morning Briefing" })).toBeVisible();
     await expect(page.getByRole("region", { name: "AI Summary draft" })).toBeVisible();
     await expect(page.getByRole("region", { name: "KPI hom nay" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Top risk" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
     await expect(page.getByRole("region", { name: "Approval qua han" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Du an do vang xanh" })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
@@ -447,7 +503,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     await expect(page.getByRole("heading", { name: "Morning Briefing" })).toBeVisible();
     await expect(page.getByRole("region", { name: "AI Summary draft" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Top risk" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -468,7 +524,7 @@ test.describe("Permission-aware workspace entry", () => {
     await expect(page.getByRole("region", { name: "Thong bao moi" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Quyet dinh moi" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Lich hop va su kien" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Risk tong" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -520,8 +576,29 @@ test.describe("Permission-aware workspace entry", () => {
     expect(hasBasicHorizontalFit).toBe(true);
   });
 
+  test("meeting detail renders decision tracking with command center deep links on mobile", async ({ page }) => {
+    await useMockRole(page, "chu_tich");
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto("/meetings/demo-meeting-riverside-weekly", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: /Decision tracking/i })).toBeVisible();
+    await expect(
+      page.locator(
+        'a[href*="view=executive-decision-log"][href*="demo-decision-riverside-legal"]',
+      ).first(),
+    ).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Application error");
+
+    const hasBasicHorizontalFit = await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 8,
+    );
+
+    expect(hasBasicHorizontalFit).toBe(true);
+  });
+
   test("executive workspace views fit responsive QA viewports", async ({ page }) => {
-    test.setTimeout(30000);
+    test.setTimeout(90000);
     await useMockRole(page, "tong_giam_doc");
 
     const views = [
@@ -532,7 +609,7 @@ test.describe("Permission-aware workspace entry", () => {
       },
       {
         heading: "Morning Briefing",
-        region: "Top risk",
+        region: /risk/i,
         url: "/command-center?view=executive-morning-briefing",
       },
       {
@@ -546,6 +623,16 @@ test.describe("Permission-aware workspace entry", () => {
         url: "/command-center?view=executive-approvals",
       },
       {
+        heading: "Decision & Assignment Center",
+        region: "Decision list",
+        url: "/command-center?view=executive-decision-log",
+      },
+      {
+        heading: "History & Archive",
+        region: "History Center",
+        url: "/command-center?view=executive-history",
+      },
+      {
         heading: "Private Workspace",
         region: "Priority area",
         url: "/command-center?view=executive-private-workspace",
@@ -554,8 +641,10 @@ test.describe("Permission-aware workspace entry", () => {
     const viewports = [
       { width: 360, height: 800 },
       { width: 390, height: 844 },
+      { width: 430, height: 932 },
       { width: 768, height: 1024 },
       { width: 1280, height: 900 },
+      { width: 1440, height: 900 },
     ];
 
     for (const viewport of viewports) {

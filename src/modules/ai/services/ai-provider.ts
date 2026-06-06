@@ -106,6 +106,11 @@ export class MockAiProvider implements AiProvider {
   }
 
   async generateAnswer(input: AiGenerateAnswerInput): Promise<AiGenerateAnswerResult> {
+    const citationRefs = input.promptPackage?.citations
+      .slice(0, 3)
+      .map((citation) => `[${citation.citationId}]`)
+      .join(" ");
+
     return {
       metadata: this.metadata,
       text: [
@@ -113,7 +118,7 @@ export class MockAiProvider implements AiProvider {
         `Intent route: primary=${input.routingPlan.primaryModule}; support=${input.routingPlan.supportingModules.join(", ") || "none"}.`,
         `Yeu cau: ${input.job.payload.prompt.slice(0, 220)}`,
         `Context module: ${input.contextBlocks.map((block) => `${block.title} (${block.recordCount})`).join("; ") || "khong co du lieu trong scope"}.`,
-        `Da dinh kem ${input.citations.length} citation tu du lieu duoc phep xem va Knowledge Center da duyet.`,
+        `Da dinh kem ${input.citations.length} citation tu du lieu duoc phep xem va Knowledge Center da duyet${citationRefs ? ` ${citationRefs}` : ""}.`,
         input.actionProposalCount > 0
           ? `Da tao ${input.actionProposalCount} de xuat hanh dong o trang thai proposed; khong thay doi du lieu nghiep vu.`
           : undefined,

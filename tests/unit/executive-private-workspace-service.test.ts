@@ -36,6 +36,17 @@ function delegation(input: Partial<LeadershipDelegation> & Pick<LeadershipDelega
   };
 }
 
+function fixtureRiskStatus(status: "green" | "yellow" | "red", labelVi: string) {
+  return {
+    confirmationState: "suggested" as const,
+    generatedAt: "2026-05-24T00:00:00.000Z",
+    labelVi,
+    reason: `Fixture risk status ${status}`,
+    sourceData: [],
+    status,
+  };
+}
+
 async function buildDashboardPatch(): Promise<ExecutiveDashboardData> {
   const dashboard = await getExecutiveDashboardData(
     { id: "ceo-01", role: "tong_giam_doc" },
@@ -73,11 +84,21 @@ async function buildDashboardPatch(): Promise<ExecutiveDashboardData> {
       items: [
         {
           ...base,
-          category: "Schedule",
+          category: "schedule",
+          categoryKey: "schedule",
+          categoryLabel: "Tiến độ",
           id: "duplicate-risk-high",
+          impact: "critical",
+          impactLabel: "Nghiem trong",
+          likelihood: "high",
+          likelihoodLabel: "Kha nang cao",
+          matrixCellLabel: "Kha nang cao x Nghiem trong",
+          nextAction: "Review duplicate risk priority",
           severity: "critical",
+          severityLabel: "Nghiêm trọng",
           sourceId: "shared-source",
           sourceType: "executive_action",
+          statusSuggestion: fixtureRiskStatus("red", "Đỏ"),
           title: "Duplicate risk higher priority",
           tone: "red",
         },
@@ -117,6 +138,9 @@ describe("executive private workspace service", () => {
         canViewProjects: true,
         canViewProposals: true,
         canCreateProposal: true,
+        canOverrideRisk: true,
+        canCloseRisk: true,
+        canCloseHighRisk: true,
         mutationMode: "allowed",
       }),
       scope: expect.objectContaining({ selectedScopeId: "all", operatingRole: "CEO" }),
@@ -124,6 +148,11 @@ describe("executive private workspace service", () => {
     expect(workspace?.kpis.length).toBeGreaterThan(0);
     expect(workspace?.priorityItems.length).toBeGreaterThan(0);
     expect(workspace?.assignedProjects.length).toBeGreaterThan(0);
+    expect(workspace?.aiSummary).toMatchObject({
+      status: "placeholder",
+      actionProposals: [],
+    });
+    expect(workspace?.aiSummary.citations.length).toBeGreaterThan(0);
     expect(workspace?.priorityItems[0]).toMatchObject({
       groupLabel: expect.any(String),
       priorityLabel: expect.any(String),
@@ -198,6 +227,10 @@ describe("executive private workspace service", () => {
         mutationMode: "none",
       }),
       sourceCounts: expect.objectContaining({ projects: 0, meetings: 0 }),
+      aiSummary: expect.objectContaining({
+        citations: [],
+        status: "insufficient_context",
+      }),
     });
     expect(workspace?.assignedProjects).toEqual([]);
     expect(workspace?.priorityItems).toEqual([]);
@@ -221,7 +254,7 @@ describe("executive private workspace service", () => {
     );
 
     expect(workspace?.priorityItems[0]).toMatchObject({
-      priorityLabel: "Critical",
+      priorityLabel: "Nghiêm trọng",
       title: "Duplicate risk higher priority",
     });
     expect(duplicateItems).toHaveLength(1);
@@ -403,6 +436,51 @@ describe("executive private workspace service", () => {
     expect(JSON.stringify(workspace?.assistantSupport)).not.toContain("proposal.approve");
   });
 
+  it("allows delegated risk override but strips sensitive risk close actions", async () => {
+    const workspace = await getExecutivePrivateWorkspaceData(
+      {
+        id: "assistant-01",
+        permissions: ["project.view", "meeting.view"],
+        permissionsMode: "replace",
+        role: "thu_ky_tro_ly",
+      },
+      {
+        delegations: [
+          delegation({
+            actionKeys: ["risk.override", "risk.close", "risk.close_high"],
+            id: "delegation-risk-override-only",
+            moduleId: "risk",
+          }),
+        ],
+        rolePermissionCatalog,
+        scopeAssignments: [
+          assignment({
+            id: "scope-assistant-riverside",
+            roleKey: "thu_ky_tro_ly",
+            userId: "assistant-01",
+            projectId: "demo-project-riverside",
+          }),
+        ],
+        selectedScopeId: "scope-assistant-riverside",
+        today,
+      },
+    );
+
+    expect(workspace?.permissions).toMatchObject({
+      canOverrideRisk: true,
+      canCloseRisk: false,
+      canCloseHighRisk: false,
+      mutationMode: "delegated_only",
+    });
+    expect(workspace?.assistantSupport.allowedActions.map((action) => action.actionKey)).toEqual([
+      "risk.override",
+    ]);
+    expect(workspace?.assistantSupport.delegations[0]?.actionKeys).toEqual([
+      "risk.override",
+    ]);
+    expect(JSON.stringify(workspace?.assistantSupport)).not.toContain("risk.close");
+  });
+
   it("keeps active but out-of-scope delegations disabled with a reason", async () => {
     const workspace = await getExecutivePrivateWorkspaceData(
       {
@@ -495,10 +573,21 @@ describe("executive private workspace service", () => {
             items: [
               {
                 ...base,
+                category: "operation",
+                categoryKey: "operation",
+                categoryLabel: "Vận hành / phối hợp",
                 id: "low-risk",
+                impact: "low",
+                impactLabel: "Thap",
+                likelihood: "low",
+                likelihoodLabel: "Kha nang thap",
+                matrixCellLabel: "Kha nang thap x Thap",
+                nextAction: "Monitor low risk",
                 severity: "low",
+                severityLabel: "Thấp",
                 sourceId: "low-risk",
                 sourceType: "risk",
+                statusSuggestion: fixtureRiskStatus("green", "Xanh"),
                 title: "Low risk item",
                 tone: "blue",
               },
@@ -555,6 +644,10 @@ describe("executive private workspace service", () => {
       }),
     });
     expect(workspace?.assistantSupport.allowedActions).toEqual([]);
+    expect(workspace?.aiSummary).toMatchObject({
+      status: "unavailable",
+      actionProposals: [],
+    });
     expect(serialized).not.toContain("amount");
     expect(serialized).not.toContain("cashFlowLabel");
     expect(serialized).not.toContain("budget");

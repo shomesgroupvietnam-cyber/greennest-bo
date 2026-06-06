@@ -66,6 +66,109 @@ describe("CommandCenterPage", () => {
     );
   });
 
+  it("passes executive history archive filters from the URL to command-center data", async () => {
+    const user = { id: "ceo-01", role: "tong_giam_doc" };
+    vi.mocked(requireWorkspaceRoute).mockResolvedValueOnce({
+      defaultScreen: {
+        href: "/command-center?view=executive-dashboard",
+        label: "Lanh dao",
+      },
+      isAuthenticated: true,
+      isFallback: false,
+      mode: "mock",
+      permissions: [],
+      user: {
+        ...user,
+        email: "ceo@greennest.vn",
+        fullName: "CEO",
+        status: "active",
+      },
+    });
+    vi.mocked(getCommandCenterData).mockResolvedValueOnce(
+      {} as Awaited<ReturnType<typeof getCommandCenterData>>,
+    );
+
+    await CommandCenterPage({
+      searchParams: Promise.resolve({
+        actorId: "leader-01",
+        dateFrom: "2026-06-01",
+        dateTo: "2026-06-03",
+        limit: "50",
+        module: "approvals",
+        projectId: "project-a",
+        query: "DX-001",
+        scopeId: "scope-a",
+        severity: "critical",
+        status: "approved",
+        type: "approval",
+        view: "executive-history",
+      }),
+    });
+
+    expect(getCommandCenterData).toHaveBeenCalledWith(
+      expect.objectContaining(user),
+      {
+        historyArchiveFilters: {
+          actorId: "leader-01",
+          dateFrom: "2026-06-01T00:00:00.000Z",
+          dateTo: "2026-06-03T23:59:59.999Z",
+          limit: 50,
+          module: "approvals",
+          projectId: "project-a",
+          query: "DX-001",
+          severity: "critical",
+          status: "approved",
+          type: "approval",
+        },
+        selectedScopeId: "scope-a",
+      },
+    );
+  });
+
+  it("normalizes invalid executive history URL filters before data fetch", async () => {
+    const user = { id: "ceo-01", role: "tong_giam_doc" };
+    vi.mocked(requireWorkspaceRoute).mockResolvedValueOnce({
+      defaultScreen: {
+        href: "/command-center?view=executive-dashboard",
+        label: "Lanh dao",
+      },
+      isAuthenticated: true,
+      isFallback: false,
+      mode: "mock",
+      permissions: [],
+      user: {
+        ...user,
+        email: "ceo@greennest.vn",
+        fullName: "CEO",
+        status: "active",
+      },
+    });
+    vi.mocked(getCommandCenterData).mockResolvedValueOnce(
+      {} as Awaited<ReturnType<typeof getCommandCenterData>>,
+    );
+
+    await CommandCenterPage({
+      searchParams: Promise.resolve({
+        dateFrom: "2026-02-31",
+        limit: "9999",
+        module: "bad-module",
+        severity: "bad-severity",
+        type: "bad-type",
+        view: "executive-history",
+      }),
+    });
+
+    expect(getCommandCenterData).toHaveBeenCalledWith(
+      expect.objectContaining(user),
+      {
+        historyArchiveFilters: {
+          limit: 100,
+        },
+        selectedScopeId: undefined,
+      },
+    );
+  });
+
   it("allows chairman top-level command center before data fetch", async () => {
     const user = { id: "chairman-01", role: "chu_tich" };
     vi.mocked(requireAuthenticatedSession).mockResolvedValueOnce({

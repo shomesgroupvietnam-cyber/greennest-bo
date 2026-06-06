@@ -248,6 +248,7 @@ const executiveCommandCenterViews = new Set([
   "executive-directives",
   "executive-meetings",
   "executive-decision-log",
+  "executive-history",
 ]);
 
 const operationsCommandCenterViews = new Set(["operations-dashboard"]);

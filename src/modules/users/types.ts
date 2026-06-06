@@ -38,3 +38,10 @@ export type AuditLog = {
   newValue?: unknown;
   createdAt: string;
 };
+
+export type AuditLogListFilters = {
+  action?: string;
+  actorId?: EntityId;
+  entityId?: EntityId;
+  entityType?: string;
+};

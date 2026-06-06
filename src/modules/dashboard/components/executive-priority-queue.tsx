@@ -6,6 +6,7 @@ import { AlertTriangle, CalendarClock, ChevronRight, CircleDollarSign, FileText 
 import type {
   ExecutiveDashboardSourceItem,
   ExecutiveDashboardTone,
+  ExecutiveRiskItem,
 } from "@/modules/dashboard/types";
 
 export type ExecutivePriorityQueueItem = ExecutiveDashboardSourceItem & {
@@ -105,6 +106,23 @@ function ApprovalMeta({ item }: { item: ExecutivePriorityQueueItem }) {
   );
 }
 
+type RiskPriorityQueueItem = ExecutivePriorityQueueItem &
+  Pick<
+    ExecutiveRiskItem,
+    "categoryLabel" | "impactLabel" | "likelihoodLabel" | "severityLabel" | "statusSuggestion"
+  >;
+
+function isRiskPriorityQueueItem(item: ExecutivePriorityQueueItem): item is RiskPriorityQueueItem {
+  return (
+    item.sourceType === "risk" &&
+    "categoryLabel" in item &&
+    "impactLabel" in item &&
+    "likelihoodLabel" in item &&
+    "severityLabel" in item &&
+    "statusSuggestion" in item
+  );
+}
+
 export function ExecutivePriorityQueue({
   canDrillDown,
   emptyLabel,
@@ -151,6 +169,25 @@ export function ExecutivePriorityQueue({
                     <span className="rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                       {item.status}
                     </span>
+                    {isRiskPriorityQueueItem(item) ? (
+                      <>
+                        <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800">
+                          {item.severityLabel}
+                        </span>
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                          {item.categoryLabel}
+                        </span>
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800">
+                          {item.likelihoodLabel}
+                        </span>
+                        <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800">
+                          {item.impactLabel}
+                        </span>
+                        <span className="rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                          Gợi ý {item.statusSuggestion.labelVi}
+                        </span>
+                      </>
+                    ) : null}
                   </span>
                   <span className="mt-2 block break-words text-sm font-semibold text-slate-950">
                     {item.title}

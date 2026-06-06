@@ -58,6 +58,7 @@ values
   ('decision.approve', 'meeting', 'Approve decisions'),
   ('report.view', 'report', 'View report snapshots'),
   ('report.create', 'report', 'Create report snapshots'),
+  ('report.export', 'report', 'Export scoped report data'),
   ('knowledge.view', 'knowledge', 'View governed Knowledge Center items'),
   ('knowledge.create', 'knowledge', 'Create or import knowledge sources'),
   ('knowledge.create_candidate', 'knowledge', 'Create Knowledge Candidates from chat, search, upload, meetings, reports, documents or manual input'),
@@ -81,6 +82,12 @@ values
   ('finance.approve', 'finance', 'Approve finance records'),
   ('payment.request', 'finance', 'Request payments'),
   ('payment.approve', 'finance', 'Approve payments'),
+  ('risk.view', 'risk', 'View executive risks and risk status suggestions'),
+  ('risk.create', 'risk', 'Create official executive risk/blocker records'),
+  ('risk.update', 'risk', 'Update open official executive risk/blocker records'),
+  ('risk.override', 'risk', 'Confirm or override suggested red/yellow/green risk status'),
+  ('risk.close', 'risk', 'Close or resolve official low/medium risk/blocker records'),
+  ('risk.close_high', 'risk', 'Close or resolve high/critical executive risk/blocker records'),
   ('user.view', 'admin', 'View users'),
   ('user.invite', 'admin', 'Invite users'),
   ('user.update_role', 'admin', 'Update user roles'),
@@ -108,10 +115,11 @@ with role_permission_seed(role_key, permission_keys) as (
       'document.view','document.create','document.update','document.approve','document.archive',
       'legal.view','legal.update','legal.approve',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
       'design.view','design.review','construction.view',
       'finance.view','finance.approve','payment.approve',
+      'risk.view','risk.create','risk.update','risk.override','risk.close','risk.close_high',
       'audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('super_admin', array[
@@ -121,11 +129,12 @@ with role_permission_seed(role_key, permission_keys) as (
       'document.view','document.create','document.update','document.approve','document.archive',
       'legal.view','legal.update','legal.approve','legal.configure_template',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.create_candidate','knowledge.promote','knowledge.review','knowledge.approve','knowledge.manage_source_registry',
       'design.view','design.create','design.update','design.review','design.approve_change',
       'construction.view','construction.update','site_diary.create','quality.update','acceptance.approve',
       'finance.view','finance.create','finance.update','finance.approve','payment.request','payment.approve',
+      'risk.view','risk.create','risk.update','risk.override','risk.close','risk.close_high',
       'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
       'ai.use','ai.ask','ai.use_rag','ai.view_insight','ai.create_draft','ai.propose_action','ai.confirm_action','ai.configure'
     ]),
@@ -136,11 +145,12 @@ with role_permission_seed(role_key, permission_keys) as (
       'document.view','document.create','document.update','document.approve','document.archive',
       'legal.view','legal.update','legal.approve','legal.configure_template',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review',
       'design.view','design.create','design.update','design.review',
       'construction.view','construction.update','site_diary.create','quality.update',
       'finance.view','payment.request',
+      'risk.view',
       'user.view','user.invite','user.update_role','settings.manage','delegation.manage','audit.view',
       'ai.use','ai.view_insight','ai.confirm_action'
     ]),
@@ -150,9 +160,10 @@ with role_permission_seed(role_key, permission_keys) as (
       'task.view','task.create','task.update','task.archive',
       'document.view','legal.view','legal.approve',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
       'design.view','construction.view','finance.view','finance.approve','payment.approve',
+      'risk.view','risk.create','risk.update','risk.override','risk.close','risk.close_high',
       'user.view','delegation.manage','audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('pho_tong_giam_doc', array[
@@ -160,29 +171,29 @@ with role_permission_seed(role_key, permission_keys) as (
       'task.view','task.create','task.update','task.archive',
       'document.view','legal.view','legal.approve',
       'meeting.view','meeting.create','meeting.update','decision.create','decision.approve',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
-      'design.view','construction.view','finance.view','delegation.manage','audit.view','ai.use','ai.view_insight','ai.confirm_action'
+      'design.view','construction.view','finance.view','risk.view','risk.create','risk.update','risk.override','risk.close','risk.close_high','delegation.manage','audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('giam_doc_du_an', array[
       'project.view','project.create','project.update','project.archive','project.assign_member',
       'task.view','task.create','task.update','task.archive',
       'document.view','document.create','document.update','document.archive',
       'legal.view','legal.update','meeting.view','meeting.create','meeting.update','decision.create',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
       'design.view','design.create','design.update','construction.view','construction.update',
-      'finance.view','audit.view','ai.use','ai.view_insight','ai.confirm_action'
+      'finance.view','risk.view','risk.create','risk.update','risk.override','risk.close','audit.view','ai.use','ai.view_insight','ai.confirm_action'
     ]),
     ('quan_ly_du_an', array[
       'project.view','project.create','project.update',
       'task.view','task.create','task.update',
       'document.view','document.create','document.update',
       'legal.view','legal.update','meeting.view','meeting.create','meeting.update','decision.create',
-      'report.view','report.create',
+      'report.view','report.create','report.export',
       'knowledge.view','knowledge.create','knowledge.review','knowledge.approve',
       'design.view','design.create','design.update','construction.view','construction.update',
-      'finance.view','audit.view','ai.use','ai.view_insight'
+      'finance.view','risk.view','risk.create','risk.update','audit.view','ai.use','ai.view_insight'
     ]),
     ('to_truong', array[
       'project.view','task.view','task.create','task.update_own','document.view','meeting.view','report.view','knowledge.view',
@@ -229,12 +240,12 @@ with role_permission_seed(role_key, permission_keys) as (
       'project.view','task.view','task.create','task.update',
       'document.view','document.create','document.update',
       'legal.view','legal.update',
-      'meeting.view','meeting.create','meeting.update','decision.create','report.view','report.create','knowledge.view','knowledge.create',
+      'meeting.view','meeting.create','meeting.update','decision.create','report.view','report.create','report.export','knowledge.view','knowledge.create',
       'design.view','construction.view','ai.use','ai.view_insight'
     ]),
     ('kiem_soat_noi_bo', array[
       'project.view','task.view','document.view','legal.view','meeting.view','report.view','knowledge.view',
-      'design.view','construction.view','finance.view','audit.view','ai.use','ai.view_insight'
+      'design.view','construction.view','finance.view','risk.view','audit.view','ai.use','ai.view_insight'
     ]),
     ('nha_thau', array[
       'project.view','task.view','task.update_own','document.view','document.create','meeting.view','report.view',
@@ -246,6 +257,7 @@ with role_permission_seed(role_key, permission_keys) as (
     ]),
     ('viewer', array[
       'project.view','task.view','document.view','legal.view','meeting.view','report.view','knowledge.view','design.view','construction.view','finance.view'
+      ,'risk.view'
     ])
 )
 insert into public.role_permissions (role_id, permission_id)
@@ -342,7 +354,7 @@ with enterprise_role_permission_seed(role_key, permission_keys) as (
       'project.view','document.view','task.view','meeting.view','knowledge.view','report.view',
       'proposal.view','proposal.create','proposal.update','proposal.review',
       'investment.view','investment.create','investment.update','investment.review',
-      'finance.view','contract.view','ai.use','ai.view_insight'
+      'finance.view','risk.view','contract.view','ai.use','ai.view_insight'
     ]),
     ('quan_ly_tai_chinh', array[
       'project.view','task.view','document.view','meeting.view','knowledge.view','report.view',

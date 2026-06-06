@@ -42,6 +42,39 @@
 
 - **[4-1-decision-record-tu-approval-meeting-hoac-doc-lap.md](./4-1-decision-record-tu-approval-meeting-hoac-doc-lap.md)** - Official decision record foundation
 - **[4-2-assignment-task-tu-decision-cho-nhieu-nguoi.md](./4-2-assignment-task-tu-decision-cho-nhieu-nguoi.md)** - Multi-assignment decision tasks
+- **[4-3-version-history-khi-sua-decision-quan-trong.md](./4-3-version-history-khi-sua-decision-quan-trong.md)** - Decision version history
+- **[4-4-decision-assignment-center-ui.md](./4-4-decision-assignment-center-ui.md)** - Decision assignment center UI
+
+### Epic 5 - Risk Alert Center
+
+- **[5-1-risk-levels-categories-va-status-suggestion.md](./5-1-risk-levels-categories-va-status-suggestion.md)** - Risk levels, categories and status suggestion
+- **[5-2-risk-map-va-drill-down-matrix.md](./5-2-risk-map-va-drill-down-matrix.md)** - Risk map and drill-down matrix
+- **[5-3-tao-va-cap-nhat-risk-blocker-theo-quyen.md](./5-3-tao-va-cap-nhat-risk-blocker-theo-quyen.md)** - Create and update risk/blocker by permission
+- **[5-4-override-va-dong-risk-blocker-co-audit.md](./5-4-override-va-dong-risk-blocker-co-audit.md)** - Override and close risk/blocker with audit
+- **[5-5-risk-alert-overdue-escalation-va-draft-suggestions.md](./5-5-risk-alert-overdue-escalation-va-draft-suggestions.md)** - Risk alert overdue escalation and draft suggestions
+
+### Epic 6 - One Meeting Engine
+
+- **[6-1-meeting-engine-types-scope-va-repository-contract.md](./6-1-meeting-engine-types-scope-va-repository-contract.md)** - Meeting engine types, scope and repository contract
+- **[6-2-meeting-list-filters-va-executive-visibility.md](./6-2-meeting-list-filters-va-executive-visibility.md)** - Bộ lọc danh sách meeting và executive visibility
+- **[6-3-tao-va-sua-meeting-voi-related-records.md](./6-3-tao-va-sua-meeting-voi-related-records.md)** - Tạo và sửa meeting với related records
+- **[6-4-minutes-attachments-va-ai-summary-draft.md](./6-4-minutes-attachments-va-ai-summary-draft.md)** - Minutes, attachments và AI summary draft
+- **[6-5-follow-up-actions-lien-ket-related-tasks.md](./6-5-follow-up-actions-lien-ket-related-tasks.md)** - Follow-up actions liên kết related tasks
+- **[6-6-decision-tracking-sau-hop.md](./6-6-decision-tracking-sau-hop.md)** - Decision tracking sau họp
+
+### Epic 7 - History, Archive, Export And Audit Visibility
+
+- **[7-1-history-archive-center-service.md](./7-1-history-archive-center-service.md)** - History archive center service
+- **[7-2-search-filter-va-timeline-ui.md](./7-2-search-filter-va-timeline-ui.md)** - Search, filter and timeline UI
+- **[7-3-export-theo-permission-va-audit.md](./7-3-export-theo-permission-va-audit.md)** - Export by permission with audit
+- **[7-4-history-export-states-va-qa-nghiem-thu.md](./7-4-history-export-states-va-qa-nghiem-thu.md)** - History/export states and QA acceptance
+
+### Epic 8 - Executive AI Advisory
+
+- **[8-1-ai-gateway-voi-permission-context-va-citation.md](./8-1-ai-gateway-voi-permission-context-va-citation.md)** - AI gateway permission context and citation
+- **[8-2-executive-ai-summary-draft-trong-workspace.md](./8-2-executive-ai-summary-draft-trong-workspace.md)** - Executive AI summary draft in workspace
+- **[8-3-ai-approval-assistant-voi-action-proposal.md](./8-3-ai-approval-assistant-voi-action-proposal.md)** - AI approval assistant action proposal
+- **[8-4-ai-meeting-summary-va-future-ai-placeholders.md](./8-4-ai-meeting-summary-va-future-ai-placeholders.md)** - AI meeting summary and future AI placeholders
 
 ## Specs
 

@@ -1,7 +1,7 @@
 import type { ProjectRepository } from "@/modules/projects/services/project-repository";
 import { projectRepository } from "@/modules/projects/services/project-repository";
-import type { Task, TaskInput, TaskListFilters, TaskUpdateInput } from "@/modules/tasks/types";
-import { taskInputSchema, taskUpdateSchema } from "@/modules/tasks/validation";
+import type { Task, TaskCreationMetadata, TaskInput, TaskListFilters, TaskUpdateInput } from "@/modules/tasks/types";
+import { taskCreationMetadataSchema, taskInputSchema, taskUpdateSchema } from "@/modules/tasks/validation";
 
 import { DEFAULT_UPCOMING_WINDOW_DAYS, MOCK_CURRENT_USER_ID } from "../constants";
 import { taskRepository, type TaskRepository } from "./task-repository";
@@ -86,9 +86,11 @@ export async function getUpcomingTasks(filters: TaskListFilters = {}, repository
 export async function createTask(
   input: TaskInput,
   repository: TaskRepository = taskRepository,
-  projects: ProjectRepository = projectRepository
+  projects: ProjectRepository = projectRepository,
+  metadata: TaskCreationMetadata = {}
 ) {
   const parsedInput = taskInputSchema.parse(input);
+  const parsedMetadata = taskCreationMetadataSchema.parse(metadata);
   const project = await projects.getProject(parsedInput.projectId);
 
   if (!project || project.archivedAt) {
@@ -106,6 +108,9 @@ export async function createTask(
     status: parsedInput.status,
     priority: parsedInput.priority,
     category: parsedInput.category,
+    linkedEntityType: parsedMetadata.linkedEntityType,
+    linkedEntityId: parsedMetadata.linkedEntityId,
+    createdBy: parsedMetadata.createdBy,
     createdAt: now,
     updatedAt: now
   };

@@ -24,6 +24,12 @@ describe("permission behavior", () => {
       "decision.create",
       "decision.approve",
       "proposal.view",
+      "risk.view",
+      "risk.create",
+      "risk.update",
+      "risk.override",
+      "risk.close",
+      "risk.close_high",
       "proposal.approve",
       "proposal.reject",
       "proposal.request_change",
@@ -69,6 +75,13 @@ describe("permission behavior", () => {
     expect(can(admin, "legal.update")).toBe(true);
     expect(can(admin, "legal.approve")).toBe(false);
     expect(can(admin, "report.create")).toBe(true);
+    expect(can(admin, "report.export")).toBe(true);
+    expect(can(admin, "risk.view")).toBe(true);
+    expect(can(admin, "risk.create")).toBe(false);
+    expect(can(admin, "risk.update")).toBe(false);
+    expect(can(admin, "risk.override")).toBe(false);
+    expect(can(admin, "risk.close")).toBe(false);
+    expect(can(admin, "risk.close_high")).toBe(false);
     expect(can(admin, "ai.ask")).toBe(true);
     expect(can(admin, "ai.use_rag")).toBe(true);
     expect(can(admin, "ai.create_draft")).toBe(true);
@@ -104,10 +117,17 @@ describe("permission behavior", () => {
     expect(can(executive, "legal.approve")).toBe(true);
     expect(can(executive, "legal.update")).toBe(false);
     expect(can(executive, "proposal.view")).toBe(true);
+    expect(can(executive, "risk.view")).toBe(true);
+    expect(can(executive, "risk.create")).toBe(true);
+    expect(can(executive, "risk.update")).toBe(true);
+    expect(can(executive, "risk.override")).toBe(true);
+    expect(can(executive, "risk.close")).toBe(true);
+    expect(can(executive, "risk.close_high")).toBe(true);
     expect(can(executive, "proposal.approve")).toBe(true);
     expect(can(executive, "proposal.reject")).toBe(true);
     expect(can(executive, "proposal.request_change")).toBe(true);
     expect(can(executive, "report.create")).toBe(true);
+    expect(can(executive, "report.export")).toBe(true);
     expect(can(executive, "ai.ask")).toBe(true);
     expect(can(executive, "ai.use_rag")).toBe(true);
     expect(can(executive, "ai.propose_action")).toBe(true);
@@ -129,12 +149,34 @@ describe("permission behavior", () => {
       "/command-center?view=executive-dashboard",
     );
     expect(can(ceo, "project.create")).toBe(true);
+    expect(can(ceo, "risk.view")).toBe(true);
+    expect(can(ceo, "risk.create")).toBe(true);
+    expect(can(ceo, "risk.update")).toBe(true);
+    expect(can(ceo, "risk.override")).toBe(true);
+    expect(can(ceo, "risk.close")).toBe(true);
+    expect(can(ceo, "risk.close_high")).toBe(true);
     expect(can(ceo, "investment.approve")).toBe(true);
     expect(can(ceo, "contract.approve")).toBe(true);
     expect(can(ceo, "hr.approve")).toBe(true);
     expect(can(ceo, "qa.approve")).toBe(true);
     expect(can(ceo, "safety.approve")).toBe(true);
     expect(can(ceo, "settings.manage")).toBe(true);
+  });
+
+  it("separates regular project risk mutation from leadership close authority", () => {
+    const projectDirector = user("giam_doc_du_an");
+    const projectManager = user("quan_ly_du_an");
+
+    expect(can(projectDirector, "risk.create")).toBe(true);
+    expect(can(projectDirector, "risk.update")).toBe(true);
+    expect(can(projectDirector, "risk.override")).toBe(true);
+    expect(can(projectDirector, "risk.close")).toBe(true);
+    expect(can(projectDirector, "risk.close_high")).toBe(false);
+    expect(can(projectManager, "risk.create")).toBe(true);
+    expect(can(projectManager, "risk.update")).toBe(true);
+    expect(can(projectManager, "risk.override")).toBe(false);
+    expect(can(projectManager, "risk.close")).toBe(false);
+    expect(can(projectManager, "risk.close_high")).toBe(false);
   });
 
   it("limits to_truong to assigned task updates and execution modules", () => {
@@ -150,6 +192,7 @@ describe("permission behavior", () => {
     expect(can(lead, "finance.view")).toBe(false);
     expect(can(lead, "report.view")).toBe(true);
     expect(can(lead, "report.create")).toBe(false);
+    expect(can(lead, "report.export")).toBe(false);
     expect(can(lead, "knowledge.view")).toBe(true);
     expect(can(lead, "knowledge.create")).toBe(false);
     expect(can(lead, "knowledge.create_candidate")).toBe(false);
@@ -189,6 +232,7 @@ describe("permission behavior", () => {
 
     expect(can(investment, "investment.create")).toBe(true);
     expect(can(investment, "proposal.create")).toBe(true);
+    expect(can(investment, "risk.view")).toBe(true);
     expect(can(investment, "finance.approve")).toBe(false);
     expect(ROLE_DEFAULT_SCREENS.dau_tu_phat_trien.href).toBe(
       "/investment-workspace",
@@ -252,7 +296,14 @@ describe("permission behavior", () => {
     expect(can(viewer, "task.update")).toBe(false);
     expect(can(viewer, "user.update_role")).toBe(false);
     expect(can(viewer, "report.view")).toBe(true);
+    expect(can(viewer, "risk.view")).toBe(true);
+    expect(can(viewer, "risk.create")).toBe(false);
+    expect(can(viewer, "risk.update")).toBe(false);
+    expect(can(viewer, "risk.override")).toBe(false);
+    expect(can(viewer, "risk.close")).toBe(false);
+    expect(can(viewer, "risk.close_high")).toBe(false);
     expect(can(viewer, "report.create")).toBe(false);
+    expect(can(viewer, "report.export")).toBe(false);
     expect(can(viewer, "knowledge.view")).toBe(true);
     expect(can(viewer, "ai.ask")).toBe(false);
     expect(can(viewer, "ai.confirm_action")).toBe(false);
@@ -268,12 +319,23 @@ describe("permission behavior", () => {
     expect(ROLE_DEFAULT_SCREENS.viewer.href).toBe("/viewer");
   });
 
+  it("keeps secretary assistant risk mutation dependent on delegation", () => {
+    const assistant = user("thu_ky_tro_ly");
+
+    expect(can(assistant, "risk.create")).toBe(false);
+    expect(can(assistant, "risk.update")).toBe(false);
+    expect(can(assistant, "risk.override")).toBe(false);
+    expect(can(assistant, "risk.close")).toBe(false);
+    expect(can(assistant, "risk.close_high")).toBe(false);
+  });
+
   it("keeps pending users without module permissions or navigation", () => {
     const pending = user("pending");
 
     expect(can(pending, "project.view")).toBe(false);
     expect(can(pending, "task.view")).toBe(false);
     expect(can(pending, "document.view")).toBe(false);
+    expect(can(pending, "risk.view")).toBe(false);
     expect(can(pending, "project:view")).toBe(false);
     expect(getPermittedNavItems(pending)).toEqual([]);
     expect(ROLE_DEFAULT_SCREENS.pending.href).toBe("/pending-access");

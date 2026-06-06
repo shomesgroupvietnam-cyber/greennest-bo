@@ -18,6 +18,7 @@ import {
 import type {
   ExecutiveDashboardSourceItem,
   ExecutiveMorningBriefingData,
+  ExecutiveRiskItem,
 } from "@/modules/dashboard/types";
 import { ExecutiveDrilldownPanel } from "@/modules/dashboard/components/executive-drilldown-panel";
 
@@ -32,8 +33,8 @@ const toneClasses = {
 
 const healthLabels: Record<"green" | "red" | "yellow", string> = {
   green: "Xanh",
-  red: "Do",
-  yellow: "Vang",
+  red: "Đỏ",
+  yellow: "Vàng",
 };
 
 const summaryStatusLabels: Record<
@@ -43,6 +44,7 @@ const summaryStatusLabels: Record<
   draft: "draft",
   insufficient_context: "insufficient_context",
   placeholder: "placeholder",
+  unavailable: "unavailable",
 };
 
 function formatGeneratedAt(value: string) {
@@ -121,6 +123,23 @@ function ApprovalMeta({ item }: { item: ExecutiveDashboardSourceItem }) {
   );
 }
 
+type RiskLabeledItem = ExecutiveDashboardSourceItem &
+  Pick<
+    ExecutiveRiskItem,
+    "categoryLabel" | "impactLabel" | "likelihoodLabel" | "severityLabel" | "statusSuggestion"
+  >;
+
+function isRiskLabeledItem(item: ExecutiveDashboardSourceItem): item is RiskLabeledItem {
+  return (
+    item.sourceType === "risk" &&
+    "categoryLabel" in item &&
+    "impactLabel" in item &&
+    "likelihoodLabel" in item &&
+    "severityLabel" in item &&
+    "statusSuggestion" in item
+  );
+}
+
 function SourceList({
   canDrillDown,
   emptyLabel,
@@ -149,6 +168,25 @@ function SourceList({
             <span className="mt-1 block text-xs leading-5 text-slate-600">
               {item.reason ?? item.status}
             </span>
+            {isRiskLabeledItem(item) ? (
+              <span className="mt-2 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-md bg-red-50 px-2 py-0.5 font-semibold text-red-800">
+                  {item.severityLabel}
+                </span>
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+                  {item.categoryLabel}
+                </span>
+                <span className="rounded-md bg-blue-50 px-2 py-0.5 font-semibold text-blue-800">
+                  {item.likelihoodLabel}
+                </span>
+                <span className="rounded-md bg-purple-50 px-2 py-0.5 font-semibold text-purple-800">
+                  {item.impactLabel}
+                </span>
+                <span className="rounded-md bg-white px-2 py-0.5 font-semibold text-slate-600 ring-1 ring-slate-200">
+                  Gợi ý {item.statusSuggestion.labelVi}
+                </span>
+              </span>
+            ) : null}
             <ApprovalMeta item={item} />
             <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
               {item.owner ? <span>{item.owner}</span> : null}
@@ -190,6 +228,11 @@ function SourceList({
 
 function SummaryPanel({ data }: { data: ExecutiveMorningBriefingData }) {
   const isInsufficient = data.summary.status === "insufficient_context";
+  const proposals = (data.summary.actionProposals ?? []).filter(
+    (proposal) =>
+      proposal.status === "proposed" &&
+      (!proposal.workflowStatus || proposal.workflowStatus === "DRAFT"),
+  );
 
   return (
     <section
@@ -233,6 +276,31 @@ function SummaryPanel({ data }: { data: ExecutiveMorningBriefingData }) {
                   </span>
                 </span>
               </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {proposals.length ? (
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">
+            De xuat hanh dong advisory
+          </p>
+          <div className="mt-2 space-y-2">
+            {proposals.map((proposal) => (
+              <article
+                className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+                key={proposal.id}
+              >
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="font-semibold">{proposal.title}</p>
+                  <span className="w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                    {proposal.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-amber-900">
+                  {proposal.actionKey} - {proposal.requiredPermission}. Chua thay doi du lieu nghiep vu.
+                </p>
+              </article>
             ))}
           </div>
         </div>
@@ -435,12 +503,12 @@ export function ExecutiveMorningBriefing({
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-5">
           <section
-            aria-label="Top risk"
+            aria-label="Risk ưu tiên"
             className="rounded-md border bg-white p-4 shadow-sm"
           >
             <SectionHeader
               icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
-              title="Top risk"
+              title="Risk ưu tiên"
             />
             <div className="mt-3">
               <SourceList

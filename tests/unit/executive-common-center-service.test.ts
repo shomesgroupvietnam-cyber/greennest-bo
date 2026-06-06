@@ -102,7 +102,7 @@ describe("executive common center service", () => {
     expect(
       commonCenter.priorityItems.some(
         (item) =>
-          item.groupLabel === "Risk nghiem trong" ||
+          item.groupLabel === "Risk nghiêm trọng" ||
           item.groupLabel === "Approval qua han",
       ),
     ).toBe(true);
@@ -258,6 +258,11 @@ describe("executive common center service", () => {
           canViewProjects: false,
           canViewProposals: false,
           canViewRisk: false,
+          canCreateRisk: false,
+          canUpdateRisk: false,
+          canOverrideRisk: false,
+          canCloseRisk: false,
+          canCloseHighRisk: false,
         },
       },
       executiveData,

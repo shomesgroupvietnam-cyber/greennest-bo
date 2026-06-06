@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
@@ -13,11 +14,22 @@ const emptyStore: TaskStore = {
   tasks: []
 };
 
+function isWriteContention(error: unknown) {
+  const code = (error as NodeJS.ErrnoException).code;
+
+  return code === "EPERM" || code === "EBUSY" || code === "EACCES";
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export type TaskRepository = {
   listTasks(filters?: TaskListFilters): Promise<Task[]>;
   getTask(taskId: string): Promise<Task | undefined>;
   createTask(task: Task): Promise<Task>;
   updateTask(taskId: string, patch: Partial<Task>): Promise<Task>;
+  deleteTasks(taskIds: string[]): Promise<void>;
 };
 
 export class JsonTaskRepository implements TaskRepository {
@@ -75,6 +87,19 @@ export class JsonTaskRepository implements TaskRepository {
     return updatedTask;
   }
 
+  async deleteTasks(taskIds: string[]) {
+    if (taskIds.length === 0) {
+      return;
+    }
+
+    const taskIdSet = new Set(taskIds);
+    const store = await this.readStore();
+
+    await this.writeStore({
+      tasks: store.tasks.filter((task) => !taskIdSet.has(task.id))
+    });
+  }
+
   private async readStore(): Promise<TaskStore> {
     try {
       const raw = await readFile(this.filePath, "utf8");
@@ -96,7 +121,31 @@ export class JsonTaskRepository implements TaskRepository {
 
   private async writeStore(store: TaskStore) {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+    const tempPath = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
+    const payload = `${JSON.stringify(store, null, 2)}\n`;
+
+    await writeFile(tempPath, payload, "utf8");
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        await rename(tempPath, this.filePath);
+        return;
+      } catch (error) {
+        if (!isWriteContention(error)) {
+          await unlink(tempPath).catch(() => undefined);
+          throw error;
+        }
+
+        if (attempt < 4) {
+          await delay(20 * (attempt + 1));
+          continue;
+        }
+
+        await writeFile(this.filePath, payload, "utf8");
+        await unlink(tempPath).catch(() => undefined);
+        return;
+      }
+    }
   }
 }
 
@@ -110,8 +159,12 @@ type TaskRow = {
   status: Task["status"];
   priority: Task["priority"];
   category: string | null;
+  linked_entity_type?: Task["linkedEntityType"] | null;
+  linked_entity_id?: string | null;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 };
 
 function toTask(row: TaskRow): Task {
@@ -125,6 +178,9 @@ function toTask(row: TaskRow): Task {
     status: row.status,
     priority: row.priority,
     category: row.category ?? undefined,
+    linkedEntityType: row.linked_entity_type ?? undefined,
+    linkedEntityId: row.linked_entity_id ?? undefined,
+    createdBy: row.created_by ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -141,6 +197,9 @@ function taskToRow(task: Task) {
     status: task.status,
     priority: task.priority,
     category: task.category ?? null,
+    linked_entity_type: task.linkedEntityType ?? null,
+    linked_entity_id: task.linkedEntityId ?? null,
+    created_by: task.createdBy ?? null,
     created_at: task.createdAt,
     updated_at: task.updatedAt
   };
@@ -156,6 +215,9 @@ function taskPatchToRow(patch: Partial<Task>) {
     ...(patch.status !== undefined ? { status: patch.status } : {}),
     ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
     ...(patch.category !== undefined ? { category: patch.category ?? null } : {}),
+    ...(patch.linkedEntityType !== undefined ? { linked_entity_type: patch.linkedEntityType ?? null } : {}),
+    ...(patch.linkedEntityId !== undefined ? { linked_entity_id: patch.linkedEntityId ?? null } : {}),
+    ...(patch.createdBy !== undefined ? { created_by: patch.createdBy ?? null } : {}),
     ...(patch.updatedAt !== undefined ? { updated_at: patch.updatedAt } : {})
   };
 }
@@ -223,6 +285,19 @@ export class SupabaseTaskRepository implements TaskRepository {
     }
 
     return toTask(data as TaskRow);
+  }
+
+  async deleteTasks(taskIds: string[]) {
+    if (taskIds.length === 0) {
+      return;
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.from("tasks").delete().in("id", taskIds);
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 }
 

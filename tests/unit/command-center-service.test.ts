@@ -57,6 +57,11 @@ describe("command center service", () => {
           viewKey: "executive-approvals",
         }),
         expect.objectContaining({
+          href: "/command-center?view=executive-history",
+          label: "History & Archive",
+          viewKey: "executive-history",
+        }),
+        expect.objectContaining({
           href: "/command-center?view=executive-private-workspace",
           label: "Private Workspace",
           viewKey: "executive-private-workspace",

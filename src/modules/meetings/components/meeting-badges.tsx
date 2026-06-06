@@ -8,6 +8,7 @@ import {
   type MeetingType,
   type MeetingVisibility
 } from "@/modules/meetings/constants";
+import React from "react";
 
 const statusClassName: Record<MeetingStatus, string> = {
   SCHEDULED: "bg-sky-100 text-sky-800",
@@ -34,4 +35,3 @@ export function MeetingVisibilityBadge({ visibility }: { visibility: MeetingVisi
 export function MeetingParticipantScopeLabel({ participantScope }: { participantScope: MeetingParticipantScope }) {
   return <span>{MEETING_PARTICIPANT_SCOPES[participantScope]}</span>;
 }
-

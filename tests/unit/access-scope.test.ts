@@ -5,11 +5,13 @@ import {
   canReadDecisionInScope,
   canReadDocumentInScope,
   canReadLegalStepInScope,
+  canReadMeetingInScope,
   canReadProposalInScope,
   canReadProjectInScope,
   canReadTaskInScope,
   filterDecisionsForScope,
   filterDocumentsForScope,
+  filterMeetingsForScope,
   filterProposalsForScope,
   filterProjectsForScope,
   filterTasksForScope,
@@ -17,7 +19,7 @@ import {
 } from "@/lib/permissions/access-scope";
 import type { PermissionUser } from "@/lib/permissions/can";
 import type { Document } from "@/modules/documents/types";
-import type { Decision } from "@/modules/meetings/types";
+import type { Decision, Meeting } from "@/modules/meetings/types";
 import type { Project } from "@/modules/projects/types";
 import type { Proposal } from "@/modules/proposals/types";
 import type { ScopeAssignment } from "@/modules/settings/types";
@@ -122,6 +124,55 @@ const decisions: Decision[] = [
     projectId: "project-b",
     decisionText: "Approve project B",
     status: "open",
+    createdAt: "",
+    updatedAt: "",
+  },
+];
+
+const meetings: Meeting[] = [
+  {
+    id: "meeting-multi",
+    organizationId: "org-green-nest",
+    projectIds: ["project-a", "project-b"],
+    title: "Portfolio project meeting",
+    meetingType: "PROJECT_MEETING",
+    visibility: "project",
+    participantScope: "project_team",
+    status: "SCHEDULED",
+    meetingDate: "",
+    startTime: "",
+    participants: [],
+    externalParticipants: [],
+    attachments: [],
+    aiSummary: { status: "DRAFT" },
+    decisions: [],
+    followUpActions: [],
+    relatedApprovals: [],
+    relatedTasks: [],
+    auditLog: [],
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "meeting-org",
+    organizationId: "org-green-nest",
+    title: "Organization-only leadership meeting",
+    meetingType: "EXECUTIVE_MEETING",
+    visibility: "organization",
+    participantScope: "all_leadership",
+    status: "SCHEDULED",
+    meetingDate: "",
+    startTime: "",
+    hostId: "leader-01",
+    participants: ["assistant-01"],
+    externalParticipants: [],
+    attachments: [],
+    aiSummary: { status: "DRAFT" },
+    decisions: [],
+    followUpActions: [],
+    relatedApprovals: [],
+    relatedTasks: [],
+    auditLog: [],
     createdAt: "",
     updatedAt: "",
   },
@@ -472,6 +523,142 @@ describe("access scope filtering", () => {
     expect(filterDecisionsForScope(decisions, scope).map((decision) => decision.id)).toEqual([
       "decision-a",
     ]);
+  });
+
+  it("filters meetings by projectIds and prevents organization-only no-leak behavior", () => {
+    const viewerScope = resolveAccessScope(user("viewer", "viewer"), { memberships, tasks, documents });
+    const contractorScope = resolveAccessScope(user("contractor-01", "nha_thau"), { memberships, tasks, documents });
+    const participantScope = resolveAccessScope(user("assistant-01", "viewer"), { memberships, tasks, documents });
+
+    expect(filterMeetingsForScope(meetings, viewerScope).map((meeting) => meeting.id)).toEqual(["meeting-multi"]);
+    expect(filterMeetingsForScope(meetings, contractorScope).map((meeting) => meeting.id)).toEqual(["meeting-multi"]);
+    expect(canReadMeetingInScope(meetings[1], viewerScope)).toBe(false);
+    expect(canReadMeetingInScope(meetings[1], contractorScope)).toBe(false);
+    expect(canReadMeetingInScope(meetings[1], participantScope)).toBe(true);
+  });
+
+  it("matches assignment-model meeting.view for project and organization scopes", () => {
+    const scope = resolveAccessScope(user("operator", "pending"), {
+      scopeAssignments: [
+        {
+          id: "assignment-meeting-project-b",
+          userId: "operator",
+          roleKey: "thu_ky_tro_ly",
+          permissionKeys: ["meeting.view"],
+          projectId: "project-b",
+          moduleId: "meeting",
+          active: true,
+          scopeType: "scoped",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "assignment-meeting-org",
+          userId: "operator",
+          roleKey: "tong_giam_doc",
+          permissionKeys: ["meeting.view"],
+          organizationId: "org-green-nest",
+          workstreamId: "meeting",
+          moduleId: "meeting",
+          active: true,
+          scopeType: "scoped",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+
+    expect(canReadMeetingInScope(meetings[0], scope)).toBe(true);
+    expect(canReadMeetingInScope(meetings[1], scope)).toBe(true);
+    expect(
+      canReadMeetingInScope({ ...meetings[1], id: "meeting-other-org", organizationId: "org-other" }, scope),
+    ).toBe(false);
+  });
+
+  it("matches assignment-model meeting.view for department/workstream scope without leaking sibling departments", () => {
+    const scope = resolveAccessScope(user("operator", "pending"), {
+      scopeAssignments: [
+        {
+          id: "assignment-meeting-legal",
+          userId: "operator",
+          roleKey: "thu_ky_tro_ly",
+          permissionKeys: ["meeting.view"],
+          organizationId: "org-green-nest",
+          axisId: "axis-1",
+          workstreamId: "legal",
+          moduleId: "meeting",
+          active: true,
+          scopeType: "scoped",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+
+    expect(
+      canReadMeetingInScope(
+        {
+          ...meetings[1],
+          axisId: "axis-1",
+          departmentId: "legal",
+          id: "meeting-legal",
+        },
+        scope,
+      ),
+    ).toBe(true);
+    expect(
+      canReadMeetingInScope(
+        {
+          ...meetings[1],
+          axisId: "axis-1",
+          departmentId: "finance",
+          id: "meeting-finance",
+        },
+        scope,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps assignment-model meeting visibility for direct hosts and participants", () => {
+    const scope = resolveAccessScope(user("operator", "pending"), {
+      scopeAssignments: [
+        {
+          id: "assignment-meeting-project-b",
+          userId: "operator",
+          roleKey: "thu_ky_tro_ly",
+          permissionKeys: ["meeting.view"],
+          projectId: "project-b",
+          moduleId: "meeting",
+          active: true,
+          scopeType: "scoped",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+
+    expect(
+      canReadMeetingInScope(
+        {
+          ...meetings[1],
+          hostId: "operator",
+          id: "meeting-hosted-by-operator",
+          organizationId: "org-other",
+        },
+        scope,
+      ),
+    ).toBe(true);
+    expect(
+      canReadMeetingInScope(
+        {
+          ...meetings[1],
+          id: "meeting-operator-participant",
+          organizationId: "org-other",
+          participants: ["operator"],
+        },
+        scope,
+      ),
+    ).toBe(true);
   });
 
   it("supports multi-project and organization-only decision scopes without global leaks", () => {

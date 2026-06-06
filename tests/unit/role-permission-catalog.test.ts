@@ -62,12 +62,73 @@ describe("role permission catalog service", () => {
       module: "finance",
       sensitive: true,
     });
+    expect(catalog.permissions.find((item) => item.key === "report.create")).toMatchObject({
+      module: "report",
+      actionType: "create",
+    });
+    expect(catalog.permissions.find((item) => item.key === "report.export")).toMatchObject({
+      module: "report",
+      actionType: "export",
+      sensitive: false,
+    });
+    expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).toContain(
+      "report.export",
+    );
+    expect(catalog.roles.find((role) => role.key === "viewer")?.permissionKeys).not.toContain(
+      "report.export",
+    );
     expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
       "proposal.approve",
     );
-    expect(catalog.roles.find((role) => role.key === "chu_tich")?.permissionKeys).toEqual(
-      expect.arrayContaining(["proposal.approve", "finance.view", "decision.approve"]),
+    expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
+      "risk.create",
     );
+    expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
+      "risk.override",
+    );
+    expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
+      "risk.close",
+    );
+    expect(catalog.roles.find((role) => role.key === "admin")?.permissionKeys).not.toContain(
+      "risk.close_high",
+    );
+    expect(catalog.roles.find((role) => role.key === "chu_tich")?.permissionKeys).toEqual(
+      expect.arrayContaining([
+        "proposal.approve",
+        "finance.view",
+        "decision.approve",
+        "risk.create",
+        "risk.update",
+        "risk.override",
+        "risk.close",
+        "risk.close_high",
+      ]),
+    );
+    expect(catalog.permissions.find((permission) => permission.key === "risk.create")).toMatchObject({
+      actionType: "create",
+      module: "risk",
+      sensitive: false,
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.update")).toMatchObject({
+      actionType: "update",
+      module: "risk",
+      sensitive: false,
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.override")).toMatchObject({
+      actionType: "update",
+      module: "risk",
+      sensitive: false,
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.close")).toMatchObject({
+      actionType: "update",
+      module: "risk",
+      sensitive: true,
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.close_high")).toMatchObject({
+      actionType: "update",
+      module: "risk",
+      sensitive: true,
+    });
     const chairmanPermissions = catalog.roles.find((role) => role.key === "chu_tich")?.permissionKeys ?? [];
     const superAdminPermissions = catalog.roles.find((role) => role.key === "super_admin")?.permissionKeys ?? [];
     for (const permission of chairmanBoDeniedPermissions) {

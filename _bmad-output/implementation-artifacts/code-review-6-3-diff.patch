@@ -1,0 +1,4978 @@
+﻿diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index 59b95ea..990b971 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -1,5 +1,5 @@
+ # generated: 2026-05-23T16:00:49+07:00
+-# last_updated: 2026-05-31T13:43:59+07:00
++# last_updated: 2026-06-03T09:00:24+07:00
+ # project: green_nest_buider_web
+ # project_key: NOKEY
+ # tracking_system: file-system
+@@ -35,7 +35,7 @@
+ # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+ 
+ generated: 2026-05-23T16:00:49+07:00
+-last_updated: 2026-05-31T13:43:59+07:00
++last_updated: 2026-06-03T09:00:24+07:00
+ project: green_nest_buider_web
+ project_key: NOKEY
+ tracking_system: file-system
+@@ -71,21 +71,21 @@ development_status:
+   epic-3-retrospective: optional
+   epic-4: in-progress
+   4-1-decision-record-tu-approval-meeting-hoac-doc-lap: done
+-  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: in-progress
+-  4-3-version-history-khi-sua-decision-quan-trong: backlog
+-  4-4-decision-assignment-center-ui: backlog
++  4-2-assignment-task-tu-decision-cho-nhieu-nguoi: done
++  4-3-version-history-khi-sua-decision-quan-trong: done
++  4-4-decision-assignment-center-ui: done
+   epic-4-retrospective: optional
+-  epic-5: backlog
+-  5-1-risk-levels-categories-va-status-suggestion: backlog
+-  5-2-risk-map-va-drill-down-matrix: backlog
+-  5-3-tao-va-cap-nhat-risk-blocker-theo-quyen: backlog
+-  5-4-override-va-dong-risk-blocker-co-audit: backlog
+-  5-5-risk-alert-overdue-escalation-va-draft-suggestions: backlog
++  epic-5: in-progress
++  5-1-risk-levels-categories-va-status-suggestion: done
++  5-2-risk-map-va-drill-down-matrix: done
++  5-3-tao-va-cap-nhat-risk-blocker-theo-quyen: done
++  5-4-override-va-dong-risk-blocker-co-audit: done
++  5-5-risk-alert-overdue-escalation-va-draft-suggestions: done
+   epic-5-retrospective: optional
+-  epic-6: backlog
+-  6-1-meeting-engine-types-scope-va-repository-contract: backlog
+-  6-2-meeting-list-filters-va-executive-visibility: backlog
+-  6-3-tao-va-sua-meeting-voi-related-records: backlog
++  epic-6: in-progress
++  6-1-meeting-engine-types-scope-va-repository-contract: done
++  6-2-meeting-list-filters-va-executive-visibility: done
++  6-3-tao-va-sua-meeting-voi-related-records: review
+   6-4-minutes-attachments-va-ai-summary-draft: backlog
+   6-5-follow-up-actions-lien-ket-related-tasks: backlog
+   6-6-decision-tracking-sau-hop: backlog
+diff --git a/src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx b/src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx
+index 55155d3..606aafe 100644
+--- a/src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx
++++ b/src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx
+@@ -4,16 +4,27 @@ import { PageShell } from "@/components/shared/page-shell";
+ import { UnauthorizedState } from "@/components/shared/unauthorized-state";
+ import { getCurrentUser } from "@/lib/auth/session";
+ import { can } from "@/lib/permissions/can";
+-import { getScopedMeeting, listScopedProjects } from "@/lib/permissions/scoped-resources";
++import {
++  getScopedMeeting,
++  listScopedDecisions,
++  listScopedDocuments,
++  listScopedExecutiveRiskRecords,
++  listScopedProjects,
++  listScopedProposals,
++  listScopedTasks,
++} from "@/lib/permissions/scoped-resources";
+ import { updateMeetingAction } from "@/modules/meetings/actions";
+ import { MeetingForm } from "@/modules/meetings/components/meeting-form";
++import { buildMeetingRelatedRecordOptions } from "@/modules/meetings/services/meeting-related-record-options";
+ import { getMeeting } from "@/modules/meetings/services/meeting-service";
+ 
+ type EditMeetingPageProps = {
+   params: Promise<{ meetingId: string }>;
+ };
+ 
+-export default async function EditMeetingPage({ params }: EditMeetingPageProps) {
++export default async function EditMeetingPage({
++  params,
++}: EditMeetingPageProps) {
+   const { meetingId } = await params;
+   const currentUser = await getCurrentUser();
+   const rawMeeting = await getMeeting(meetingId);
+@@ -22,12 +33,22 @@ export default async function EditMeetingPage({ params }: EditMeetingPageProps)
+     notFound();
+   }
+ 
+-  const [meeting, projects] = await Promise.all([getScopedMeeting(currentUser, meetingId), listScopedProjects(currentUser)]);
++  const [meeting, projects] = await Promise.all([
++    getScopedMeeting(currentUser, meetingId),
++    listScopedProjects(currentUser),
++  ]);
+ 
+   if (!meeting) {
+     return (
+-      <PageShell title="Không có quyền truy cập" description="Cuộc họp này không nằm trong phạm vi được giao của bạn.">
+-        <UnauthorizedState backHref="/meetings" backLabel="Về danh sách họp" title="Bạn không có quyền sửa cuộc họp này" />
++      <PageShell
++        title="Không có quyền truy cập"
++        description="Cuộc họp này không nằm trong phạm vi được giao của bạn."
++      >
++        <UnauthorizedState
++          backHref="/meetings"
++          backLabel="Về danh sách họp"
++          title="Bạn không có quyền sửa cuộc họp này"
++        />
+       </PageShell>
+     );
+   }
+@@ -35,14 +56,39 @@ export default async function EditMeetingPage({ params }: EditMeetingPageProps)
+   if (!can(currentUser, "meeting.update", meeting)) {
+     return (
+       <PageShell title="Sửa biên bản họp" description={meeting.title}>
+-        <UnauthorizedState backHref={`/meetings/${meeting.id}`} backLabel="Về chi tiết họp" title="Bạn không có quyền sửa biên bản" />
++        <UnauthorizedState
++          backHref={`/meetings/${meeting.id}`}
++          backLabel="Về chi tiết họp"
++          title="Bạn không có quyền sửa biên bản"
++        />
+       </PageShell>
+     );
+   }
+ 
++  const [proposals, tasks, documents, decisions, risks] = await Promise.all([
++    listScopedProposals(currentUser),
++    listScopedTasks(currentUser),
++    listScopedDocuments(currentUser),
++    listScopedDecisions(currentUser),
++    listScopedExecutiveRiskRecords(currentUser),
++  ]);
++  const relatedRecordOptions = buildMeetingRelatedRecordOptions({
++    decisions,
++    documents,
++    proposals,
++    risks,
++    tasks,
++  });
++
+   return (
+     <PageShell title="Sửa biên bản họp" description={meeting.title}>
+-      <MeetingForm action={updateMeetingAction.bind(null, meeting.id)} meeting={meeting} projects={projects} submitLabel="Lưu biên bản" />
++      <MeetingForm
++        action={updateMeetingAction.bind(null, meeting.id)}
++        meeting={meeting}
++        projects={projects}
++        relatedRecordOptions={relatedRecordOptions}
++        submitLabel="Lưu biên bản"
++      />
+     </PageShell>
+   );
+ }
+diff --git a/src/app/(dashboard)/meetings/[meetingId]/page.tsx b/src/app/(dashboard)/meetings/[meetingId]/page.tsx
+index 0fe2fb2..62c7e03 100644
+--- a/src/app/(dashboard)/meetings/[meetingId]/page.tsx
++++ b/src/app/(dashboard)/meetings/[meetingId]/page.tsx
+@@ -7,17 +7,27 @@ import { UnauthorizedState } from "@/components/shared/unauthorized-state";
+ import { Button } from "@/components/ui/button";
+ import { getCurrentUser } from "@/lib/auth/session";
+ import { can } from "@/lib/permissions/can";
+-import { getScopedMeeting, getScopedProject, listScopedDecisions } from "@/lib/permissions/scoped-resources";
++import {
++  getScopedDecision,
++  getScopedDocument,
++  getScopedExecutiveRiskRecord,
++  getScopedMeeting,
++  getScopedProject,
++  getScopedProposal,
++  getScopedTask,
++  listScopedDecisions,
++} from "@/lib/permissions/scoped-resources";
+ import { createDecisionAction } from "@/modules/meetings/actions";
+ import {
+   MeetingParticipantScopeLabel,
+   MeetingStatusBadge,
+   MeetingTypeBadge,
+-  MeetingVisibilityBadge
++  MeetingVisibilityBadge,
+ } from "@/modules/meetings/components/meeting-badges";
+ import { DecisionForm } from "@/modules/meetings/components/decision-form";
+ import { DecisionList } from "@/modules/meetings/components/decision-list";
+ import { getMeeting } from "@/modules/meetings/services/meeting-service";
++import type { Meeting, MeetingRelatedRecord } from "@/modules/meetings/types";
+ 
+ type MeetingDetailPageProps = {
+   params: Promise<{ meetingId: string }>;
+@@ -26,11 +36,137 @@ type MeetingDetailPageProps = {
+ function formatDateTime(value: string) {
+   return new Intl.DateTimeFormat("vi-VN", {
+     dateStyle: "medium",
+-    timeStyle: "short"
++    timeStyle: "short",
+   }).format(new Date(value));
+ }
+ 
+-export default async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
++type VisibleRelatedRecord = {
++  href?: string;
++  id: string;
++  label: string;
++  typeLabel: string;
++};
++
++function normalizedMeetingRelatedRecords(meeting: Meeting) {
++  const records: MeetingRelatedRecord[] = [];
++  const seen = new Set<string>();
++
++  function add(record: MeetingRelatedRecord) {
++    const key = `${record.type}:${record.id}`;
++
++    if (seen.has(key)) {
++      return;
++    }
++
++    seen.add(key);
++    records.push(record);
++  }
++
++  for (const record of meeting.relatedRecords ?? []) {
++    add(record);
++  }
++
++  for (const approvalId of meeting.relatedApprovals ?? []) {
++    add({ type: "approval", id: approvalId, relationType: "context" });
++  }
++
++  for (const taskId of meeting.relatedTasks ?? []) {
++    add({ type: "task", id: taskId, relationType: "context" });
++  }
++
++  return records;
++}
++
++async function resolveVisibleRelatedRecord(
++  currentUser: Awaited<ReturnType<typeof getCurrentUser>>,
++  record: MeetingRelatedRecord,
++): Promise<VisibleRelatedRecord | undefined> {
++  if (record.type === "approval" || record.type === "proposal") {
++    const detail = await getScopedProposal(currentUser, record.id);
++
++    return detail
++      ? {
++          href: `/proposals/${detail.proposal.id}`,
++          id: detail.proposal.id,
++          label: `${detail.proposal.code} - ${detail.proposal.title}`,
++          typeLabel: "Approval/Proposal",
++        }
++      : undefined;
++  }
++
++  if (record.type === "task") {
++    const task = await getScopedTask(currentUser, record.id);
++
++    return task
++      ? {
++          href: `/tasks/${task.id}`,
++          id: task.id,
++          label: task.title,
++          typeLabel: "Task",
++        }
++      : undefined;
++  }
++
++  if (record.type === "document") {
++    const document = await getScopedDocument(currentUser, record.id);
++
++    return document
++      ? {
++          href: `/documents/${document.id}`,
++          id: document.id,
++          label: document.title,
++          typeLabel: "Document",
++        }
++      : undefined;
++  }
++
++  if (record.type === "decision") {
++    const decision = await getScopedDecision(currentUser, record.id);
++
++    return decision
++      ? {
++          id: decision.id,
++          label: decision.title ?? decision.decisionText,
++          typeLabel: "Decision",
++        }
++      : undefined;
++  }
++
++  if (record.type === "risk") {
++    const risk = await getScopedExecutiveRiskRecord(currentUser, record.id);
++
++    return risk
++      ? {
++          id: risk.id,
++          label: risk.title,
++          typeLabel: "Risk/Blocker",
++        }
++      : undefined;
++  }
++
++  if (record.type === "project") {
++    const project = await getScopedProject(currentUser, record.id);
++
++    return project
++      ? {
++          href: `/projects/${project.id}`,
++          id: project.id,
++          label: `${project.code} - ${project.name}`,
++          typeLabel: "Dự án",
++        }
++      : undefined;
++  }
++
++  return {
++    id: record.id,
++    label: record.title ?? record.id,
++    typeLabel: "Custom",
++  };
++}
++
++export default async function MeetingDetailPage({
++  params,
++}: MeetingDetailPageProps) {
+   const { meetingId } = await params;
+   const currentUser = await getCurrentUser();
+   const rawMeeting = await getMeeting(meetingId);
+@@ -43,15 +179,33 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+ 
+   if (!meeting) {
+     return (
+-      <PageShell title="Không có quyền truy cập" description="Cuộc họp này không nằm trong phạm vi được giao của bạn.">
+-        <UnauthorizedState backHref="/meetings" backLabel="Về danh sách họp" title="Bạn không có quyền xem cuộc họp này" />
++      <PageShell
++        title="Không có quyền truy cập"
++        description="Cuộc họp này không nằm trong phạm vi được giao của bạn."
++      >
++        <UnauthorizedState
++          backHref="/meetings"
++          backLabel="Về danh sách họp"
++          title="Bạn không có quyền xem cuộc họp này"
++        />
+       </PageShell>
+     );
+   }
+ 
+-  const [project, decisions] = await Promise.all([
+-    meeting.projectId ? getScopedProject(currentUser, meeting.projectId) : Promise.resolve(undefined),
+-    listScopedDecisions(currentUser, { meetingId: meeting.id })
++  const [project, decisions, visibleRelatedRecords] = await Promise.all([
++    meeting.projectId
++      ? getScopedProject(currentUser, meeting.projectId)
++      : Promise.resolve(undefined),
++    listScopedDecisions(currentUser, { meetingId: meeting.id }),
++    Promise.all(
++      normalizedMeetingRelatedRecords(meeting).map((record) =>
++        resolveVisibleRelatedRecord(currentUser, record),
++      ),
++    ).then((records) =>
++      records.filter((record): record is VisibleRelatedRecord =>
++        Boolean(record),
++      ),
++    ),
+   ]);
+   const canUpdateMeeting = can(currentUser, "meeting.update", meeting);
+   const canCreateDecision = can(currentUser, "decision.create");
+@@ -59,7 +213,10 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+   const decisionAction = createDecisionAction.bind(null, meeting.id);
+ 
+   return (
+-    <PageShell title={meeting.title} description="Chi tiết biên bản họp, quyết định và action item.">
++    <PageShell
++      title={meeting.title}
++      description="Chi tiết biên bản họp, quyết định và action item."
++    >
+       <div className="flex flex-wrap items-center justify-between gap-3">
+         <Button asChild variant="ghost">
+           <Link href="/meetings">
+@@ -82,7 +239,10 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+           <p className="text-sm text-slate-500">Dự án / scope</p>
+           <p className="mt-2 text-sm font-medium text-slate-950">
+             {project ? (
+-              <Link className="text-emerald-700 hover:text-emerald-800" href={`/projects/${project.id}`}>
++              <Link
++                className="text-emerald-700 hover:text-emerald-800"
++                href={`/projects/${project.id}`}
++              >
+                 {project.code} - {project.name}
+               </Link>
+             ) : (
+@@ -90,13 +250,18 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+             )}
+           </p>
+           <p className="mt-2 text-xs text-slate-500">
+-            Org: {meeting.organizationId ?? "-"} · Trục: {meeting.axisId ?? "-"} · Phòng ban: {meeting.departmentId ?? "-"}
++            Org: {meeting.organizationId ?? "-"} · Trục: {meeting.axisId ?? "-"}{" "}
++            · Phòng ban: {meeting.departmentId ?? "-"}
+           </p>
+         </div>
+         <div className="rounded-lg border bg-white p-5 shadow-sm">
+           <p className="text-sm text-slate-500">Thời gian</p>
+-          <p className="mt-2 text-sm font-medium text-slate-950">{formatDateTime(meeting.startTime)}</p>
+-          <p className="mt-2 text-xs text-slate-500">Kết thúc: {meeting.endTime ? formatDateTime(meeting.endTime) : "-"}</p>
++          <p className="mt-2 text-sm font-medium text-slate-950">
++            {formatDateTime(meeting.startTime)}
++          </p>
++          <p className="mt-2 text-xs text-slate-500">
++            Kết thúc: {meeting.endTime ? formatDateTime(meeting.endTime) : "-"}
++          </p>
+         </div>
+         <div className="rounded-lg border bg-white p-5 shadow-sm">
+           <p className="text-sm text-slate-500">Meeting Engine</p>
+@@ -106,7 +271,10 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+             <MeetingVisibilityBadge visibility={meeting.visibility} />
+           </div>
+           <p className="mt-2 text-xs text-slate-500">
+-            Participant scope: <MeetingParticipantScopeLabel participantScope={meeting.participantScope} />
++            Participant scope:{" "}
++            <MeetingParticipantScopeLabel
++              participantScope={meeting.participantScope}
++            />
+           </p>
+         </div>
+       </section>
+@@ -114,66 +282,136 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+         <div className="space-y-6">
+           <section className="rounded-lg border bg-white p-5 shadow-sm">
+-            <h2 className="text-base font-semibold text-slate-950">Metadata phân loại động</h2>
++            <h2 className="text-base font-semibold text-slate-950">
++              Metadata phân loại động
++            </h2>
+             <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+               <div>
+                 <dt className="text-slate-500">Host</dt>
+-                <dd className="font-medium text-slate-900">{meeting.hostId ?? meeting.createdBy ?? "-"}</dd>
++                <dd className="font-medium text-slate-900">
++                  {meeting.hostId ?? meeting.createdBy ?? "-"}
++                </dd>
+               </div>
+               <div>
+                 <dt className="text-slate-500">Room placeholder</dt>
+-                <dd className="font-medium text-slate-900">{meeting.roomId ?? "Chưa đặt phòng"}</dd>
++                <dd className="font-medium text-slate-900">
++                  {meeting.roomId ?? "Chưa đặt phòng"}
++                </dd>
+               </div>
+               <div>
+                 <dt className="text-slate-500">Participants nội bộ</dt>
+-                <dd className="font-medium text-slate-900">{meeting.participants.length > 0 ? meeting.participants.join(", ") : "-"}</dd>
++                <dd className="font-medium text-slate-900">
++                  {meeting.participants.length > 0
++                    ? meeting.participants.join(", ")
++                    : "-"}
++                </dd>
+               </div>
+               <div>
+                 <dt className="text-slate-500">External participants</dt>
+                 <dd className="font-medium text-slate-900">
+-                  {meeting.externalParticipants.length > 0 ? meeting.externalParticipants.join(", ") : "-"}
++                  {meeting.externalParticipants.length > 0
++                    ? meeting.externalParticipants.join(", ")
++                    : "-"}
+                 </dd>
+               </div>
+             </dl>
+           </section>
+ 
++          <section className="rounded-lg border bg-white p-5 shadow-sm">
++            <h2 className="text-base font-semibold text-slate-950">
++              Related records
++            </h2>
++            {visibleRelatedRecords.length > 0 ? (
++              <ul className="mt-4 space-y-3">
++                {visibleRelatedRecords.map((record) => (
++                  <li
++                    key={`${record.typeLabel}:${record.id}`}
++                    className="flex flex-wrap items-center gap-2 text-sm"
++                  >
++                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
++                      {record.typeLabel}
++                    </span>
++                    {record.href ? (
++                      <Link
++                        className="font-medium text-emerald-700 hover:text-emerald-800"
++                        href={record.href}
++                      >
++                        {record.label}
++                      </Link>
++                    ) : (
++                      <span className="font-medium text-slate-900">
++                        {record.label}
++                      </span>
++                    )}
++                  </li>
++                ))}
++              </ul>
++            ) : (
++              <p className="mt-3 text-sm text-slate-600">
++                Chưa có related record trong scope được phép xem.
++              </p>
++            )}
++          </section>
++
+           <section className="rounded-lg border bg-white p-5 shadow-sm">
+             <h2 className="text-base font-semibold text-slate-950">Agenda</h2>
+-            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{meeting.agenda ?? "Chưa có agenda."}</p>
++            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
++              {meeting.agenda ?? "Chưa có agenda."}
++            </p>
+           </section>
+ 
+           <section className="rounded-lg border bg-white p-5 shadow-sm">
+-            <h2 className="text-base font-semibold text-slate-950">Biên bản/tóm tắt</h2>
++            <h2 className="text-base font-semibold text-slate-950">
++              Biên bản/tóm tắt
++            </h2>
+             <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+-              {meeting.meetingMinutes ?? meeting.summary ?? "Chưa có nội dung tóm tắt."}
++              {meeting.meetingMinutes ??
++                meeting.summary ??
++                "Chưa có nội dung tóm tắt."}
+             </p>
+           </section>
+ 
+           <section className="grid gap-4 md:grid-cols-2">
+             <div className="rounded-lg border bg-white p-5 shadow-sm">
+-              <h2 className="text-base font-semibold text-slate-950">AI summary</h2>
+-              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-amber-700">Placeholder · {meeting.aiSummary.status}</p>
++              <h2 className="text-base font-semibold text-slate-950">
++                AI summary
++              </h2>
++              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-amber-700">
++                Placeholder · {meeting.aiSummary.status}
++              </p>
+               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+-                {meeting.aiSummary.content ?? "AI summary thật chưa triển khai. Nội dung AI luôn là draft cho tới khi được duyệt."}
++                {meeting.aiSummary.content ??
++                  "AI summary thật chưa triển khai. Nội dung AI luôn là draft cho tới khi được duyệt."}
+               </p>
+             </div>
+             <div className="rounded-lg border bg-white p-5 shadow-sm">
+-              <h2 className="text-base font-semibold text-slate-950">Transcript</h2>
+-              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Placeholder</p>
++              <h2 className="text-base font-semibold text-slate-950">
++                Transcript
++              </h2>
++              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
++                Placeholder
++              </p>
+               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+-                {meeting.transcript ?? "Transcript thật chưa triển khai trong scope này."}
++                {meeting.transcript ??
++                  "Transcript thật chưa triển khai trong scope này."}
+               </p>
+             </div>
+           </section>
+ 
+           <section className="space-y-3">
+             <div>
+-              <h2 className="text-base font-semibold text-slate-950">Decision tracking và follow-up task</h2>
++              <h2 className="text-base font-semibold text-slate-950">
++                Decision tracking và follow-up task
++              </h2>
+               <p className="mt-1 text-sm text-slate-600">
+-                Action item có thể sinh task khi cần. Decision tracking chính thức hiện dùng danh sách quyết định/action item hiện hữu.
++                Action item có thể sinh task khi cần. Decision tracking chính
++                thức hiện dùng danh sách quyết định/action item hiện hữu.
+               </p>
+             </div>
+-            <DecisionList canConvertToTask={canCreateTask} decisions={decisions} />
++            <DecisionList
++              canConvertToTask={canCreateTask}
++              decisions={decisions}
++            />
+           </section>
+         </div>
+ 
+@@ -181,8 +419,9 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
+           <DecisionForm action={decisionAction} />
+         ) : (
+           <div className="rounded-lg border border-dashed bg-white p-5 text-sm text-slate-600">
+-            Follow-up task cần một dự án cụ thể để sinh task. Cuộc họp cấp tổ chức/portfolio có thể theo dõi decision ở phần metadata,
+-            nhưng chưa tạo task tự động trong scope placeholder này.
++            Follow-up task cần một dự án cụ thể để sinh task. Cuộc họp cấp tổ
++            chức/portfolio có thể theo dõi decision ở phần metadata, nhưng chưa
++            tạo task tự động trong scope placeholder này.
+           </div>
+         )}
+       </section>
+diff --git a/src/app/(dashboard)/meetings/new/page.tsx b/src/app/(dashboard)/meetings/new/page.tsx
+index f0308b2..02eae5b 100644
+--- a/src/app/(dashboard)/meetings/new/page.tsx
++++ b/src/app/(dashboard)/meetings/new/page.tsx
+@@ -2,9 +2,17 @@ import { PageShell } from "@/components/shared/page-shell";
+ import { UnauthorizedState } from "@/components/shared/unauthorized-state";
+ import { getCurrentUser } from "@/lib/auth/session";
+ import { can } from "@/lib/permissions/can";
+-import { listScopedProjects } from "@/lib/permissions/scoped-resources";
++import {
++  listScopedDecisions,
++  listScopedDocuments,
++  listScopedExecutiveRiskRecords,
++  listScopedProjects,
++  listScopedProposals,
++  listScopedTasks,
++} from "@/lib/permissions/scoped-resources";
+ import { createMeetingAction } from "@/modules/meetings/actions";
+ import { MeetingForm } from "@/modules/meetings/components/meeting-form";
++import { buildMeetingRelatedRecordOptions } from "@/modules/meetings/services/meeting-related-record-options";
+ 
+ type NewMeetingPageProps = {
+   searchParams?: Promise<Record<string, string | string[] | undefined>>;
+@@ -14,21 +22,46 @@ function readParam(value: string | string[] | undefined) {
+   return Array.isArray(value) ? value[0] : value;
+ }
+ 
+-export default async function NewMeetingPage({ searchParams }: NewMeetingPageProps) {
++export default async function NewMeetingPage({
++  searchParams,
++}: NewMeetingPageProps) {
+   const currentUser = await getCurrentUser();
+   const params = searchParams ? await searchParams : {};
+   const defaultProjectId = readParam(params.projectId);
+-  const projects = await listScopedProjects(currentUser);
++  const [projects, proposals, tasks, documents, decisions, risks] =
++    await Promise.all([
++      listScopedProjects(currentUser),
++      listScopedProposals(currentUser),
++      listScopedTasks(currentUser),
++      listScopedDocuments(currentUser),
++      listScopedDecisions(currentUser),
++      listScopedExecutiveRiskRecords(currentUser),
++    ]);
++  const relatedRecordOptions = buildMeetingRelatedRecordOptions({
++    decisions,
++    documents,
++    proposals,
++    risks,
++    tasks,
++  });
+ 
+   return (
+-    <PageShell title="Tạo cuộc họp" description="Tạo meeting record trong One Meeting Engine; có thể gắn dự án hoặc chỉ nằm ở scope điều hành.">
++    <PageShell
++      title="Tạo cuộc họp"
++      description="Tạo meeting record trong One Meeting Engine; có thể gắn dự án hoặc chỉ nằm ở scope điều hành."
++    >
+       {!can(currentUser, "meeting.create") ? (
+-        <UnauthorizedState backHref="/meetings" backLabel="Về danh sách họp" title="Bạn không có quyền tạo cuộc họp" />
++        <UnauthorizedState
++          backHref="/meetings"
++          backLabel="Về danh sách họp"
++          title="Bạn không có quyền tạo cuộc họp"
++        />
+       ) : (
+         <MeetingForm
+           action={createMeetingAction}
+           defaultProjectId={defaultProjectId}
+           projects={projects}
++          relatedRecordOptions={relatedRecordOptions}
+           submitLabel="Tạo biên bản họp"
+         />
+       )}
+diff --git a/src/lib/permissions/scoped-resources.ts b/src/lib/permissions/scoped-resources.ts
+index 2b46cb8..afff4ec 100644
+--- a/src/lib/permissions/scoped-resources.ts
++++ b/src/lib/permissions/scoped-resources.ts
+@@ -1,5 +1,7 @@
+-import type { PermissionUser } from "@/lib/permissions/can";
++import { can, type PermissionUser } from "@/lib/permissions/can";
+ import {
++  type AccessScope,
++  canAccessScopedAction,
+   canReadDocumentInScope,
+   canReadDecisionInScope,
+   canReadMeetingInScope,
+@@ -14,10 +16,13 @@ import {
+   filterProjectsForScope,
+   filterTasksForScope,
+   requiresAssignmentScopeForRole,
+-  resolveAccessScope
++  resolveAccessScope,
++  usesAssignmentModel
+ } from "@/lib/permissions/access-scope";
+ import { getDocument, listDocuments } from "@/modules/documents/services/document-service";
+ import type { DocumentListFilters } from "@/modules/documents/types";
++import { riskRecordRepository, type ExecutiveRiskRecordListFilters, type RiskRecordRepository } from "@/modules/executive/services/risk-record-repository";
++import type { ExecutiveRiskRecord } from "@/modules/executive/types";
+ import { listLegalSteps } from "@/modules/legal/services/legal-service";
+ import type { LegalStepListFilters } from "@/modules/legal/types";
+ import { getDecision, getMeeting, listDecisions, listMeetings } from "@/modules/meetings/services/meeting-service";
+@@ -168,6 +173,135 @@ export async function getScopedMeeting(user: PermissionUser, meetingId: string)
+   return canReadMeetingInScope(meeting, resolveScopedResourceScope(user, inputs)) ? meeting : undefined;
+ }
+ 
++function canReadRiskRecordInScope(
++  record: Pick<ExecutiveRiskRecord, "createdBy" | "id" | "moduleId" | "organizationId" | "ownerId" | "projectId">,
++  scope: AccessScope,
++) {
++  const user = { id: scope.userId, role: scope.role };
++
++  if (usesAssignmentModel(scope)) {
++    return canAccessScopedAction(
++      user,
++      "risk.view",
++      {
++        moduleId: record.moduleId ?? "risk",
++        organizationId: record.organizationId,
++        projectId: record.projectId,
++        recordId: record.id,
++      },
++      {
++        now: scope.evaluatedAt,
++        rolePermissionCatalog: scope.rolePermissionCatalog,
++        scopeAssignments: scope.scopeAssignments,
++      },
++    );
++  }
++
++  if (!can(user, "risk.view")) {
++    return false;
++  }
++
++  if (scope.kind === "internal_full") {
++    return true;
++  }
++
++  if (record.ownerId === scope.userId || record.createdBy === scope.userId) {
++    return true;
++  }
++
++  return record.projectId ? scope.assignedProjectIds.has(record.projectId) : false;
++}
++
++export async function listScopedExecutiveRiskRecords(
++  user: PermissionUser,
++  filters: ExecutiveRiskRecordListFilters = {},
++  repository: RiskRecordRepository = riskRecordRepository,
++) {
++  const [records, inputs] = await Promise.all([repository.listRiskRecords(filters), getScopeInputs()]);
++  const scope = resolveScopedResourceScope(user, inputs);
++
++  return records.filter((record) => canReadRiskRecordInScope(record, scope));
++}
++
++export async function getScopedExecutiveRiskRecord(
++  user: PermissionUser,
++  riskId: string,
++  repository: RiskRecordRepository = riskRecordRepository,
++) {
++  const [record, inputs] = await Promise.all([repository.getRiskRecord(riskId), getScopeInputs()]);
++
++  if (!record) {
++    return undefined;
++  }
++
++  return canReadRiskRecordInScope(record, resolveScopedResourceScope(user, inputs)) ? record : undefined;
++}
++
++function normalizeScopeValue(value?: string) {
++  const normalized = value?.trim();
++
++  return normalized ? normalized : undefined;
++}
++
++export async function canCreateProjectMeeting(
++  user: PermissionUser,
++  target: { organizationId?: string; projectId: string; axisId?: string; departmentId?: string },
++) {
++  if (!requiresAssignmentScopeForRole(user.role)) {
++    return true;
++  }
++
++  const inputs = await getScopeInputs();
++
++  return canAccessScopedAction(
++    user,
++    "meeting.create",
++    {
++      organizationId: normalizeScopeValue(target.organizationId),
++      projectId: target.projectId,
++      axisId: normalizeScopeValue(target.axisId),
++      workstreamId: normalizeScopeValue(target.departmentId) ?? "meeting",
++      moduleId: "meeting",
++    },
++    {
++      rolePermissionCatalog: inputs.rolePermissionCatalog,
++      scopeAssignments: inputs.scopeAssignments,
++    },
++  );
++}
++
++export async function canCreateOrganizationMeeting(
++  user: PermissionUser,
++  target: { organizationId?: string; axisId?: string; departmentId?: string } = {},
++) {
++  const organizationId = normalizeScopeValue(target.organizationId);
++
++  if (!organizationId) {
++    return false;
++  }
++
++  if (!requiresAssignmentScopeForRole(user.role)) {
++    return true;
++  }
++
++  const inputs = await getScopeInputs();
++
++  return canAccessScopedAction(
++    user,
++    "meeting.create",
++    {
++      organizationId,
++      axisId: normalizeScopeValue(target.axisId),
++      workstreamId: normalizeScopeValue(target.departmentId) ?? "meeting",
++      moduleId: "meeting",
++    },
++    {
++      rolePermissionCatalog: inputs.rolePermissionCatalog,
++      scopeAssignments: inputs.scopeAssignments,
++    },
++  );
++}
++
+ export async function listScopedDecisions(user: PermissionUser, filters: DecisionListFilters = {}) {
+   const [decisions, inputs] = await Promise.all([listDecisions(filters), getScopeInputs()]);
+   const scope = resolveScopedResourceScope(user, inputs);
+diff --git a/src/modules/meetings/actions.ts b/src/modules/meetings/actions.ts
+index c11c8a7..922ff31 100644
+--- a/src/modules/meetings/actions.ts
++++ b/src/modules/meetings/actions.ts
+@@ -5,7 +5,17 @@ import { redirect } from "next/navigation";
+ 
+ import { getCurrentUser } from "@/lib/auth/session";
+ import { assertCan } from "@/lib/permissions/can";
+-import { getScopedDecision, getScopedMeeting, getScopedProject } from "@/lib/permissions/scoped-resources";
++import {
++  canCreateOrganizationMeeting,
++  canCreateProjectMeeting,
++  getScopedDocument,
++  getScopedDecision,
++  getScopedExecutiveRiskRecord,
++  getScopedMeeting,
++  getScopedProposal,
++  getScopedProject,
++  getScopedTask,
++} from "@/lib/permissions/scoped-resources";
+ import { createDecisionRecord } from "@/modules/executive/services/decision-record-service";
+ import {
+   convertDecisionToTask,
+@@ -14,21 +24,34 @@ import {
+   getMeeting,
+   updateMeeting
+ } from "@/modules/meetings/services/meeting-service";
+-import type { DecisionInput, MeetingInput, MeetingUpdateInput } from "@/modules/meetings/types";
++import type { DecisionInput, MeetingInput, MeetingRelatedRecord, MeetingUpdateInput } from "@/modules/meetings/types";
+ 
+ function readArrayField(formData: FormData, key: string) {
+-  const raw = String(formData.get(key) ?? "");
++  const values = formData.getAll(key);
+ 
+-  return raw
+-    .split(",")
++  return values
++    .flatMap((value) => String(value).split(","))
+     .map((item) => item.trim())
+     .filter(Boolean);
+ }
+ 
++function readOptionalArrayField(formData: FormData, key: string) {
++  if (!formData.has(key) && !formData.has(`${key}__present`)) {
++    return undefined;
++  }
++
++  return readArrayField(formData, key);
++}
++
++function normalizeProjectScope(projectId: string | undefined, projectIds: string[] = []) {
++  return [...new Set([projectId, ...projectIds].filter((item): item is string => Boolean(item)))];
++}
++
+ function formDataToMeetingInput(formData: FormData): MeetingInput {
+   return {
+     organizationId: String(formData.get("organizationId") ?? ""),
+     projectId: String(formData.get("projectId") ?? ""),
++    projectIds: readArrayField(formData, "projectIds"),
+     axisId: String(formData.get("axisId") ?? ""),
+     departmentId: String(formData.get("departmentId") ?? ""),
+     title: String(formData.get("title") ?? ""),
+@@ -44,15 +67,36 @@ function formDataToMeetingInput(formData: FormData): MeetingInput {
+     roomId: String(formData.get("roomId") ?? ""),
+     agenda: String(formData.get("agenda") ?? ""),
+     meetingMinutes: String(formData.get("meetingMinutes") ?? ""),
+-    summary: String(formData.get("summary") ?? "")
++    summary: String(formData.get("summary") ?? ""),
++    relatedApprovals: readArrayField(formData, "relatedApprovals"),
++    relatedTasks: readArrayField(formData, "relatedTasks"),
++    relatedDecisions: readArrayField(formData, "relatedDecisions"),
++    relatedRisks: readArrayField(formData, "relatedRisks"),
++    relatedDocuments: readArrayField(formData, "relatedDocuments")
+   };
+ }
+ 
+ function formDataToMeetingUpdateInput(formData: FormData): MeetingUpdateInput {
+   return {
+     title: String(formData.get("title") ?? ""),
++    meetingType: String(formData.get("meetingType") ?? "PROJECT_MEETING") as MeetingInput["meetingType"],
++    visibility: String(formData.get("visibility") ?? "project") as MeetingInput["visibility"],
++    participantScope: String(formData.get("participantScope") ?? "project_team") as MeetingInput["participantScope"],
++    status: String(formData.get("status") ?? "SCHEDULED") as MeetingInput["status"],
+     meetingDate: String(formData.get("meetingDate") ?? ""),
+-    summary: String(formData.get("summary") ?? "")
++    endTime: String(formData.get("endTime") ?? ""),
++    hostId: String(formData.get("hostId") ?? ""),
++    participants: readArrayField(formData, "participants"),
++    externalParticipants: readArrayField(formData, "externalParticipants"),
++    roomId: String(formData.get("roomId") ?? ""),
++    agenda: String(formData.get("agenda") ?? ""),
++    meetingMinutes: String(formData.get("meetingMinutes") ?? ""),
++    summary: String(formData.get("summary") ?? ""),
++    relatedApprovals: readOptionalArrayField(formData, "relatedApprovals"),
++    relatedTasks: readOptionalArrayField(formData, "relatedTasks"),
++    relatedDecisions: readOptionalArrayField(formData, "relatedDecisions"),
++    relatedRisks: readOptionalArrayField(formData, "relatedRisks"),
++    relatedDocuments: readOptionalArrayField(formData, "relatedDocuments")
+   };
+ }
+ 
+@@ -66,20 +110,94 @@ function formDataToDecisionInput(meetingId: string, formData: FormData): Decisio
+   };
+ }
+ 
++function addRecordIds(records: Set<string>, relatedRecords: MeetingRelatedRecord[] | undefined, types: MeetingRelatedRecord["type"][]) {
++  for (const record of relatedRecords ?? []) {
++    if (types.includes(record.type)) {
++      records.add(record.id);
++    }
++  }
++}
++
++async function assertRelatedRecordsInScope(currentUser: Awaited<ReturnType<typeof getCurrentUser>>, input: MeetingInput | MeetingUpdateInput) {
++  const approvalIds = new Set(input.relatedApprovals ?? []);
++  const taskIds = new Set(input.relatedTasks ?? []);
++  const documentIds = new Set(input.relatedDocuments ?? []);
++  const riskIds = new Set(input.relatedRisks ?? []);
++  const decisionIds = new Set(input.relatedDecisions ?? []);
++
++  addRecordIds(approvalIds, input.relatedRecords, ["approval", "proposal"]);
++  addRecordIds(taskIds, input.relatedRecords, ["task"]);
++  addRecordIds(documentIds, input.relatedRecords, ["document"]);
++  addRecordIds(riskIds, input.relatedRecords, ["risk"]);
++  addRecordIds(decisionIds, input.relatedRecords, ["decision"]);
++
++  for (const approvalId of approvalIds) {
++    if (!(await getScopedProposal(currentUser, approvalId))) {
++      throw new Error("Lien ket approval/proposal khong nam trong pham vi cua ban.");
++    }
++  }
++
++  for (const taskId of taskIds) {
++    if (!(await getScopedTask(currentUser, taskId))) {
++      throw new Error("Lien ket task khong nam trong pham vi cua ban.");
++    }
++  }
++
++  for (const documentId of documentIds) {
++    if (!(await getScopedDocument(currentUser, documentId))) {
++      throw new Error("Lien ket document khong nam trong pham vi cua ban.");
++    }
++  }
++
++  for (const riskId of riskIds) {
++    if (!(await getScopedExecutiveRiskRecord(currentUser, riskId))) {
++      throw new Error("Lien ket risk/blocker khong nam trong pham vi cua ban.");
++    }
++  }
++
++  for (const decisionId of decisionIds) {
++    if (!(await getScopedDecision(currentUser, decisionId))) {
++      throw new Error("Lien ket decision khong nam trong pham vi cua ban.");
++    }
++  }
++}
++
+ export async function createMeetingAction(formData: FormData) {
+   const currentUser = await getCurrentUser();
+   assertCan(currentUser, "meeting.create");
+   const input = formDataToMeetingInput(formData);
++  const projectIds = normalizeProjectScope(input.projectId, input.projectIds);
+ 
+-  if (input.projectId && !(await getScopedProject(currentUser, input.projectId))) {
+-    throw new Error("Bạn không có quyền tạo biên bản họp cho dự án này.");
++  for (const projectId of projectIds) {
++    if (
++      !(await canCreateProjectMeeting(currentUser, {
++        organizationId: input.organizationId,
++        projectId,
++        axisId: input.axisId,
++        departmentId: input.departmentId,
++      }))
++    ) {
++      throw new Error("Bạn không có quyền tạo biên bản họp cho dự án này.");
++    }
++  }
++  if (
++    projectIds.length === 0 &&
++    !(await canCreateOrganizationMeeting(currentUser, {
++      organizationId: input.organizationId,
++      axisId: input.axisId,
++      departmentId: input.departmentId,
++    }))
++  ) {
++    throw new Error("Bạn không có quyền tạo biên bản họp cấp tổ chức.");
+   }
+ 
++  await assertRelatedRecordsInScope(currentUser, input);
++
+   const meeting = await createMeeting(input, currentUser.id);
+ 
+   revalidatePath("/meetings");
+-  if (meeting.projectId) {
+-    revalidatePath(`/projects/${meeting.projectId}`);
++  for (const projectId of new Set([meeting.projectId, ...(meeting.projectIds ?? [])].filter((item): item is string => Boolean(item)))) {
++    revalidatePath(`/projects/${projectId}`);
+   }
+   redirect(`/meetings/${meeting.id}`);
+ }
+@@ -93,12 +211,15 @@ export async function updateMeetingAction(meetingId: string, formData: FormData)
+     throw new Error("Bạn không có quyền cập nhật cuộc họp này.");
+   }
+ 
+-  const meeting = await updateMeeting(meetingId, formDataToMeetingUpdateInput(formData));
++  const input = formDataToMeetingUpdateInput(formData);
++  await assertRelatedRecordsInScope(currentUser, input);
++
++  const meeting = await updateMeeting(meetingId, input, undefined, currentUser.id);
+ 
+   revalidatePath("/meetings");
+   revalidatePath(`/meetings/${meeting.id}`);
+-  if (meeting.projectId) {
+-    revalidatePath(`/projects/${meeting.projectId}`);
++  for (const projectId of new Set([meeting.projectId, ...(meeting.projectIds ?? [])].filter((item): item is string => Boolean(item)))) {
++    revalidatePath(`/projects/${projectId}`);
+   }
+   redirect(`/meetings/${meeting.id}`);
+ }
+diff --git a/src/modules/meetings/components/meeting-form.tsx b/src/modules/meetings/components/meeting-form.tsx
+index b77cbba..8e636ee 100644
+--- a/src/modules/meetings/components/meeting-form.tsx
++++ b/src/modules/meetings/components/meeting-form.tsx
+@@ -1,13 +1,19 @@
+ import Link from "next/link";
++import React from "react";
+ 
+ import { Button } from "@/components/ui/button";
+ import {
+   MEETING_PARTICIPANT_SCOPES,
+   MEETING_STATUSES,
+   MEETING_TYPES,
+-  MEETING_VISIBILITIES
++  MEETING_VISIBILITIES,
+ } from "@/modules/meetings/constants";
+ import type { Meeting } from "@/modules/meetings/types";
++import {
++  emptyMeetingRelatedRecordOptions,
++  type MeetingRelatedRecordOption,
++  type MeetingRelatedRecordOptions,
++} from "@/modules/meetings/services/meeting-related-record-options";
+ import type { Project } from "@/modules/projects/types";
+ 
+ type MeetingFormProps = {
+@@ -15,6 +21,7 @@ type MeetingFormProps = {
+   defaultProjectId?: string;
+   meeting?: Meeting;
+   projects: Project[];
++  relatedRecordOptions?: MeetingRelatedRecordOptions;
+   submitLabel: string;
+ };
+ 
+@@ -29,16 +36,132 @@ function toDateTimeInput(value?: string) {
+   return value.slice(0, 16);
+ }
+ 
+-export function MeetingForm({ action, defaultProjectId, meeting, projects, submitLabel }: MeetingFormProps) {
++function relatedIds(
++  meeting: Meeting | undefined,
++  type: "approval" | "decision" | "document" | "risk" | "task",
++) {
++  if (!meeting) {
++    return [];
++  }
++
++  const fromGenericRecords = (meeting.relatedRecords ?? [])
++    .filter(
++      (record) =>
++        record.type === type ||
++        (type === "approval" && record.type === "proposal"),
++    )
++    .map((record) => record.id);
++
++  if (type === "approval") {
++    return [
++      ...new Set([...fromGenericRecords, ...(meeting.relatedApprovals ?? [])]),
++    ];
++  }
++
++  if (type === "task") {
++    return [
++      ...new Set([...fromGenericRecords, ...(meeting.relatedTasks ?? [])]),
++    ];
++  }
++
++  return [...new Set(fromGenericRecords)];
++}
++
++function projectScopeLabel(projects: Project[], projectIds: string[]) {
++  if (projectIds.length === 0) {
++    return "Không gắn dự án cụ thể";
++  }
++
++  return projectIds
++    .map((projectId) => {
++      const project = projects.find((item) => item.id === projectId);
++
++      return project ? `${project.code} - ${project.name}` : projectId;
++    })
++    .join(", ");
++}
++
++function RelatedRecordSelect({
++  label,
++  name,
++  options,
++  selectedIds,
++}: {
++  label: string;
++  name: string;
++  options: MeetingRelatedRecordOption[];
++  selectedIds: string[];
++}) {
++  const selectSize = Math.min(Math.max(options.length, 2), 5);
++
++  return (
++    <div className="space-y-2">
++      <label className="text-sm font-medium text-slate-800" htmlFor={name}>
++        {label}
++      </label>
++      <input name={`${name}__present`} type="hidden" value="1" />
++      {options.length > 0 ? (
++        <select
++          className={fieldClass}
++          defaultValue={selectedIds}
++          id={name}
++          multiple
++          name={name}
++          size={selectSize}
++        >
++          {options.map((option) => (
++            <option key={option.id} value={option.id}>
++              {option.helper
++                ? `${option.label} (${option.helper})`
++                : option.label}
++            </option>
++          ))}
++        </select>
++      ) : (
++        <>
++          {selectedIds.map((selectedId) => (
++            <input
++              key={selectedId}
++              name={name}
++              type="hidden"
++              value={selectedId}
++            />
++          ))}
++          <p className="rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
++            Không có record trong scope hiện tại.
++          </p>
++        </>
++      )}
++    </div>
++  );
++}
++
++export function MeetingForm({
++  action,
++  defaultProjectId,
++  meeting,
++  projects,
++  relatedRecordOptions = emptyMeetingRelatedRecordOptions,
++  submitLabel,
++}: MeetingFormProps) {
+   const selectedProjectId = meeting?.projectId ?? defaultProjectId ?? "";
++  const selectedProjectIds = meeting
++    ? [meeting.projectId, ...(meeting.projectIds ?? [])].filter(
++        (item): item is string => Boolean(item),
++      )
++    : [];
+ 
+   return (
+-    <form action={action} className="space-y-6 rounded-lg border bg-white p-5 shadow-sm">
++    <form
++      action={action}
++      className="space-y-6 rounded-lg border bg-white p-5 shadow-sm"
++    >
+       <section className="rounded-md border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-900">
+         <p className="font-medium">One Meeting Engine</p>
+         <p className="mt-1">
+-          Một hệ thống họp chung, phân loại động theo loại họp, tổ chức, dự án, trục, phòng ban, visibility và participant scope.
+-          Video call, transcript và AI summary thật chưa triển khai ở bước này.
++          Một hệ thống họp chung, phân loại động theo loại họp, tổ chức, dự án,
++          trục, phòng ban, visibility và participant scope. Video call,
++          transcript và AI summary thật chưa triển khai ở bước này.
+         </p>
+       </section>
+ 
+@@ -47,14 +170,28 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+           <label className="text-sm font-medium text-slate-800" htmlFor="title">
+             Tiêu đề cuộc họp <span className="text-red-600">*</span>
+           </label>
+-          <input className={fieldClass} defaultValue={meeting?.title} id="title" name="title" required />
++          <input
++            className={fieldClass}
++            defaultValue={meeting?.title}
++            id="title"
++            name="title"
++            required
++          />
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="meetingType">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="meetingType"
++          >
+             Loại cuộc họp
+           </label>
+-          <select className={fieldClass} defaultValue={meeting?.meetingType ?? "PROJECT_MEETING"} id="meetingType" name="meetingType">
++          <select
++            className={fieldClass}
++            defaultValue={meeting?.meetingType ?? "PROJECT_MEETING"}
++            id="meetingType"
++            name="meetingType"
++          >
+             {Object.entries(MEETING_TYPES).map(([type, label]) => (
+               <option key={type} value={type}>
+                 {label}
+@@ -64,10 +201,18 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="status">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="status"
++          >
+             Trạng thái workflow
+           </label>
+-          <select className={fieldClass} defaultValue={meeting?.status ?? "SCHEDULED"} id="status" name="status">
++          <select
++            className={fieldClass}
++            defaultValue={meeting?.status ?? "SCHEDULED"}
++            id="status"
++            name="status"
++          >
+             {Object.entries(MEETING_STATUSES).map(([status, label]) => (
+               <option key={status} value={status}>
+                 {label}
+@@ -77,23 +222,95 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         {!meeting ? (
+-          <div className="space-y-2">
+-            <label className="text-sm font-medium text-slate-800" htmlFor="projectId">
+-              Dự án
+-            </label>
+-            <select className={fieldClass} defaultValue={selectedProjectId} id="projectId" name="projectId">
+-              <option value="">Không gắn dự án cụ thể</option>
+-              {projects.map((project) => (
+-                <option key={project.id} value={project.id}>
+-                  {project.code} - {project.name}
+-                </option>
+-              ))}
+-            </select>
+-          </div>
+-        ) : null}
++          <>
++            <div className="space-y-2">
++              <label
++                className="text-sm font-medium text-slate-800"
++                htmlFor="projectId"
++              >
++                Dự án
++              </label>
++              <select
++                className={fieldClass}
++                defaultValue={selectedProjectId}
++                id="projectId"
++                name="projectId"
++              >
++                <option value="">Không gắn dự án cụ thể</option>
++                {projects.map((project) => (
++                  <option key={project.id} value={project.id}>
++                    {project.code} - {project.name}
++                  </option>
++                ))}
++              </select>
++            </div>
++
++            <div className="space-y-2">
++              <label
++                className="text-sm font-medium text-slate-800"
++                htmlFor="projectIds"
++              >
++                Dự án liên quan thêm
++              </label>
++              <select
++                className={fieldClass}
++                id="projectIds"
++                multiple
++                name="projectIds"
++                size={Math.min(Math.max(projects.length, 2), 5)}
++              >
++                {projects.map((project) => (
++                  <option key={project.id} value={project.id}>
++                    {project.code} - {project.name}
++                  </option>
++                ))}
++              </select>
++            </div>
++          </>
++        ) : (
++          <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 md:col-span-2">
++            <div>
++              <h2 className="text-sm font-semibold text-slate-900">
++                Scope cuộc họp
++              </h2>
++              <p className="mt-1 text-xs text-slate-500">
++                Scope được giữ nguyên trong màn hình sửa này.
++              </p>
++            </div>
++            <dl className="grid gap-3 text-sm md:grid-cols-2">
++              <div>
++                <dt className="text-slate-500">Dự án</dt>
++                <dd className="font-medium text-slate-900">
++                  {projectScopeLabel(projects, selectedProjectIds)}
++                </dd>
++              </div>
++              <div>
++                <dt className="text-slate-500">Organization</dt>
++                <dd className="font-medium text-slate-900">
++                  {meeting.organizationId ?? "-"}
++                </dd>
++              </div>
++              <div>
++                <dt className="text-slate-500">Trục</dt>
++                <dd className="font-medium text-slate-900">
++                  {meeting.axisId ?? "-"}
++                </dd>
++              </div>
++              <div>
++                <dt className="text-slate-500">Phòng ban</dt>
++                <dd className="font-medium text-slate-900">
++                  {meeting.departmentId ?? "-"}
++                </dd>
++              </div>
++            </dl>
++          </section>
++        )}
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="meetingDate">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="meetingDate"
++          >
+             Bắt đầu <span className="text-red-600">*</span>
+           </label>
+           <input
+@@ -107,17 +324,34 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="endTime">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="endTime"
++          >
+             Kết thúc
+           </label>
+-          <input className={fieldClass} defaultValue={toDateTimeInput(meeting?.endTime)} id="endTime" name="endTime" type="datetime-local" />
++          <input
++            className={fieldClass}
++            defaultValue={toDateTimeInput(meeting?.endTime)}
++            id="endTime"
++            name="endTime"
++            type="datetime-local"
++          />
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="visibility">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="visibility"
++          >
+             Visibility
+           </label>
+-          <select className={fieldClass} defaultValue={meeting?.visibility ?? "project"} id="visibility" name="visibility">
++          <select
++            className={fieldClass}
++            defaultValue={meeting?.visibility ?? "project"}
++            id="visibility"
++            name="visibility"
++          >
+             {Object.entries(MEETING_VISIBILITIES).map(([visibility, label]) => (
+               <option key={visibility} value={visibility}>
+                 {label}
+@@ -127,48 +361,114 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="participantScope">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="participantScope"
++          >
+             Participant scope
+           </label>
+-          <select className={fieldClass} defaultValue={meeting?.participantScope ?? "project_team"} id="participantScope" name="participantScope">
+-            {Object.entries(MEETING_PARTICIPANT_SCOPES).map(([scope, label]) => (
+-              <option key={scope} value={scope}>
+-                {label}
+-              </option>
+-            ))}
++          <select
++            className={fieldClass}
++            defaultValue={meeting?.participantScope ?? "project_team"}
++            id="participantScope"
++            name="participantScope"
++          >
++            {Object.entries(MEETING_PARTICIPANT_SCOPES).map(
++              ([scope, label]) => (
++                <option key={scope} value={scope}>
++                  {label}
++                </option>
++              ),
++            )}
+           </select>
+         </div>
+ 
+-        <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="organizationId">
+-            Organization ID
+-          </label>
+-          <input className={fieldClass} defaultValue={meeting?.organizationId} id="organizationId" name="organizationId" placeholder="org-green-nest" />
+-        </div>
++        {!meeting ? (
++          <>
++            <div className="space-y-2">
++              <label
++                className="text-sm font-medium text-slate-800"
++                htmlFor="organizationId"
++              >
++                Organization ID
++              </label>
++              <input
++                className={fieldClass}
++                id="organizationId"
++                name="organizationId"
++                placeholder="org-green-nest"
++              />
++            </div>
+ 
+-        <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="axisId">
+-            Trục
+-          </label>
+-          <input className={fieldClass} defaultValue={meeting?.axisId} id="axisId" name="axisId" placeholder="axis-1" />
+-        </div>
++            <div className="space-y-2">
++              <label
++                className="text-sm font-medium text-slate-800"
++                htmlFor="axisId"
++              >
++                Trục
++              </label>
++              <input
++                className={fieldClass}
++                id="axisId"
++                name="axisId"
++                placeholder="axis-1"
++              />
++            </div>
++
++            <div className="space-y-2">
++              <label
++                className="text-sm font-medium text-slate-800"
++                htmlFor="departmentId"
++              >
++                Department ID
++              </label>
++              <input
++                className={fieldClass}
++                id="departmentId"
++                name="departmentId"
++                placeholder="legal / investment / design"
++              />
++            </div>
++          </>
++        ) : null}
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="departmentId">
+-            Department ID
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="roomId"
++          >
++            Room ID placeholder
+           </label>
+-          <input className={fieldClass} defaultValue={meeting?.departmentId} id="departmentId" name="departmentId" placeholder="legal / investment / design" />
++          <input
++            className={fieldClass}
++            defaultValue={meeting?.roomId}
++            id="roomId"
++            name="roomId"
++            placeholder="room-board-01 hoặc online-placeholder"
++          />
+         </div>
+ 
+         <div className="space-y-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="roomId">
+-            Room ID placeholder
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="hostId"
++          >
++            Host ID
+           </label>
+-          <input className={fieldClass} defaultValue={meeting?.roomId} id="roomId" name="roomId" placeholder="room-board-01 hoặc online-placeholder" />
++          <input
++            className={fieldClass}
++            defaultValue={meeting?.hostId}
++            id="hostId"
++            name="hostId"
++            placeholder="user-host-01"
++          />
+         </div>
+ 
+         <div className="space-y-2 md:col-span-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="participants">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="participants"
++          >
+             Participants nội bộ
+           </label>
+           <input
+@@ -181,7 +481,10 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         <div className="space-y-2 md:col-span-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="externalParticipants">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="externalParticipants"
++          >
+             External participants
+           </label>
+           <input
+@@ -194,33 +497,103 @@ export function MeetingForm({ action, defaultProjectId, meeting, projects, submi
+         </div>
+ 
+         <div className="space-y-2 md:col-span-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="agenda">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="agenda"
++          >
+             Agenda
+           </label>
+-          <textarea className={fieldClass} defaultValue={meeting?.agenda} id="agenda" name="agenda" rows={4} />
++          <textarea
++            className={fieldClass}
++            defaultValue={meeting?.agenda}
++            id="agenda"
++            name="agenda"
++            rows={4}
++          />
+         </div>
+ 
+         <div className="space-y-2 md:col-span-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="summary">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="summary"
++          >
+             Tóm tắt/biên bản
+           </label>
+-          <textarea className={fieldClass} defaultValue={meeting?.summary} id="summary" name="summary" rows={8} />
++          <textarea
++            className={fieldClass}
++            defaultValue={meeting?.summary}
++            id="summary"
++            name="summary"
++            rows={8}
++          />
+         </div>
+ 
+         <div className="space-y-2 md:col-span-2">
+-          <label className="text-sm font-medium text-slate-800" htmlFor="meetingMinutes">
++          <label
++            className="text-sm font-medium text-slate-800"
++            htmlFor="meetingMinutes"
++          >
+             Meeting minutes chính thức
+           </label>
+-          <textarea className={fieldClass} defaultValue={meeting?.meetingMinutes} id="meetingMinutes" name="meetingMinutes" rows={5} />
++          <textarea
++            className={fieldClass}
++            defaultValue={meeting?.meetingMinutes}
++            id="meetingMinutes"
++            name="meetingMinutes"
++            rows={5}
++          />
+         </div>
++
++        <section className="space-y-4 md:col-span-2">
++          <div>
++            <h2 className="text-base font-semibold text-slate-950">
++              Related records
++            </h2>
++            <p className="mt-1 text-sm text-slate-600">
++              Chỉ hiển thị các record trong scope được phép xem.
++            </p>
++          </div>
++          <div className="grid gap-4 md:grid-cols-2">
++            <RelatedRecordSelect
++              label="Approval/Proposal liên quan"
++              name="relatedApprovals"
++              options={relatedRecordOptions.approvals}
++              selectedIds={relatedIds(meeting, "approval")}
++            />
++            <RelatedRecordSelect
++              label="Risk/Blocker liên quan"
++              name="relatedRisks"
++              options={relatedRecordOptions.risks}
++              selectedIds={relatedIds(meeting, "risk")}
++            />
++            <RelatedRecordSelect
++              label="Decision liên quan"
++              name="relatedDecisions"
++              options={relatedRecordOptions.decisions}
++              selectedIds={relatedIds(meeting, "decision")}
++            />
++            <RelatedRecordSelect
++              label="Task liên quan"
++              name="relatedTasks"
++              options={relatedRecordOptions.tasks}
++              selectedIds={relatedIds(meeting, "task")}
++            />
++            <RelatedRecordSelect
++              label="Document liên quan"
++              name="relatedDocuments"
++              options={relatedRecordOptions.documents}
++              selectedIds={relatedIds(meeting, "document")}
++            />
++          </div>
++        </section>
+       </div>
+ 
+       <div className="flex flex-wrap items-center gap-3">
+-        <Button type="submit">
+-          {submitLabel}
+-        </Button>
++        <Button type="submit">{submitLabel}</Button>
+         <Button asChild type="button" variant="outline">
+-          <Link href={meeting ? `/meetings/${meeting.id}` : "/meetings"}>Hủy</Link>
++          <Link href={meeting ? `/meetings/${meeting.id}` : "/meetings"}>
++            Hủy
++          </Link>
+         </Button>
+       </div>
+     </form>
+diff --git a/src/modules/meetings/services/meeting-repository.ts b/src/modules/meetings/services/meeting-repository.ts
+index 8de19a4..978d306 100644
+--- a/src/modules/meetings/services/meeting-repository.ts
++++ b/src/modules/meetings/services/meeting-repository.ts
+@@ -3,27 +3,37 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+ import path from "node:path";
+ 
+ import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
++import { businessDateRangeEndIso, businessDateRangeStartIso } from "@/lib/date/business-day";
+ import { selectRepository } from "@/lib/db/repository-mode";
+ import type {
+   Decision,
++  DecisionAssignment,
++  DecisionAssignmentListFilters,
+   DecisionListFilters,
++  DecisionVersion,
+   Meeting,
+   MeetingAiSummary,
+   MeetingAuditEntry,
+   MeetingAttachment,
+   MeetingDecisionTracking,
+   MeetingFollowUpAction,
+-  MeetingListFilters
++  MeetingListFilters,
++  MeetingRelatedRecord
+ } from "@/modules/meetings/types";
++import type { AuditLog } from "@/modules/users/types";
+ 
+ type MeetingStore = {
+   meetings: Meeting[];
+   decisions: Decision[];
++  decisionAssignments: DecisionAssignment[];
++  decisionVersions: DecisionVersion[];
+ };
+ 
+ const emptyStore: MeetingStore = {
+   meetings: [],
+-  decisions: []
++  decisions: [],
++  decisionAssignments: [],
++  decisionVersions: []
+ };
+ 
+ function isWriteContention(error: unknown) {
+@@ -36,6 +46,51 @@ function delay(ms: number) {
+   return new Promise((resolve) => setTimeout(resolve, ms));
+ }
+ 
++function activeFilterValue(value: string | "all" | undefined) {
++  if (!value || value === "all") {
++    return undefined;
++  }
++
++  const normalized = value.trim();
++
++  return normalized ? normalized : undefined;
++}
++
++const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
++const supabaseUuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
++
++function isSupabaseUuid(value: string) {
++  return supabaseUuidPattern.test(value);
++}
++
++function normalizeDateRangeStart(value: string | "all" | undefined) {
++  const normalized = activeFilterValue(value);
++
++  if (!normalized) {
++    return undefined;
++  }
++
++  if (dateOnlyPattern.test(normalized)) {
++    return businessDateRangeStartIso(normalized);
++  }
++
++  return Number.isNaN(Date.parse(normalized)) ? undefined : normalized;
++}
++
++function normalizeDateRangeEnd(value: string | "all" | undefined) {
++  const normalized = activeFilterValue(value);
++
++  if (!normalized) {
++    return undefined;
++  }
++
++  if (dateOnlyPattern.test(normalized)) {
++    return businessDateRangeEndIso(normalized);
++  }
++
++  return Number.isNaN(Date.parse(normalized)) ? undefined : normalized;
++}
++
+ export type MeetingRepository = {
+   listMeetings(filters?: MeetingListFilters): Promise<Meeting[]>;
+   getMeeting(meetingId: string): Promise<Meeting | undefined>;
+@@ -45,6 +100,20 @@ export type MeetingRepository = {
+   getDecision(decisionId: string): Promise<Decision | undefined>;
+   createDecision(decision: Decision): Promise<Decision>;
+   updateDecision(decisionId: string, patch: Partial<Decision>): Promise<Decision>;
++  listDecisionVersions(decisionId: string): Promise<DecisionVersion[]>;
++  createDecisionVersion(version: DecisionVersion): Promise<DecisionVersion>;
++  deleteDecisionVersions(versionIds: string[]): Promise<void>;
++  updateDecisionWithVersionAndAudit?(input: DecisionUpdateTransactionInput): Promise<Decision>;
++  listDecisionAssignments(filters?: DecisionAssignmentListFilters): Promise<DecisionAssignment[]>;
++  createDecisionAssignments(assignments: DecisionAssignment[]): Promise<DecisionAssignment[]>;
++  deleteDecisionAssignments(assignmentIds: string[]): Promise<void>;
++};
++
++export type DecisionUpdateTransactionInput = {
++  decisionId: string;
++  patch: Partial<Decision>;
++  version?: DecisionVersion;
++  auditLog: Omit<AuditLog, "id" | "createdAt">;
+ };
+ 
+ export class JsonMeetingRepository implements MeetingRepository {
+@@ -148,8 +217,11 @@ export class JsonMeetingRepository implements MeetingRepository {
+       ...patch,
+       id: normalizedDecision.id,
+       meetingId: normalizedDecision.meetingId,
+-      projectId: normalizedDecision.projectId,
+-      projectIds: normalizedDecision.projectIds,
++      sourceType: normalizedDecision.sourceType,
++      sourceId: normalizedDecision.sourceId,
++      createdBy: normalizedDecision.createdBy,
++      decidedBy: normalizedDecision.decidedBy,
++      decidedAt: normalizedDecision.decidedAt,
+       createdAt: normalizedDecision.createdAt
+     });
+ 
+@@ -161,6 +233,86 @@ export class JsonMeetingRepository implements MeetingRepository {
+     return updatedDecision;
+   }
+ 
++  async listDecisionVersions(decisionId: string) {
++    const store = await this.readStore();
++
++    return store.decisionVersions
++      .map(normalizeDecisionVersion)
++      .filter((version) => version.decisionId === decisionId)
++      .sort((a, b) => a.versionNumber - b.versionNumber);
++  }
++
++  async createDecisionVersion(version: DecisionVersion) {
++    const store = await this.readStore();
++    const normalizedVersion = normalizeDecisionVersion(version);
++
++    await this.writeStore({
++      ...store,
++      decisionVersions: [normalizedVersion, ...store.decisionVersions]
++    });
++
++    return normalizedVersion;
++  }
++
++  async deleteDecisionVersions(versionIds: string[]) {
++    if (versionIds.length === 0) {
++      return;
++    }
++
++    const versionIdSet = new Set(versionIds);
++    const store = await this.readStore();
++
++    await this.writeStore({
++      ...store,
++      decisionVersions: store.decisionVersions.filter((version) => !versionIdSet.has(version.id))
++    });
++  }
++
++  async listDecisionAssignments(filters: DecisionAssignmentListFilters = {}) {
++    const store = await this.readStore();
++
++    return store.decisionAssignments
++      .map(normalizeDecisionAssignment)
++      .filter((assignment) => !filters.decisionId || assignment.decisionId === filters.decisionId)
++      .filter((assignment) => !filters.taskId || assignment.taskId === filters.taskId)
++      .filter(
++        (assignment) =>
++          !filters.projectId || filters.projectId === "all" || assignment.projectId === filters.projectId
++      )
++      .filter(
++        (assignment) =>
++          !filters.assigneeId || filters.assigneeId === "all" || assignment.assigneeId === filters.assigneeId
++      )
++      .filter((assignment) => !filters.status || filters.status === "all" || assignment.status === filters.status)
++      .sort((a, b) => (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31"));
++  }
++
++  async createDecisionAssignments(assignments: DecisionAssignment[]) {
++    const store = await this.readStore();
++    const normalizedAssignments = assignments.map(normalizeDecisionAssignment);
++
++    await this.writeStore({
++      ...store,
++      decisionAssignments: [...normalizedAssignments, ...store.decisionAssignments]
++    });
++
++    return normalizedAssignments;
++  }
++
++  async deleteDecisionAssignments(assignmentIds: string[]) {
++    if (assignmentIds.length === 0) {
++      return;
++    }
++
++    const assignmentIdSet = new Set(assignmentIds);
++    const store = await this.readStore();
++
++    await this.writeStore({
++      ...store,
++      decisionAssignments: store.decisionAssignments.filter((assignment) => !assignmentIdSet.has(assignment.id))
++    });
++  }
++
+   private async readStore(): Promise<MeetingStore> {
+     try {
+       const raw = await readFile(this.filePath, "utf8");
+@@ -168,7 +320,9 @@ export class JsonMeetingRepository implements MeetingRepository {
+ 
+       return {
+         meetings: parsed.meetings ?? [],
+-        decisions: parsed.decisions ?? []
++        decisions: parsed.decisions ?? [],
++        decisionAssignments: parsed.decisionAssignments ?? [],
++        decisionVersions: parsed.decisionVersions ?? []
+       };
+     } catch (error) {
+       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+@@ -237,6 +391,7 @@ type MeetingRow = {
+   follow_up_actions?: MeetingFollowUpAction[] | null;
+   related_approvals?: string[] | null;
+   related_tasks?: string[] | null;
++  related_records?: MeetingRelatedRecord[] | null;
+   audit_log?: MeetingAuditEntry[] | null;
+   summary: string | null;
+   created_by: string | null;
+@@ -260,6 +415,7 @@ type DecisionRow = {
+   linked_records?: Decision["linkedRecords"] | null;
+   owner_id: string | null;
+   priority?: Decision["priority"] | null;
++  kpi?: string | null;
+   due_date: string | null;
+   status: Decision["status"];
+   task_id?: string | null;
+@@ -270,6 +426,39 @@ type DecisionRow = {
+   updated_at: string;
+ };
+ 
++type DecisionVersionRow = {
++  id: string;
++  decision_id: string;
++  version_number: number;
++  changed_fields: DecisionVersion["changedFields"];
++  previous_value: DecisionVersion["previousValue"] | null;
++  new_value: DecisionVersion["newValue"] | null;
++  reason?: string | null;
++  created_by: string;
++  created_at: string;
++  updated_at?: string | null;
++};
++
++type DecisionAssignmentRow = {
++  id: string;
++  decision_id: string;
++  task_id?: string | null;
++  organization_id?: string | null;
++  project_id: string;
++  assignee_type: DecisionAssignment["assigneeType"];
++  assignee_id?: string | null;
++  department_id?: string | null;
++  title: string;
++  description?: string | null;
++  kpi?: string | null;
++  due_date?: string | null;
++  priority: DecisionAssignment["priority"];
++  status: DecisionAssignment["status"];
++  created_by: string;
++  created_at: string;
++  updated_at: string;
++};
++
+ function toMeeting(row: MeetingRow): Meeting {
+   return normalizeMeeting({
+     id: row.id,
+@@ -299,6 +488,7 @@ function toMeeting(row: MeetingRow): Meeting {
+     followUpActions: row.follow_up_actions ?? undefined,
+     relatedApprovals: row.related_approvals ?? undefined,
+     relatedTasks: row.related_tasks ?? undefined,
++    relatedRecords: row.related_records ?? undefined,
+     auditLog: row.audit_log ?? undefined,
+     summary: row.summary ?? undefined,
+     createdBy: row.created_by ?? undefined,
+@@ -324,6 +514,7 @@ function toDecision(row: DecisionRow): Decision {
+     linkedRecords: row.linked_records ?? undefined,
+     ownerId: row.owner_id ?? undefined,
+     priority: row.priority ?? undefined,
++    kpi: row.kpi ?? undefined,
+     dueDate: row.due_date ?? undefined,
+     status: row.status,
+     taskId: row.task_id ?? undefined,
+@@ -335,6 +526,43 @@ function toDecision(row: DecisionRow): Decision {
+   });
+ }
+ 
++function toDecisionVersion(row: DecisionVersionRow): DecisionVersion {
++  return normalizeDecisionVersion({
++    id: row.id,
++    decisionId: row.decision_id,
++    versionNumber: row.version_number,
++    changedFields: row.changed_fields,
++    previousValue: row.previous_value ?? {},
++    newValue: row.new_value ?? {},
++    reason: row.reason ?? undefined,
++    createdBy: row.created_by,
++    createdAt: row.created_at,
++    updatedAt: row.updated_at ?? row.created_at
++  });
++}
++
++function toDecisionAssignment(row: DecisionAssignmentRow): DecisionAssignment {
++  return normalizeDecisionAssignment({
++    id: row.id,
++    decisionId: row.decision_id,
++    taskId: row.task_id ?? undefined,
++    organizationId: row.organization_id ?? undefined,
++    projectId: row.project_id,
++    assigneeType: row.assignee_type,
++    assigneeId: row.assignee_id ?? undefined,
++    departmentId: row.department_id ?? undefined,
++    title: row.title,
++    description: row.description ?? undefined,
++    kpi: row.kpi ?? undefined,
++    dueDate: row.due_date ?? undefined,
++    priority: row.priority,
++    status: row.status,
++    createdBy: row.created_by,
++    createdAt: row.created_at,
++    updatedAt: row.updated_at
++  });
++}
++
+ function meetingToRow(meeting: Meeting) {
+   return {
+     id: meeting.id,
+@@ -364,6 +592,7 @@ function meetingToRow(meeting: Meeting) {
+     follow_up_actions: meeting.followUpActions,
+     related_approvals: meeting.relatedApprovals,
+     related_tasks: meeting.relatedTasks,
++    related_records: meeting.relatedRecords,
+     audit_log: meeting.auditLog,
+     summary: meeting.summary ?? null,
+     created_by: meeting.createdBy ?? null,
+@@ -389,6 +618,7 @@ function decisionToRow(decision: Decision) {
+     linked_records: decision.linkedRecords ?? [],
+     owner_id: decision.ownerId ?? null,
+     priority: decision.priority ?? "medium",
++    kpi: decision.kpi ?? null,
+     due_date: decision.dueDate ?? null,
+     status: decision.status,
+     task_id: decision.taskId ?? null,
+@@ -400,6 +630,54 @@ function decisionToRow(decision: Decision) {
+   };
+ }
+ 
++function decisionVersionToRow(version: DecisionVersion) {
++  return {
++    id: version.id,
++    decision_id: version.decisionId,
++    version_number: version.versionNumber,
++    changed_fields: version.changedFields,
++    previous_value: version.previousValue,
++    new_value: version.newValue,
++    reason: version.reason ?? null,
++    created_by: version.createdBy,
++    created_at: version.createdAt,
++    updated_at: version.updatedAt
++  };
++}
++
++function auditLogInputToRow(auditLog: Omit<AuditLog, "id" | "createdAt">) {
++  return {
++    actor_id: auditLog.actorId,
++    entity_type: auditLog.entityType,
++    entity_id: auditLog.entityId,
++    action: auditLog.action,
++    old_value: auditLog.oldValue ?? null,
++    new_value: auditLog.newValue ?? null
++  };
++}
++
++function decisionAssignmentToRow(assignment: DecisionAssignment) {
++  return {
++    id: assignment.id,
++    decision_id: assignment.decisionId,
++    task_id: assignment.taskId ?? null,
++    organization_id: assignment.organizationId ?? null,
++    project_id: assignment.projectId,
++    assignee_type: assignment.assigneeType,
++    assignee_id: assignment.assigneeId ?? null,
++    department_id: assignment.departmentId ?? null,
++    title: assignment.title,
++    description: assignment.description ?? null,
++    kpi: assignment.kpi ?? null,
++    due_date: assignment.dueDate ?? null,
++    priority: assignment.priority,
++    status: assignment.status,
++    created_by: assignment.createdBy,
++    created_at: assignment.createdAt,
++    updated_at: assignment.updatedAt
++  };
++}
++
+ function meetingPatchToRow(patch: Partial<Meeting>) {
+   return {
+     ...(patch.organizationId !== undefined ? { organization_id: patch.organizationId ?? null } : {}),
+@@ -426,6 +704,7 @@ function meetingPatchToRow(patch: Partial<Meeting>) {
+     ...(patch.followUpActions !== undefined ? { follow_up_actions: patch.followUpActions } : {}),
+     ...(patch.relatedApprovals !== undefined ? { related_approvals: patch.relatedApprovals } : {}),
+     ...(patch.relatedTasks !== undefined ? { related_tasks: patch.relatedTasks } : {}),
++    ...(patch.relatedRecords !== undefined ? { related_records: patch.relatedRecords } : {}),
+     ...(patch.auditLog !== undefined ? { audit_log: patch.auditLog } : {}),
+     ...(patch.summary !== undefined ? { summary: patch.summary ?? null } : {}),
+     ...(patch.updatedAt !== undefined ? { updated_at: patch.updatedAt } : {})
+@@ -448,6 +727,7 @@ function decisionPatchToRow(patch: Partial<Decision>) {
+     ...(patch.linkedRecords !== undefined ? { linked_records: patch.linkedRecords } : {}),
+     ...(patch.ownerId !== undefined ? { owner_id: patch.ownerId ?? null } : {}),
+     ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
++    ...(patch.kpi !== undefined ? { kpi: patch.kpi ?? null } : {}),
+     ...(patch.dueDate !== undefined ? { due_date: patch.dueDate ?? null } : {}),
+     ...(patch.status !== undefined ? { status: patch.status } : {}),
+     ...(patch.taskId !== undefined ? { task_id: patch.taskId ?? null } : {}),
+@@ -462,9 +742,14 @@ export class SupabaseMeetingRepository implements MeetingRepository {
+   async listMeetings(filters: MeetingListFilters = {}) {
+     const supabase = await createSupabaseServerClient();
+     let query = supabase.from("meetings").select("*");
++    const projectId = activeFilterValue(filters.projectId);
+ 
+-    if (filters.projectId && filters.projectId !== "all") {
+-      query = query.or(`project_id.eq.${filters.projectId},project_ids.cs.{${filters.projectId}}`);
++    if (projectId) {
++      if (!isSupabaseUuid(projectId)) {
++        return [];
++      }
++
++      query = query.or(`project_id.eq.${projectId},project_ids.cs.{${projectId}}`);
+     }
+ 
+     if (filters.organizationId && filters.organizationId !== "all") {
+@@ -491,6 +776,27 @@ export class SupabaseMeetingRepository implements MeetingRepository {
+       query = query.eq("visibility", filters.visibility);
+     }
+ 
++    const participantId = activeFilterValue(filters.participantId);
++
++    if (participantId) {
++      if (!isSupabaseUuid(participantId)) {
++        return [];
++      }
++
++      query = query.or(`host_id.eq.${participantId},participants.cs.{${participantId}}`);
++    }
++
++    const dateFrom = normalizeDateRangeStart(filters.dateFrom);
++    const dateTo = normalizeDateRangeEnd(filters.dateTo);
++
++    if (dateFrom) {
++      query = query.gte("start_time", dateFrom);
++    }
++
++    if (dateTo) {
++      query = query.lte("start_time", dateTo);
++    }
++
+     const { data, error } = await query.order("start_time", { ascending: false });
+ 
+     if (error) {
+@@ -594,6 +900,129 @@ export class SupabaseMeetingRepository implements MeetingRepository {
+ 
+     return toDecision(data as DecisionRow);
+   }
++
++  async listDecisionVersions(decisionId: string) {
++    const supabase = await createSupabaseServerClient();
++    const { data, error } = await supabase
++      .from("decision_versions")
++      .select("*")
++      .eq("decision_id", decisionId)
++      .order("version_number", { ascending: true });
++
++    if (error) {
++      throw new Error(error.message);
++    }
++
++    return ((data ?? []) as DecisionVersionRow[]).map(toDecisionVersion);
++  }
++
++  async createDecisionVersion(version: DecisionVersion) {
++    const supabase = await createSupabaseServerClient();
++    const { data, error } = await supabase
++      .from("decision_versions")
++      .insert(decisionVersionToRow(version))
++      .select("*")
++      .single();
++
++    if (error) {
++      throw new Error(error.message);
++    }
++
++    return toDecisionVersion(data as DecisionVersionRow);
++  }
++
++  async deleteDecisionVersions(versionIds: string[]) {
++    if (versionIds.length === 0) {
++      return;
++    }
++
++    const supabase = await createSupabaseServerClient();
++    const { error } = await supabase.from("decision_versions").delete().in("id", versionIds);
++
++    if (error) {
++      throw new Error(error.message);
++    }
++  }
++
++  async updateDecisionWithVersionAndAudit(input: DecisionUpdateTransactionInput) {
++    const supabase = await createSupabaseServerClient();
++    const { data, error } = await supabase.rpc("update_decision_with_version_and_audit", {
++      p_decision_id: input.decisionId,
++      p_decision_patch: decisionPatchToRow(input.patch),
++      p_decision_version: input.version ? decisionVersionToRow(input.version) : null,
++      p_audit_log: auditLogInputToRow(input.auditLog)
++    });
++
++    if (error) {
++      throw new Error(error.message);
++    }
++
++    return toDecision(data as DecisionRow);
++  }
++
++  async listDecisionAssignments(filters: DecisionAssignmentListFilters = {}) {
++    const supabase = await createSupabaseServerClient();
++    let query = supabase.from("decision_assignments").select("*");
++
++    if (filters.decisionId) {
++      query = query.eq("decision_id", filters.decisionId);
++    }
++
++    if (filters.taskId) {
++      query = query.eq("task_id", filters.taskId);
++    }
++
++    if (filters.projectId && filters.projectId !== "all") {
++      query = query.eq("project_id", filters.projectId);
++    }
++
++    if (filters.assigneeId && filters.assigneeId !== "all") {
++      query = query.eq("assignee_id", filters.assigneeId);
++    }
++
++    if (filters.status && filters.status !== "all") {
++      query = query.eq("status", filters.status);
++    }
++
++    const { data, error } = await query.order("due_date", { ascending: true, nullsFirst: false });
++
++    if (error) {
++      throw new Error(error.message);
++    }
++
++    return ((data ?? []) as DecisionAssignmentRow[]).map(toDecisionAssignment);
++  }
++
++  async createDecisionAssignments(assignments: DecisionAssignment[]) {
++    if (assignments.length === 0) {
++      return [];
++    }
++
++    const supabase = await createSupabaseServerClient();
++    const { data, error } = await supabase
++      .from("decision_assignments")
++      .insert(assignments.map(decisionAssignmentToRow))
++      .select("*");
++
++    if (error) {
++      throw new Error(error.message);
++    }
++
++    return ((data ?? []) as DecisionAssignmentRow[]).map(toDecisionAssignment);
++  }
++
++  async deleteDecisionAssignments(assignmentIds: string[]) {
++    if (assignmentIds.length === 0) {
++      return;
++    }
++
++    const supabase = await createSupabaseServerClient();
++    const { error } = await supabase.from("decision_assignments").delete().in("id", assignmentIds);
++
++    if (error) {
++      throw new Error(error.message);
++    }
++  }
+ }
+ 
+ function normalizeMeeting(meeting: Partial<Meeting> & Pick<Meeting, "id" | "title" | "meetingDate" | "createdAt" | "updatedAt">): Meeting {
+@@ -627,6 +1056,7 @@ function normalizeMeeting(meeting: Partial<Meeting> & Pick<Meeting, "id" | "titl
+     followUpActions: meeting.followUpActions ?? [],
+     relatedApprovals: meeting.relatedApprovals ?? [],
+     relatedTasks: meeting.relatedTasks ?? [],
++    relatedRecords: meeting.relatedRecords ?? [],
+     auditLog: meeting.auditLog ?? [],
+     summary: meeting.summary ?? undefined,
+     createdBy: meeting.createdBy ?? undefined,
+@@ -657,7 +1087,30 @@ function normalizeDecision(decision: Decision): Decision {
+   };
+ }
+ 
++function normalizeDecisionVersion(version: DecisionVersion): DecisionVersion {
++  return {
++    ...version,
++    changedFields: [...new Set(version.changedFields)],
++    previousValue: version.previousValue ?? {},
++    newValue: version.newValue ?? {},
++    updatedAt: version.updatedAt ?? version.createdAt
++  };
++}
++
++function normalizeDecisionAssignment(assignment: DecisionAssignment): DecisionAssignment {
++  return {
++    ...assignment,
++    status: assignment.status ?? "assigned",
++    priority: assignment.priority ?? "medium"
++  };
++}
++
+ function matchesMeetingFilters(meeting: Meeting, filters: MeetingListFilters) {
++  const participantId = activeFilterValue(filters.participantId);
++  const dateFrom = normalizeDateRangeStart(filters.dateFrom);
++  const dateTo = normalizeDateRangeEnd(filters.dateTo);
++  const meetingStart = activeFilterValue(meeting.startTime) ?? activeFilterValue(meeting.meetingDate) ?? "";
++
+   return (
+     (!filters.projectId ||
+       filters.projectId === "all" ||
+@@ -666,9 +1119,12 @@ function matchesMeetingFilters(meeting: Meeting, filters: MeetingListFilters) {
+     (!filters.organizationId || filters.organizationId === "all" || meeting.organizationId === filters.organizationId) &&
+     (!filters.axisId || filters.axisId === "all" || meeting.axisId === filters.axisId) &&
+     (!filters.departmentId || filters.departmentId === "all" || meeting.departmentId === filters.departmentId) &&
++    (!participantId || meeting.hostId === participantId || meeting.participants.includes(participantId)) &&
+     (!filters.meetingType || filters.meetingType === "all" || meeting.meetingType === filters.meetingType) &&
+     (!filters.status || filters.status === "all" || meeting.status === filters.status) &&
+-    (!filters.visibility || filters.visibility === "all" || meeting.visibility === filters.visibility)
++    (!filters.visibility || filters.visibility === "all" || meeting.visibility === filters.visibility) &&
++    (!dateFrom || meetingStart >= dateFrom) &&
++    (!dateTo || meetingStart <= dateTo)
+   );
+ }
+ 
+diff --git a/src/modules/meetings/services/meeting-service.ts b/src/modules/meetings/services/meeting-service.ts
+index 3cc4a83..9150085 100644
+--- a/src/modules/meetings/services/meeting-service.ts
++++ b/src/modules/meetings/services/meeting-service.ts
+@@ -5,16 +5,25 @@ import { taskRepository } from "@/modules/tasks/services/task-repository";
+ import { createTask } from "@/modules/tasks/services/task-service";
+ import type {
+   Decision,
++  DecisionAssignmentListFilters,
+   DecisionInput,
+   DecisionListFilters,
+   Meeting,
+   MeetingInput,
+   MeetingListFilters,
+-  MeetingUpdateInput
++  MeetingRelatedRecord,
++  MeetingUpdateInput,
+ } from "@/modules/meetings/types";
+-import { decisionInputSchema, meetingInputSchema, meetingUpdateSchema } from "@/modules/meetings/validation";
++import {
++  decisionInputSchema,
++  meetingInputSchema,
++  meetingUpdateSchema,
++} from "@/modules/meetings/validation";
+ 
+-import { meetingRepository, type MeetingRepository } from "./meeting-repository";
++import {
++  meetingRepository,
++  type MeetingRepository,
++} from "./meeting-repository";
+ 
+ function createId() {
+   return crypto.randomUUID();
+@@ -24,11 +33,145 @@ function now() {
+   return new Date().toISOString();
+ }
+ 
+-export async function listMeetings(filters: MeetingListFilters = {}, repository: MeetingRepository = meetingRepository) {
++function normalizeMeetingProjectIds(
++  projectId: string | undefined,
++  projectIds: string[] = [],
++) {
++  return [
++    ...new Set(
++      [projectId, ...projectIds].filter((item): item is string =>
++        Boolean(item),
++      ),
++    ),
++  ];
++}
++
++function uniqueIds(values: Array<string | undefined> = []) {
++  return [
++    ...new Set(
++      values
++        .map((value) => value?.trim())
++        .filter((value): value is string => Boolean(value)),
++    ),
++  ];
++}
++
++function normalizeMeetingRelatedRecords(input: {
++  relatedApprovals?: string[];
++  relatedDecisions?: string[];
++  relatedDocuments?: string[];
++  relatedRecords?: MeetingRelatedRecord[];
++  relatedRisks?: string[];
++  relatedTasks?: string[];
++}) {
++  const records: MeetingRelatedRecord[] = [];
++  const seen = new Set<string>();
++
++  function add(record: MeetingRelatedRecord) {
++    const id = record.id.trim();
++
++    if (!id) {
++      return;
++    }
++
++    const key = `${record.type}:${id}`;
++
++    if (seen.has(key)) {
++      return;
++    }
++
++    seen.add(key);
++    records.push({
++      type: record.type,
++      id,
++      relationType: record.relationType,
++      title: record.title,
++    });
++  }
++
++  for (const record of input.relatedRecords ?? []) {
++    add(record);
++  }
++
++  for (const approvalId of uniqueIds(input.relatedApprovals)) {
++    add({ type: "approval", id: approvalId, relationType: "context" });
++  }
++
++  for (const taskId of uniqueIds(input.relatedTasks)) {
++    add({ type: "task", id: taskId, relationType: "context" });
++  }
++
++  for (const riskId of uniqueIds(input.relatedRisks)) {
++    add({ type: "risk", id: riskId, relationType: "context" });
++  }
++
++  for (const documentId of uniqueIds(input.relatedDocuments)) {
++    add({ type: "document", id: documentId, relationType: "context" });
++  }
++
++  for (const decisionId of uniqueIds(input.relatedDecisions)) {
++    add({ type: "decision", id: decisionId, relationType: "context" });
++  }
++
++  return records;
++}
++
++function relatedApprovalsFromRecords(records: MeetingRelatedRecord[]) {
++  return records
++    .filter(
++      (record) => record.type === "approval" || record.type === "proposal",
++    )
++    .map((record) => record.id);
++}
++
++function relatedTasksFromRecords(records: MeetingRelatedRecord[]) {
++  return records
++    .filter((record) => record.type === "task")
++    .map((record) => record.id);
++}
++
++function hasRelatedRecordInput(input: {
++  relatedApprovals?: string[];
++  relatedDecisions?: string[];
++  relatedDocuments?: string[];
++  relatedRecords?: MeetingRelatedRecord[];
++  relatedRisks?: string[];
++  relatedTasks?: string[];
++}) {
++  return (
++    input.relatedApprovals !== undefined ||
++    input.relatedTasks !== undefined ||
++    input.relatedDecisions !== undefined ||
++    input.relatedRisks !== undefined ||
++    input.relatedDocuments !== undefined ||
++    input.relatedRecords !== undefined
++  );
++}
++
++async function assertProjectsWritable(
++  projectIds: string[],
++  projects: ProjectRepository,
++) {
++  for (const projectId of projectIds) {
++    const project = await projects.getProject(projectId);
++
++    if (!project || project.archivedAt) {
++      throw new Error("Dự án không tồn tại hoặc đã được lưu trữ.");
++    }
++  }
++}
++
++export async function listMeetings(
++  filters: MeetingListFilters = {},
++  repository: MeetingRepository = meetingRepository,
++) {
+   return repository.listMeetings(filters);
+ }
+ 
+-export async function getMeeting(meetingId: string, repository: MeetingRepository = meetingRepository) {
++export async function getMeeting(
++  meetingId: string,
++  repository: MeetingRepository = meetingRepository,
++) {
+   return repository.getMeeting(meetingId);
+ }
+ 
+@@ -36,25 +179,24 @@ export async function createMeeting(
+   input: MeetingInput,
+   createdBy: string,
+   repository: MeetingRepository = meetingRepository,
+-  projects: ProjectRepository = projectRepository
++  projects: ProjectRepository = projectRepository,
+ ) {
+   const parsedInput = meetingInputSchema.parse(input);
++  const projectIds = normalizeMeetingProjectIds(
++    parsedInput.projectId,
++    parsedInput.projectIds,
++  );
+ 
+-  if (parsedInput.projectId) {
+-    const project = await projects.getProject(parsedInput.projectId);
+-
+-    if (!project || project.archivedAt) {
+-      throw new Error("Dự án không tồn tại hoặc đã được lưu trữ.");
+-    }
+-  }
++  await assertProjectsWritable(projectIds, projects);
+ 
+   const timestamp = now();
+   const startTime = new Date(parsedInput.meetingDate).toISOString();
++  const relatedRecords = normalizeMeetingRelatedRecords(parsedInput);
+   const meeting: Meeting = {
+     id: createId(),
+     organizationId: parsedInput.organizationId,
+     projectId: parsedInput.projectId,
+-    projectIds: parsedInput.projectIds?.length ? parsedInput.projectIds : parsedInput.projectId ? [parsedInput.projectId] : [],
++    projectIds,
+     axisId: parsedInput.axisId,
+     departmentId: parsedInput.departmentId,
+     title: parsedInput.title,
+@@ -64,7 +206,9 @@ export async function createMeeting(
+     status: parsedInput.status,
+     meetingDate: startTime,
+     startTime,
+-    endTime: parsedInput.endTime ? new Date(parsedInput.endTime).toISOString() : undefined,
++    endTime: parsedInput.endTime
++      ? new Date(parsedInput.endTime).toISOString()
++      : undefined,
+     hostId: parsedInput.hostId ?? createdBy,
+     participants: parsedInput.participants,
+     externalParticipants: parsedInput.externalParticipants,
+@@ -75,21 +219,22 @@ export async function createMeeting(
+     meetingMinutes: parsedInput.meetingMinutes,
+     decisions: [],
+     followUpActions: [],
+-    relatedApprovals: [],
+-    relatedTasks: [],
++    relatedApprovals: relatedApprovalsFromRecords(relatedRecords),
++    relatedTasks: relatedTasksFromRecords(relatedRecords),
++    relatedRecords,
+     auditLog: [
+       {
+         id: createId(),
+         actorId: createdBy,
+         action: "meeting.created",
+         createdAt: timestamp,
+-        note: "Tạo cuộc họp từ Meeting Engine."
+-      }
++        note: "Tạo cuộc họp từ Meeting Engine.",
++      },
+     ],
+     summary: parsedInput.summary,
+     createdBy,
+     createdAt: timestamp,
+-    updatedAt: timestamp
++    updatedAt: timestamp,
+   };
+ 
+   return repository.createMeeting(meeting);
+@@ -98,7 +243,8 @@ export async function createMeeting(
+ export async function updateMeeting(
+   meetingId: string,
+   input: MeetingUpdateInput,
+-  repository: MeetingRepository = meetingRepository
++  repository: MeetingRepository = meetingRepository,
++  updatedBy?: string,
+ ) {
+   const parsedInput = meetingUpdateSchema.parse(input);
+   const existingMeeting = await repository.getMeeting(meetingId);
+@@ -107,10 +253,12 @@ export async function updateMeeting(
+     throw new Error("Không tìm thấy cuộc họp.");
+   }
+ 
++  const timestamp = now();
++  const relatedRecords = hasRelatedRecordInput(parsedInput)
++    ? normalizeMeetingRelatedRecords(parsedInput)
++    : (existingMeeting.relatedRecords ?? []);
++
+   return repository.updateMeeting(meetingId, {
+-    organizationId: parsedInput.organizationId,
+-    axisId: parsedInput.axisId,
+-    departmentId: parsedInput.departmentId,
+     title: parsedInput.title,
+     meetingType: parsedInput.meetingType,
+     visibility: parsedInput.visibility,
+@@ -118,29 +266,57 @@ export async function updateMeeting(
+     status: parsedInput.status,
+     meetingDate: new Date(parsedInput.meetingDate).toISOString(),
+     startTime: new Date(parsedInput.meetingDate).toISOString(),
+-    endTime: parsedInput.endTime ? new Date(parsedInput.endTime).toISOString() : undefined,
++    endTime: parsedInput.endTime
++      ? new Date(parsedInput.endTime).toISOString()
++      : undefined,
+     hostId: parsedInput.hostId,
+     participants: parsedInput.participants,
+     externalParticipants: parsedInput.externalParticipants,
+     roomId: parsedInput.roomId,
+     agenda: parsedInput.agenda,
+     meetingMinutes: parsedInput.meetingMinutes,
++    relatedApprovals: relatedApprovalsFromRecords(relatedRecords),
++    relatedTasks: relatedTasksFromRecords(relatedRecords),
++    relatedRecords,
++    auditLog: [
++      ...existingMeeting.auditLog,
++      {
++        id: createId(),
++        actorId: updatedBy,
++        action: "meeting.updated",
++        createdAt: timestamp,
++        note: "Cap nhat thong tin cuoc hop tu Meeting Engine.",
++      },
++    ],
+     summary: parsedInput.summary,
+-    updatedAt: now()
++    updatedAt: timestamp,
+   });
+ }
+ 
+-export async function listDecisions(filters: DecisionListFilters = {}, repository: MeetingRepository = meetingRepository) {
++export async function listDecisions(
++  filters: DecisionListFilters = {},
++  repository: MeetingRepository = meetingRepository,
++) {
+   return repository.listDecisions(filters);
+ }
+ 
+-export async function getDecision(decisionId: string, repository: MeetingRepository = meetingRepository) {
++export async function getDecision(
++  decisionId: string,
++  repository: MeetingRepository = meetingRepository,
++) {
+   return repository.getDecision(decisionId);
+ }
+ 
++export async function listDecisionAssignments(
++  filters: DecisionAssignmentListFilters = {},
++  repository: MeetingRepository = meetingRepository,
++) {
++  return repository.listDecisionAssignments(filters);
++}
++
+ export async function createDecision(
+   input: DecisionInput,
+-  repository: MeetingRepository = meetingRepository
++  repository: MeetingRepository = meetingRepository,
+ ) {
+   const parsedInput = decisionInputSchema.parse(input);
+   const meeting = await repository.getMeeting(parsedInput.meetingId);
+@@ -150,7 +326,9 @@ export async function createDecision(
+   }
+ 
+   if (!meeting.projectId) {
+-    throw new Error("Cuộc họp không gắn dự án nên chưa thể tạo action item theo dự án.");
++    throw new Error(
++      "Cuộc họp không gắn dự án nên chưa thể tạo action item theo dự án.",
++    );
+   }
+ 
+   const timestamp = now();
+@@ -160,7 +338,9 @@ export async function createDecision(
+     organizationId: meeting.organizationId,
+     meetingId: meeting.id,
+     projectId: meeting.projectId,
+-    projectIds: meeting.projectIds?.length ? meeting.projectIds : [meeting.projectId],
++    projectIds: meeting.projectIds?.length
++      ? meeting.projectIds
++      : [meeting.projectId],
+     axisId: meeting.axisId,
+     workstreamId: meeting.departmentId ?? "decision",
+     moduleId: "meeting",
+@@ -172,8 +352,8 @@ export async function createDecision(
+         type: "meeting",
+         id: meeting.id,
+         relationType: "source",
+-        title: meeting.title
+-      }
++        title: meeting.title,
++      },
+     ],
+     ownerId: parsedInput.ownerId,
+     priority: "medium",
+@@ -183,7 +363,7 @@ export async function createDecision(
+     decidedBy: meeting.createdBy,
+     decidedAt: timestamp,
+     createdAt: timestamp,
+-    updatedAt: timestamp
++    updatedAt: timestamp,
+   };
+ 
+   return repository.createDecision(decision);
+@@ -193,7 +373,7 @@ export async function convertDecisionToTask(
+   decisionId: string,
+   repository: MeetingRepository = meetingRepository,
+   tasks: TaskRepository = taskRepository,
+-  projects: ProjectRepository = projectRepository
++  projects: ProjectRepository = projectRepository,
+ ) {
+   const decision = await repository.getDecision(decisionId);
+ 
+@@ -206,17 +386,32 @@ export async function convertDecisionToTask(
+   }
+ 
+   if (!decision.projectId) {
+-    throw new Error("Chi decision gan mot du an moi co the chuyen thanh task.");
++    throw new Error("Chỉ decision gắn một dự án mới có thể chuyển thành task.");
+   }
+ 
+-  const meeting = decision.meetingId ? await repository.getMeeting(decision.meetingId) : undefined;
++  const projectIds = [
++    decision.projectId,
++    ...(decision.projectIds ?? []),
++  ].filter((projectId): projectId is string => Boolean(projectId));
++  const uniqueProjectIds = [...new Set(projectIds)];
++
++  if (uniqueProjectIds.length !== 1) {
++    throw new Error(
++      "Chỉ decision gắn đúng một dự án mới có thể chuyển thành task.",
++    );
++  }
++
++  const meeting = decision.meetingId
++    ? await repository.getMeeting(decision.meetingId)
++    : undefined;
++  const projectId = uniqueProjectIds[0];
+   const task = await createTask(
+     {
+-      projectId: decision.projectId,
++      projectId,
+       title: decision.decisionText,
+       description: [
+         "Công việc được tạo từ quyết định/action item cuộc họp.",
+-        meeting ? `Cuộc họp: ${meeting.title}` : undefined
++        meeting ? `Cuộc họp: ${meeting.title}` : undefined,
+       ]
+         .filter(Boolean)
+         .join("\n"),
+@@ -224,16 +419,21 @@ export async function convertDecisionToTask(
+       dueDate: decision.dueDate,
+       status: "todo",
+       priority: "medium",
+-      category: "meeting"
++      category: "meeting",
+     },
+     tasks,
+-    projects
++    projects,
++    {
++      linkedEntityType: "decision",
++      linkedEntityId: decision.id,
++      createdBy: decision.createdBy,
++    },
+   );
+ 
+   await repository.updateDecision(decision.id, {
+     taskId: task.id,
+     status: "in_progress",
+-    updatedAt: now()
++    updatedAt: now(),
+   });
+ 
+   return task;
+diff --git a/src/modules/meetings/types.ts b/src/modules/meetings/types.ts
+index 742227f..701d401 100644
+--- a/src/modules/meetings/types.ts
++++ b/src/modules/meetings/types.ts
+@@ -4,7 +4,7 @@ import type {
+   MeetingParticipantScope,
+   MeetingStatus,
+   MeetingType,
+-  MeetingVisibility
++  MeetingVisibility,
+ } from "@/modules/meetings/constants";
+ import type { EntityId, TimestampFields } from "@/types/common";
+ 
+@@ -48,6 +48,29 @@ export type MeetingAuditEntry = {
+   note?: string;
+ };
+ 
++export type MeetingRelatedRecordType =
++  | "proposal"
++  | "approval"
++  | "risk"
++  | "decision"
++  | "task"
++  | "document"
++  | "project"
++  | "custom";
++
++export type MeetingRelatedRecordRelationType =
++  | "source"
++  | "context"
++  | "generated_action"
++  | "dependency";
++
++export type MeetingRelatedRecord = {
++  type: MeetingRelatedRecordType;
++  id: EntityId;
++  relationType: MeetingRelatedRecordRelationType;
++  title?: string;
++};
++
+ export type Meeting = TimestampFields & {
+   id: EntityId;
+   organizationId?: EntityId;
+@@ -76,15 +99,28 @@ export type Meeting = TimestampFields & {
+   followUpActions: MeetingFollowUpAction[];
+   relatedApprovals: EntityId[];
+   relatedTasks: EntityId[];
++  relatedRecords?: MeetingRelatedRecord[];
+   auditLog: MeetingAuditEntry[];
+   summary?: string;
+   createdBy?: EntityId;
+ };
+ 
+-export type DecisionSourceType = "independent" | "proposal" | "approval" | "meeting";
++export type DecisionSourceType =
++  | "independent"
++  | "proposal"
++  | "approval"
++  | "meeting";
+ 
+ export type DecisionLinkedRecord = {
+-  type: "project" | "proposal" | "approval" | "meeting" | "task" | "document" | "risk" | "custom";
++  type:
++    | "project"
++    | "proposal"
++    | "approval"
++    | "meeting"
++    | "task"
++    | "document"
++    | "risk"
++    | "custom";
+   id: string;
+   relationType: "source" | "context" | "generated_action" | "dependency";
+   title?: string;
+@@ -115,6 +151,7 @@ export type Decision = TimestampFields & {
+   linkedRecords?: DecisionLinkedRecord[];
+   ownerId?: EntityId;
+   priority?: TaskPriority;
++  kpi?: string;
+   dueDate?: string;
+   status: DecisionStatus;
+   taskId?: EntityId;
+@@ -123,6 +160,102 @@ export type Decision = TimestampFields & {
+   decidedAt?: string;
+ };
+ 
++export type DecisionVersionField =
++  | "title"
++  | "decisionText"
++  | "ownerId"
++  | "dueDate"
++  | "priority"
++  | "status"
++  | "organizationId"
++  | "projectId"
++  | "projectIds"
++  | "axisId"
++  | "workstreamId"
++  | "moduleId"
++  | "linkedRecords"
++  | "kpi";
++
++export type DecisionVersionValue = Partial<
++  Record<DecisionVersionField, unknown>
++>;
++
++export type DecisionVersion = TimestampFields & {
++  id: EntityId;
++  decisionId: EntityId;
++  versionNumber: number;
++  changedFields: DecisionVersionField[];
++  previousValue: DecisionVersionValue;
++  newValue: DecisionVersionValue;
++  reason?: string;
++  createdBy: EntityId;
++};
++
++export type DecisionHistoryEvent =
++  | {
++      id: EntityId;
++      type: "version";
++      actorId?: EntityId;
++      createdAt: string;
++      versionNumber: number;
++      changedFields: DecisionVersionField[];
++      previousValue?: DecisionVersionValue;
++      newValue?: DecisionVersionValue;
++      reason?: string;
++    }
++  | {
++      id: EntityId;
++      type: "audit";
++      actorId?: EntityId;
++      createdAt: string;
++      action: string;
++      summary?: string;
++      changedFields?: string[];
++    };
++
++export type DecisionAssignmentStatus =
++  | "assigned"
++  | "in_progress"
++  | "done"
++  | "cancelled";
++
++export type DecisionAssignmentAssigneeType = "user" | "department" | "project";
++
++export type DecisionAssignment = TimestampFields & {
++  id: EntityId;
++  decisionId: EntityId;
++  taskId?: EntityId;
++  organizationId?: EntityId;
++  projectId: EntityId;
++  assigneeType: DecisionAssignmentAssigneeType;
++  assigneeId?: EntityId;
++  departmentId?: EntityId;
++  title: string;
++  description?: string;
++  kpi?: string;
++  dueDate?: string;
++  priority: TaskPriority;
++  status: DecisionAssignmentStatus;
++  createdBy: EntityId;
++};
++
++export type DecisionAssignmentInput = {
++  projectId?: EntityId;
++  assigneeType: DecisionAssignmentAssigneeType;
++  assigneeId?: EntityId;
++  departmentId?: EntityId;
++  title: string;
++  description?: string;
++  kpi?: string;
++  dueDate?: string;
++  priority?: TaskPriority;
++};
++
++export type CreateDecisionAssignmentsInput = {
++  decisionId: EntityId;
++  assignments: DecisionAssignmentInput[];
++};
++
+ export type MeetingInput = {
+   organizationId?: EntityId;
+   projectId?: EntityId;
+@@ -143,9 +276,18 @@ export type MeetingInput = {
+   agenda?: string;
+   meetingMinutes?: string;
+   summary?: string;
++  relatedApprovals?: EntityId[];
++  relatedTasks?: EntityId[];
++  relatedDecisions?: EntityId[];
++  relatedRisks?: EntityId[];
++  relatedDocuments?: EntityId[];
++  relatedRecords?: MeetingRelatedRecord[];
+ };
+ 
+-export type MeetingUpdateInput = Omit<MeetingInput, "projectId" | "projectIds">;
++export type MeetingUpdateInput = Omit<
++  MeetingInput,
++  "organizationId" | "projectId" | "projectIds" | "axisId" | "departmentId"
++>;
+ 
+ export type DecisionInput = {
+   meetingId: EntityId;
+@@ -168,20 +310,39 @@ export type CreateDecisionRecordInput = DecisionScopeInput & {
+   linkedRecords?: DecisionLinkedRecord[];
+   ownerId?: EntityId;
+   priority?: TaskPriority;
++  kpi?: string;
+   dueDate?: string;
+   status?: DecisionStatus;
+   decidedBy?: EntityId;
+   scope?: DecisionScopeInput;
+ };
+ 
++export type UpdateDecisionRecordInput = DecisionScopeInput & {
++  decisionId: EntityId;
++  title?: string;
++  content?: string;
++  decisionText?: string;
++  linkedRecords?: DecisionLinkedRecord[];
++  ownerId?: EntityId;
++  priority?: TaskPriority;
++  kpi?: string;
++  dueDate?: string;
++  status?: DecisionStatus;
++  reason?: string;
++  scope?: DecisionScopeInput;
++};
++
+ export type MeetingListFilters = {
+   projectId?: EntityId | "all";
+   organizationId?: EntityId | "all";
+   axisId?: string | "all";
+   departmentId?: EntityId | "all";
++  participantId?: EntityId | "all";
+   meetingType?: MeetingType | "all";
+   status?: MeetingStatus | "all";
+   visibility?: MeetingVisibility | "all";
++  dateFrom?: string | "all";
++  dateTo?: string | "all";
+ };
+ 
+ export type DecisionListFilters = {
+@@ -190,3 +351,11 @@ export type DecisionListFilters = {
+   ownerId?: EntityId | "all";
+   status?: DecisionStatus | "all";
+ };
++
++export type DecisionAssignmentListFilters = {
++  decisionId?: EntityId;
++  taskId?: EntityId;
++  projectId?: EntityId | "all";
++  assigneeId?: EntityId | "all";
++  status?: DecisionAssignmentStatus | "all";
++};
+diff --git a/src/modules/meetings/validation.ts b/src/modules/meetings/validation.ts
+index e5bba2c..549e2e0 100644
+--- a/src/modules/meetings/validation.ts
++++ b/src/modules/meetings/validation.ts
+@@ -16,6 +16,8 @@ const decisionPriorityKeys = Object.keys(TASK_PRIORITIES) as [
+   keyof typeof TASK_PRIORITIES,
+   ...Array<keyof typeof TASK_PRIORITIES>
+ ];
++const decisionAssignmentStatusKeys = ["assigned", "in_progress", "done", "cancelled"] as const;
++const decisionAssignmentAssigneeTypeKeys = ["user", "department", "project"] as const;
+ const decisionSourceTypeKeys = ["independent", "proposal", "approval", "meeting"] as const;
+ const decisionLinkedRecordTypeKeys = [
+   "project",
+@@ -28,6 +30,8 @@ const decisionLinkedRecordTypeKeys = [
+   "custom"
+ ] as const;
+ const decisionRelationTypeKeys = ["source", "context", "generated_action", "dependency"] as const;
++const meetingRelatedRecordTypeKeys = ["proposal", "approval", "risk", "decision", "task", "document", "project", "custom"] as const;
++const meetingRelatedRecordRelationTypeKeys = ["source", "context", "generated_action", "dependency"] as const;
+ const meetingTypeKeys = Object.keys(MEETING_TYPES) as [keyof typeof MEETING_TYPES, ...Array<keyof typeof MEETING_TYPES>];
+ const meetingVisibilityKeys = Object.keys(MEETING_VISIBILITIES) as [
+   keyof typeof MEETING_VISIBILITIES,
+@@ -45,6 +49,22 @@ const optionalText = z
+   .transform((value) => (value.length > 0 ? value : undefined))
+   .optional();
+ 
++function isDateOnly(value: string) {
++  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
++
++  if (!match) {
++    return false;
++  }
++
++  const [, yearText, monthText, dayText] = match;
++  const year = Number(yearText);
++  const month = Number(monthText);
++  const day = Number(dayText);
++  const date = new Date(Date.UTC(year, month - 1, day));
++
++  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
++}
++
+ const optionalStringArray = z
+   .union([z.string(), z.array(z.string())])
+   .optional()
+@@ -58,15 +78,41 @@ const optionalStringArray = z
+     return values.map((item) => item.trim()).filter(Boolean);
+   });
+ 
+-const dateTimeString = z.string().trim().min(1, "Thời gian họp là bắt buộc.").refine((value) => !Number.isNaN(Date.parse(value)), {
+-  message: "Thời gian họp không hợp lệ."
++const optionalStringArrayForUpdate = z
++  .union([z.string(), z.array(z.string())])
++  .optional()
++  .transform((value) => {
++    if (value === undefined) {
++      return undefined;
++    }
++
++    const values = Array.isArray(value) ? value : value.split(",");
++
++    return values.map((item) => item.trim()).filter(Boolean);
++  });
++
++const meetingRelatedRecordSchema = z.object({
++  type: z.enum(meetingRelatedRecordTypeKeys),
++  id: z.string().trim().min(1, "Related record thiếu id."),
++  relationType: z.enum(meetingRelatedRecordRelationTypeKeys).default("context"),
++  title: optionalText
+ });
+ 
+-const optionalDateTime = optionalText.refine((value) => !value || !Number.isNaN(Date.parse(value)), {
+-  message: "Thời gian kết thúc không hợp lệ."
++const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?$/;
++
++function isIsoTimestamp(value: string) {
++  return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
++}
++
++const dateTimeString = z.string().trim().min(1, "Thời gian họp là bắt buộc.").refine(isIsoTimestamp, {
++  message: "Thời gian họp phải là ISO timestamp hợp lệ."
++});
++
++const optionalDateTime = optionalText.refine((value) => !value || isIsoTimestamp(value), {
++  message: "Thời gian kết thúc phải là ISO timestamp hợp lệ."
+ });
+ 
+-const optionalDate = optionalText.refine((value) => !value || !Number.isNaN(Date.parse(value)), {
++const optionalDate = optionalText.refine((value) => !value || isDateOnly(value), {
+   message: "Hạn xử lý không hợp lệ."
+ });
+ 
+@@ -89,7 +135,36 @@ const meetingBaseSchema = z.object({
+     roomId: optionalText,
+     agenda: optionalText,
+     meetingMinutes: optionalText,
+-    summary: optionalText
++    summary: optionalText,
++    relatedApprovals: optionalStringArray,
++    relatedTasks: optionalStringArray,
++    relatedDecisions: optionalStringArray,
++    relatedRisks: optionalStringArray,
++    relatedDocuments: optionalStringArray,
++    relatedRecords: z.array(meetingRelatedRecordSchema).default([])
++  });
++
++const meetingUpdateSchemaBase = meetingBaseSchema
++  .omit({
++    organizationId: true,
++    projectId: true,
++    projectIds: true,
++    axisId: true,
++    departmentId: true,
++    relatedApprovals: true,
++    relatedTasks: true,
++    relatedDecisions: true,
++    relatedRisks: true,
++    relatedDocuments: true,
++    relatedRecords: true
++  })
++  .extend({
++    relatedApprovals: optionalStringArrayForUpdate,
++    relatedTasks: optionalStringArrayForUpdate,
++    relatedDecisions: optionalStringArrayForUpdate,
++    relatedRisks: optionalStringArrayForUpdate,
++    relatedDocuments: optionalStringArrayForUpdate,
++    relatedRecords: z.array(meetingRelatedRecordSchema).optional()
+   });
+ 
+ function refineMeetingTime<T extends z.ZodTypeAny>(schema: T) {
+@@ -99,9 +174,19 @@ function refineMeetingTime<T extends z.ZodTypeAny>(schema: T) {
+   });
+ }
+ 
+-export const meetingInputSchema = refineMeetingTime(meetingBaseSchema);
++export const meetingInputSchema = refineMeetingTime(meetingBaseSchema).superRefine((input, context) => {
++  const projectIds = [input.projectId, ...(input.projectIds ?? [])].filter(Boolean);
++
++  if (projectIds.length === 0 && !input.organizationId) {
++    context.addIssue({
++      code: z.ZodIssueCode.custom,
++      message: "Cuộc họp phải gắn với tổ chức hoặc ít nhất một dự án.",
++      path: ["organizationId"]
++    });
++  }
++});
+ 
+-export const meetingUpdateSchema = refineMeetingTime(meetingBaseSchema.omit({ projectId: true, projectIds: true }));
++export const meetingUpdateSchema = refineMeetingTime(meetingUpdateSchemaBase);
+ 
+ export const decisionInputSchema = z.object({
+   meetingId: z.string().trim().min(1, "Cuộc họp là bắt buộc."),
+@@ -120,6 +205,15 @@ const decisionScopeSchema = z.object({
+   moduleId: optionalText
+ });
+ 
++const decisionUpdateScopeSchema = z.object({
++  organizationId: optionalText,
++  projectId: optionalText,
++  projectIds: optionalStringArrayForUpdate,
++  axisId: optionalText,
++  workstreamId: optionalText,
++  moduleId: optionalText
++});
++
+ const decisionLinkedRecordSchema = z.object({
+   type: z.enum(decisionLinkedRecordTypeKeys),
+   id: z.string().trim().min(1, "Lien ket record thieu id."),
+@@ -143,6 +237,7 @@ export const createDecisionRecordInputSchema = decisionScopeSchema
+     linkedRecords: z.array(decisionLinkedRecordSchema).default([]),
+     ownerId: optionalText,
+     priority: z.enum(decisionPriorityKeys).default("medium"),
++    kpi: optionalText,
+     dueDate: optionalDate,
+     status: z.enum(decisionStatusKeys).default("open"),
+     decidedBy: optionalText,
+@@ -157,3 +252,56 @@ export const createDecisionRecordInputSchema = decisionScopeSchema
+       });
+     }
+   });
++
++export const updateDecisionRecordInputSchema = decisionUpdateScopeSchema
++  .extend({
++    decisionId: z.string().trim().min(1, "Decision la bat buoc."),
++    title: optionalText,
++    content: optionalText,
++    decisionText: optionalText,
++    linkedRecords: z.array(decisionLinkedRecordSchema).optional(),
++    ownerId: optionalText,
++    priority: z.enum(decisionPriorityKeys).optional(),
++    kpi: optionalText,
++    dueDate: optionalDate,
++    status: z.enum(decisionStatusKeys).optional(),
++    reason: optionalText,
++    scope: decisionUpdateScopeSchema.optional()
++  });
++
++const decisionAssignmentInputSchema = z
++  .object({
++    projectId: optionalText,
++    assigneeType: z.enum(decisionAssignmentAssigneeTypeKeys),
++    assigneeId: optionalText,
++    departmentId: optionalText,
++    title: z.string().trim().min(1, "Tieu de assignment la bat buoc."),
++    description: optionalText,
++    kpi: optionalText,
++    dueDate: optionalDate,
++    priority: z.enum(decisionPriorityKeys).default("medium")
++  })
++  .superRefine((input, context) => {
++    if (input.assigneeType === "user" && !input.assigneeId) {
++      context.addIssue({
++        code: z.ZodIssueCode.custom,
++        message: "Nguoi nhan assignment la bat buoc.",
++        path: ["assigneeId"]
++      });
++    }
++
++    if (input.assigneeType === "department" && !input.departmentId) {
++      context.addIssue({
++        code: z.ZodIssueCode.custom,
++        message: "Phong ban nhan assignment la bat buoc.",
++        path: ["departmentId"]
++      });
++    }
++  });
++
++export const createDecisionAssignmentsInputSchema = z.object({
++  decisionId: z.string().trim().min(1, "Decision la bat buoc."),
++  assignments: z.array(decisionAssignmentInputSchema).min(1, "Can it nhat mot assignment.")
++});
++
++export const decisionAssignmentStatusSchema = z.enum(decisionAssignmentStatusKeys);
+diff --git a/tests/unit/meeting-actions.test.ts b/tests/unit/meeting-actions.test.ts
+index 991e763..d4118df 100644
+--- a/tests/unit/meeting-actions.test.ts
++++ b/tests/unit/meeting-actions.test.ts
+@@ -1,15 +1,21 @@
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ 
+ const mocks = vi.hoisted(() => ({
++  canCreateOrganizationMeeting: vi.fn(),
++  canCreateProjectMeeting: vi.fn(),
+   convertDecisionToTask: vi.fn(),
+   createDecisionRecord: vi.fn(),
+   createMeeting: vi.fn(),
+   getCurrentUser: vi.fn(),
+   getDecision: vi.fn(),
+   getMeeting: vi.fn(),
++  getScopedDocument: vi.fn(),
+   getScopedDecision: vi.fn(),
++  getScopedExecutiveRiskRecord: vi.fn(),
+   getScopedMeeting: vi.fn(),
++  getScopedProposal: vi.fn(),
+   getScopedProject: vi.fn(),
++  getScopedTask: vi.fn(),
+   redirect: vi.fn(),
+   revalidatePath: vi.fn(),
+   updateMeeting: vi.fn(),
+@@ -28,9 +34,15 @@ vi.mock("@/lib/auth/session", () => ({
+ }));
+ 
+ vi.mock("@/lib/permissions/scoped-resources", () => ({
++  canCreateOrganizationMeeting: mocks.canCreateOrganizationMeeting,
++  canCreateProjectMeeting: mocks.canCreateProjectMeeting,
++  getScopedDocument: mocks.getScopedDocument,
+   getScopedDecision: mocks.getScopedDecision,
++  getScopedExecutiveRiskRecord: mocks.getScopedExecutiveRiskRecord,
+   getScopedMeeting: mocks.getScopedMeeting,
++  getScopedProposal: mocks.getScopedProposal,
+   getScopedProject: mocks.getScopedProject,
++  getScopedTask: mocks.getScopedTask,
+ }));
+ 
+ vi.mock("@/modules/executive/services/decision-record-service", () => ({
+@@ -45,7 +57,7 @@ vi.mock("@/modules/meetings/services/meeting-service", () => ({
+   updateMeeting: mocks.updateMeeting,
+ }));
+ 
+-import { createDecisionAction } from "@/modules/meetings/actions";
++import { createDecisionAction, createMeetingAction, updateMeetingAction } from "@/modules/meetings/actions";
+ 
+ function decisionFormData() {
+   const formData = new FormData();
+@@ -58,6 +70,21 @@ function decisionFormData() {
+   return formData;
+ }
+ 
++function meetingFormData() {
++  const formData = new FormData();
++
++  formData.set("organizationId", "org-green-nest");
++  formData.set("projectIds", "project-a, project-b");
++  formData.set("title", "Multi-project meeting");
++  formData.set("meetingType", "PROJECT_MEETING");
++  formData.set("visibility", "project");
++  formData.set("participantScope", "project_team");
++  formData.set("status", "SCHEDULED");
++  formData.set("meetingDate", "2026-06-05T09:00:00.000Z");
++
++  return formData;
++}
++
+ describe("meeting actions", () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+@@ -95,4 +122,170 @@ describe("meeting actions", () => {
+     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
+     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-b");
+   });
++
++  it("checks every selected project before creating a multi-project meeting", async () => {
++    const currentUser = { id: "assistant-01", role: "thu_ky_tro_ly" };
++    mocks.getCurrentUser.mockResolvedValue(currentUser);
++    mocks.canCreateProjectMeeting.mockImplementation(async (_user, { projectId }: { projectId: string }) =>
++      projectId === "project-a" ? { id: "project-a" } : undefined,
++    );
++
++    await expect(createMeetingAction(meetingFormData())).rejects.toThrow(
++      "Bạn không có quyền tạo biên bản họp cho dự án này.",
++    );
++
++    expect(mocks.canCreateProjectMeeting).toHaveBeenCalledWith(currentUser, {
++      organizationId: "org-green-nest",
++      projectId: "project-a",
++      axisId: "",
++      departmentId: "",
++    });
++    expect(mocks.canCreateProjectMeeting).toHaveBeenCalledWith(currentUser, {
++      organizationId: "org-green-nest",
++      projectId: "project-b",
++      axisId: "",
++      departmentId: "",
++    });
++    expect(mocks.createMeeting).not.toHaveBeenCalled();
++  });
++
++  it("preserves repeated projectIds entries from multi-select form submissions", async () => {
++    const currentUser = { id: "assistant-01", role: "thu_ky_tro_ly" };
++    const formData = meetingFormData();
++    formData.delete("projectIds");
++    formData.append("projectIds", "project-a");
++    formData.append("projectIds", "project-b");
++    mocks.getCurrentUser.mockResolvedValue(currentUser);
++    mocks.canCreateProjectMeeting.mockResolvedValue(true);
++    mocks.createMeeting.mockResolvedValue({
++      id: "meeting-01",
++      projectIds: ["project-a", "project-b"],
++    });
++
++    await createMeetingAction(formData);
++
++    expect(mocks.createMeeting).toHaveBeenCalledWith(
++      expect.objectContaining({
++        projectIds: ["project-a", "project-b"],
++      }),
++      currentUser.id,
++    );
++    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
++    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-b");
++  });
++
++  it("validates scoped related records before creating a meeting and preserves repeated ids", async () => {
++    const currentUser = { id: "assistant-01", role: "thu_ky_tro_ly" };
++    const formData = meetingFormData();
++    formData.append("relatedApprovals", "proposal-a");
++    formData.append("relatedApprovals", "proposal-b");
++    formData.append("relatedTasks", "task-a");
++    formData.append("relatedDocuments", "document-a");
++    formData.append("relatedRisks", "risk-a");
++    formData.append("relatedDecisions", "decision-a");
++    mocks.getCurrentUser.mockResolvedValue(currentUser);
++    mocks.canCreateProjectMeeting.mockResolvedValue(true);
++    mocks.getScopedProposal.mockResolvedValue({ proposal: { id: "proposal-a" } });
++    mocks.getScopedTask.mockResolvedValue({ id: "task-a" });
++    mocks.getScopedDocument.mockResolvedValue({ id: "document-a" });
++    mocks.getScopedExecutiveRiskRecord.mockResolvedValue({ id: "risk-a" });
++    mocks.getScopedDecision.mockResolvedValue({ id: "decision-a" });
++    mocks.createMeeting.mockResolvedValue({
++      id: "meeting-01",
++      projectIds: ["project-a", "project-b"],
++    });
++
++    await createMeetingAction(formData);
++
++    expect(mocks.getScopedProposal).toHaveBeenCalledWith(currentUser, "proposal-a");
++    expect(mocks.getScopedProposal).toHaveBeenCalledWith(currentUser, "proposal-b");
++    expect(mocks.getScopedTask).toHaveBeenCalledWith(currentUser, "task-a");
++    expect(mocks.getScopedDocument).toHaveBeenCalledWith(currentUser, "document-a");
++    expect(mocks.getScopedExecutiveRiskRecord).toHaveBeenCalledWith(currentUser, "risk-a");
++    expect(mocks.getScopedDecision).toHaveBeenCalledWith(currentUser, "decision-a");
++    expect(mocks.createMeeting).toHaveBeenCalledWith(
++      expect.objectContaining({
++        relatedApprovals: ["proposal-a", "proposal-b"],
++        relatedTasks: ["task-a"],
++        relatedDocuments: ["document-a"],
++        relatedRisks: ["risk-a"],
++        relatedDecisions: ["decision-a"],
++      }),
++      currentUser.id,
++    );
++  });
++
++  it("submits full mutable edit fields without accepting scope mutation fields", async () => {
++    const currentUser = { id: "assistant-01", role: "tong_giam_doc" };
++    const formData = meetingFormData();
++    formData.set("organizationId", "org-hijack");
++    formData.set("axisId", "axis-hijack");
++    formData.set("departmentId", "department-hijack");
++    formData.set("hostId", "leader-01");
++    formData.set("participants", "leader-01, assistant-01");
++    formData.set("externalParticipants", "UBND");
++    formData.set("roomId", "online-placeholder");
++    formData.set("agenda", "Review related records");
++    formData.set("meetingMinutes", "Draft minutes");
++    formData.append("relatedApprovals", "proposal-a");
++    formData.append("relatedTasks", "task-a");
++    mocks.getCurrentUser.mockResolvedValue(currentUser);
++    mocks.getMeeting.mockResolvedValue({ id: "meeting-01", title: "Meeting" });
++    mocks.getScopedMeeting.mockResolvedValue({ id: "meeting-01", title: "Meeting" });
++    mocks.getScopedProposal.mockResolvedValue({ proposal: { id: "proposal-a" } });
++    mocks.getScopedTask.mockResolvedValue({ id: "task-a" });
++    mocks.updateMeeting.mockResolvedValue({
++      id: "meeting-01",
++      projectId: "project-a",
++      projectIds: ["project-a"],
++    });
++
++    await updateMeetingAction("meeting-01", formData);
++
++    expect(mocks.updateMeeting).toHaveBeenCalledWith(
++      "meeting-01",
++      expect.objectContaining({
++        title: "Multi-project meeting",
++        meetingType: "PROJECT_MEETING",
++        visibility: "project",
++        participantScope: "project_team",
++        status: "SCHEDULED",
++        meetingDate: "2026-06-05T09:00:00.000Z",
++        hostId: "leader-01",
++        participants: ["leader-01", "assistant-01"],
++        externalParticipants: ["UBND"],
++        roomId: "online-placeholder",
++        agenda: "Review related records",
++        meetingMinutes: "Draft minutes",
++        relatedApprovals: ["proposal-a"],
++        relatedTasks: ["task-a"],
++      }),
++      undefined,
++      currentUser.id,
++    );
++    expect(mocks.updateMeeting.mock.calls[0][1]).not.toHaveProperty("organizationId");
++    expect(mocks.updateMeeting.mock.calls[0][1]).not.toHaveProperty("axisId");
++    expect(mocks.updateMeeting.mock.calls[0][1]).not.toHaveProperty("departmentId");
++  });
++
++  it("requires organization-scope create permission when no project scope is selected", async () => {
++    const currentUser = { id: "assistant-01", role: "thu_ky_tro_ly" };
++    const formData = meetingFormData();
++    formData.delete("projectIds");
++    mocks.getCurrentUser.mockResolvedValue(currentUser);
++    mocks.canCreateOrganizationMeeting.mockResolvedValue(false);
++
++    await expect(createMeetingAction(formData)).rejects.toThrow(
++      "Bạn không có quyền tạo biên bản họp cấp tổ chức.",
++    );
++
++    expect(mocks.getScopedProject).not.toHaveBeenCalled();
++    expect(mocks.canCreateProjectMeeting).not.toHaveBeenCalled();
++    expect(mocks.canCreateOrganizationMeeting).toHaveBeenCalledWith(currentUser, {
++      organizationId: "org-green-nest",
++      axisId: "",
++      departmentId: "",
++    });
++    expect(mocks.createMeeting).not.toHaveBeenCalled();
++  });
+ });
+diff --git a/tests/unit/meeting-service.test.ts b/tests/unit/meeting-service.test.ts
+index 72cb2ec..f936b37 100644
+--- a/tests/unit/meeting-service.test.ts
++++ b/tests/unit/meeting-service.test.ts
+@@ -5,12 +5,14 @@ import path from "node:path";
+ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+ 
+ const supabaseMock = vi.hoisted(() => {
+-  type TableName = "meetings" | "decisions";
++  type TableName = "meetings" | "decisions" | "decision_assignments";
+   type Row = Record<string, unknown>;
+   const tables: Record<TableName, Row[]> = {
+     decisions: [],
++    decision_assignments: [],
+     meetings: [],
+   };
++  const orExpressions: string[] = [];
+ 
+   function createQuery(table: TableName) {
+     let rows = [...tables[table]];
+@@ -20,7 +22,18 @@ const supabaseMock = vi.hoisted(() => {
+ 
+         return query;
+       },
++      gte(column: string, value: unknown) {
++        rows = rows.filter((row) => String(row[column] ?? "") >= String(value));
++
++        return query;
++      },
++      lte(column: string, value: unknown) {
++        rows = rows.filter((row) => String(row[column] ?? "") <= String(value));
++
++        return query;
++      },
+       or(expression: string) {
++        orExpressions.push(expression);
+         const clauses = expression.split(",");
+ 
+         rows = rows.filter((row) =>
+@@ -78,6 +91,7 @@ const supabaseMock = vi.hoisted(() => {
+     createSupabaseServerClient: vi.fn(async () => ({
+       from: (table: TableName) => createQuery(table),
+     })),
++    orExpressions,
+     tables,
+   };
+ });
+@@ -88,9 +102,18 @@ vi.mock("@/lib/auth/supabase-server", () => ({
+ }));
+ 
+ import { JsonMeetingRepository, SupabaseMeetingRepository } from "@/modules/meetings/services/meeting-repository";
+-import { convertDecisionToTask, createDecision, createMeeting, listDecisions, updateMeeting } from "@/modules/meetings/services/meeting-service";
++import {
++  convertDecisionToTask,
++  createDecision,
++  createMeeting,
++  listDecisions,
++  listMeetings,
++  updateMeeting,
++} from "@/modules/meetings/services/meeting-service";
++import { MEETING_STATUSES, MEETING_TYPES } from "@/modules/meetings/constants";
++import { meetingInputSchema } from "@/modules/meetings/validation";
+ import { JsonProjectRepository } from "@/modules/projects/services/project-repository";
+-import { createProject } from "@/modules/projects/services/project-service";
++import { archiveProject, createProject } from "@/modules/projects/services/project-service";
+ import { JsonTaskRepository } from "@/modules/tasks/services/task-repository";
+ 
+ let tempDir: string;
+@@ -98,6 +121,12 @@ let projectRepository: JsonProjectRepository;
+ let meetingRepository: JsonMeetingRepository;
+ let taskRepository: JsonTaskRepository;
+ 
++const supabaseProjectAId = "11111111-1111-4111-8111-111111111111";
++const supabaseProjectBId = "22222222-2222-4222-8222-222222222222";
++const supabaseLeaderId = "33333333-3333-4333-8333-333333333333";
++const supabaseAssistantId = "44444444-4444-4444-8444-444444444444";
++const supabaseHostId = "55555555-5555-4555-8555-555555555555";
++
+ beforeEach(async () => {
+   tempDir = await mkdtemp(path.join(tmpdir(), "greennest-meetings-"));
+   projectRepository = new JsonProjectRepository(path.join(tempDir, "project-core.json"));
+@@ -105,6 +134,8 @@ beforeEach(async () => {
+   taskRepository = new JsonTaskRepository(path.join(tempDir, "task-management.json"));
+   supabaseMock.tables.meetings = [];
+   supabaseMock.tables.decisions = [];
++  supabaseMock.tables.decision_assignments = [];
++  supabaseMock.orExpressions.length = 0;
+   supabaseMock.createSupabaseServerClient.mockClear();
+ });
+ 
+@@ -113,6 +144,423 @@ afterEach(async () => {
+ });
+ 
+ describe("meeting service", () => {
++  it("keeps the stable meeting type and status machine-key contract", () => {
++    expect(Object.keys(MEETING_TYPES)).toEqual([
++      "EXECUTIVE_MEETING",
++      "EXECUTIVE_OPERATIONAL_MEETING",
++      "DEPARTMENT_INTERNAL_MEETING",
++      "PROJECT_MEETING",
++      "EXTERNAL_PARTNER_MEETING",
++      "GOVERNMENT_MEETING",
++    ]);
++    expect(Object.keys(MEETING_STATUSES)).toEqual([
++      "SCHEDULED",
++      "CONFIRMED",
++      "IN_PROGRESS",
++      "COMPLETED",
++      "CANCELLED",
++      "FOLLOW_UP_PENDING",
++      "CLOSED",
++    ]);
++  });
++
++  it("requires ISO timestamps for meeting start and end times", () => {
++    expect(() =>
++      meetingInputSchema.parse({
++        title: "Date-only meeting should be rejected",
++        meetingDate: "2026-05-20",
++      }),
++    ).toThrow();
++    expect(() =>
++      meetingInputSchema.parse({
++        title: "Localized meeting should be rejected",
++        meetingDate: "20/05/2026 09:00",
++      }),
++    ).toThrow();
++  });
++
++  it("creates organization-only meetings with draft AI summary and placeholder room support", async () => {
++    const meeting = await createMeeting(
++      {
++        organizationId: "org-green-nest",
++        title: "Executive organization sync",
++        meetingType: "EXECUTIVE_MEETING",
++        visibility: "organization",
++        participantScope: "all_leadership",
++        meetingDate: "2026-05-20T09:00:00.000Z",
++        roomId: "room-placeholder",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    expect(meeting.projectId).toBeUndefined();
++    expect(meeting.projectIds).toEqual([]);
++    expect(meeting.hostId).toBe("assistant-01");
++    expect(meeting.roomId).toBe("room-placeholder");
++    expect(meeting.aiSummary).toEqual({ status: "DRAFT" });
++    expect(meeting.attachments).toEqual([]);
++    expect(meeting.decisions).toEqual([]);
++    expect(meeting.followUpActions).toEqual([]);
++    expect(meeting.relatedApprovals).toEqual([]);
++    expect(meeting.relatedTasks).toEqual([]);
++    expect(meeting.auditLog).toEqual([expect.objectContaining({ action: "meeting.created" })]);
++  });
++
++  it("creates and updates meetings with generic related records and audit entries", async () => {
++    const project = await createProject({ name: "GreenNest Related", status: "active" }, projectRepository);
++    const meeting = await createMeeting(
++      {
++        projectId: project.id,
++        title: "Related record planning",
++        meetingDate: "2026-06-05T09:00:00.000Z",
++        relatedApprovals: ["proposal-a", "proposal-a"],
++        relatedTasks: ["task-a"],
++        relatedRisks: ["risk-a"],
++        relatedDocuments: ["document-a"],
++        relatedDecisions: ["decision-a"],
++        relatedRecords: [
++          {
++            id: "proposal-b",
++            relationType: "context",
++            title: "Approval B",
++            type: "proposal",
++          },
++          {
++            id: "task-a",
++            relationType: "context",
++            title: "Duplicate task link",
++            type: "task",
++          },
++        ],
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    expect(meeting.relatedApprovals).toEqual(["proposal-b", "proposal-a"]);
++    expect(meeting.relatedTasks).toEqual(["task-a"]);
++    expect(meeting.relatedRecords).toEqual([
++      {
++        id: "proposal-b",
++        relationType: "context",
++        title: "Approval B",
++        type: "proposal",
++      },
++      {
++        id: "task-a",
++        relationType: "context",
++        title: "Duplicate task link",
++        type: "task",
++      },
++      {
++        id: "proposal-a",
++        relationType: "context",
++        type: "approval",
++      },
++      {
++        id: "risk-a",
++        relationType: "context",
++        type: "risk",
++      },
++      {
++        id: "document-a",
++        relationType: "context",
++        type: "document",
++      },
++      {
++        id: "decision-a",
++        relationType: "context",
++        type: "decision",
++      },
++    ]);
++
++    const updatedMeeting = await updateMeeting(
++      meeting.id,
++      {
++        title: "Related record planning updated",
++        meetingDate: "2026-06-05T10:00:00.000Z",
++        meetingType: "EXECUTIVE_MEETING",
++        visibility: "executive",
++        participantScope: "all_leadership",
++        status: "CONFIRMED",
++        hostId: "leader-01",
++        participants: ["leader-01", "assistant-01"],
++        externalParticipants: ["UBND"],
++        roomId: "online-placeholder",
++        agenda: "Review linked records",
++        meetingMinutes: "Draft minutes",
++        summary: "Updated summary",
++        relatedApprovals: ["proposal-c"],
++        relatedTasks: [],
++        relatedRecords: [
++          {
++            id: "document-b",
++            relationType: "context",
++            title: "Document B",
++            type: "document",
++          },
++        ],
++      },
++      meetingRepository,
++      "assistant-02",
++    );
++
++    expect(updatedMeeting.projectId).toBe(project.id);
++    expect(updatedMeeting.projectIds).toEqual([project.id]);
++    expect(updatedMeeting.relatedApprovals).toEqual(["proposal-c"]);
++    expect(updatedMeeting.relatedTasks).toEqual([]);
++    expect(updatedMeeting.relatedRecords).toEqual([
++      {
++        id: "document-b",
++        relationType: "context",
++        title: "Document B",
++        type: "document",
++      },
++      {
++        id: "proposal-c",
++        relationType: "context",
++        type: "approval",
++      },
++    ]);
++    expect(updatedMeeting.auditLog).toEqual([
++      expect.objectContaining({ action: "meeting.created", actorId: "assistant-01" }),
++      expect.objectContaining({ action: "meeting.updated", actorId: "assistant-02" }),
++    ]);
++  });
++
++  it("rejects meetings without organization or project scope", async () => {
++    await expect(
++      createMeeting(
++        {
++          title: "Unscoped meeting",
++          meetingDate: "2026-05-20T09:00:00.000Z",
++        },
++        "assistant-01",
++        meetingRepository,
++        projectRepository,
++      ),
++    ).rejects.toThrow("Cuộc họp phải gắn với tổ chức hoặc ít nhất một dự án.");
++  });
++
++  it("dedupes and validates every project in multi-project meeting scope before writing", async () => {
++    const projectA = await createProject({ name: "Project A", status: "active" }, projectRepository);
++    const projectB = await createProject({ name: "Project B", status: "active" }, projectRepository);
++    const archivedProject = await createProject({ name: "Archived", status: "active" }, projectRepository);
++    await archiveProject(archivedProject.id, projectRepository);
++
++    const meeting = await createMeeting(
++      {
++        projectId: projectA.id,
++        projectIds: [projectB.id, projectA.id, projectB.id],
++        title: "Multi-project executive operation",
++        meetingDate: "2026-05-20T09:00:00.000Z",
++      },
++      "pm-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    expect(meeting.projectId).toBe(projectA.id);
++    expect(meeting.projectIds).toEqual([projectA.id, projectB.id]);
++
++    await expect(
++      createMeeting(
++        {
++          projectIds: [projectA.id, "missing-project"],
++          title: "Missing project",
++          meetingDate: "2026-05-20T09:00:00.000Z",
++        },
++        "pm-01",
++        meetingRepository,
++        projectRepository,
++      ),
++    ).rejects.toThrow("Dự án không tồn tại");
++
++    await expect(
++      createMeeting(
++        {
++          projectIds: [archivedProject.id],
++          title: "Archived project",
++          meetingDate: "2026-05-20T09:00:00.000Z",
++        },
++        "pm-01",
++        meetingRepository,
++        projectRepository,
++      ),
++    ).rejects.toThrow("Dự án không tồn tại");
++  });
++
++  it("filters JSON meetings by single projectId and multi-project projectIds", async () => {
++    const projectA = await createProject({ name: "Project A", status: "active" }, projectRepository);
++    const projectB = await createProject({ name: "Project B", status: "active" }, projectRepository);
++    const projectC = await createProject({ name: "Project C", status: "active" }, projectRepository);
++    const projectAMeeting = await createMeeting(
++      {
++        projectId: projectA.id,
++        title: "Project A only",
++        meetingDate: "2026-05-20T09:00:00.000Z",
++      },
++      "pm-01",
++      meetingRepository,
++      projectRepository,
++    );
++    const multiProjectMeeting = await createMeeting(
++      {
++        projectIds: [projectB.id, projectC.id],
++        title: "Multi-project portfolio",
++        meetingDate: "2026-05-21T09:00:00.000Z",
++      },
++      "pm-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    const projectBMeetings = await listMeetings({ projectId: projectB.id }, meetingRepository);
++
++    expect(projectBMeetings.map((meeting) => meeting.id)).toEqual([multiProjectMeeting.id]);
++    expect(projectBMeetings.map((meeting) => meeting.id)).not.toContain(projectAMeeting.id);
++  });
++
++  it("filters JSON meetings by participant and date range", async () => {
++    const project = await createProject({ name: "Project Filters", status: "active" }, projectRepository);
++    const hostMeeting = await createMeeting(
++      {
++        projectId: project.id,
++        title: "Hosted in range",
++        hostId: "leader-01",
++        participants: ["assistant-01"],
++        meetingDate: "2026-05-21T09:00:00.000Z",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++    const participantMeeting = await createMeeting(
++      {
++        projectId: project.id,
++        title: "Participating in range",
++        hostId: "leader-02",
++        participants: ["leader-01"],
++        meetingDate: "2026-05-21T15:00:00.000Z",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++    await createMeeting(
++      {
++        projectId: project.id,
++        title: "Participating outside range",
++        hostId: "leader-03",
++        participants: ["leader-01"],
++        meetingDate: "2026-05-23T09:00:00.000Z",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    const meetings = await listMeetings(
++      {
++        dateFrom: "2026-05-21",
++        dateTo: "2026-05-21",
++        participantId: "leader-01",
++      },
++      meetingRepository,
++    );
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual([participantMeeting.id, hostMeeting.id]);
++  });
++
++  it("filters JSON meetings by organization, axis, department, status, and visibility", async () => {
++    const project = await createProject({ name: "Project Full Contract", status: "active" }, projectRepository);
++    const matchingMeeting = await createMeeting(
++      {
++        axisId: "axis-1",
++        departmentId: "legal",
++        meetingDate: "2026-05-21T09:00:00.000Z",
++        organizationId: "org-green-nest",
++        projectId: project.id,
++        status: "FOLLOW_UP_PENDING",
++        title: "Matching full contract",
++        visibility: "executive",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++    await createMeeting(
++      {
++        axisId: "axis-1",
++        departmentId: "finance",
++        meetingDate: "2026-05-21T10:00:00.000Z",
++        organizationId: "org-green-nest",
++        projectId: project.id,
++        status: "FOLLOW_UP_PENDING",
++        title: "Wrong department",
++        visibility: "executive",
++      },
++      "assistant-01",
++      meetingRepository,
++      projectRepository,
++    );
++
++    const meetings = await listMeetings(
++      {
++        axisId: "axis-1",
++        departmentId: "legal",
++        organizationId: "org-green-nest",
++        status: "FOLLOW_UP_PENDING",
++        visibility: "executive",
++      },
++      meetingRepository,
++    );
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual([matchingMeeting.id]);
++  });
++
++  it("filters JSON meetings by meetingDate when startTime is empty", async () => {
++    const project = await createProject({ name: "Project Fallback Date", status: "active" }, projectRepository);
++    await meetingRepository.createMeeting({
++      aiSummary: { status: "DRAFT" },
++      attachments: [],
++      auditLog: [],
++      createdAt: "2026-05-20T08:00:00.000Z",
++      decisions: [],
++      externalParticipants: [],
++      followUpActions: [],
++      hostId: "leader-01",
++      id: "meeting-empty-start",
++      meetingDate: "2026-05-21T10:00:00.000Z",
++      meetingType: "PROJECT_MEETING",
++      participants: [],
++      participantScope: "project_team",
++      projectId: project.id,
++      projectIds: [project.id],
++      relatedApprovals: [],
++      relatedTasks: [],
++      startTime: "",
++      status: "SCHEDULED",
++      title: "Empty start fallback",
++      updatedAt: "2026-05-20T08:00:00.000Z",
++      visibility: "project",
++    });
++
++    const meetings = await listMeetings(
++      {
++        dateFrom: "2026-05-21",
++        dateTo: "2026-05-21",
++        participantId: "leader-01",
++      },
++      meetingRepository,
++    );
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual(["meeting-empty-start"]);
++  });
++
+   it("creates and updates a meeting linked to an existing project", async () => {
+     const project = await createProject({ name: "GreenNest Meeting", status: "active" }, projectRepository);
+     const meeting = await createMeeting(
+@@ -191,8 +639,8 @@ describe("meeting service", () => {
+       {
+         id: "meeting-supabase",
+         organization_id: "org-green-nest",
+-        project_id: "project-a",
+-        project_ids: ["project-a", "project-b"],
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId, supabaseProjectBId],
+         axis_id: "axis-1",
+         department_id: "legal",
+         title: "Supabase contract parity",
+@@ -229,6 +677,20 @@ describe("meeting service", () => {
+         ],
+         related_approvals: ["proposal-a"],
+         related_tasks: ["task-a"],
++        related_records: [
++          {
++            id: "proposal-a",
++            relationType: "context",
++            title: "Approval A",
++            type: "approval",
++          },
++          {
++            id: "risk-a",
++            relationType: "context",
++            title: "Risk A",
++            type: "risk",
++          },
++        ],
+         audit_log: [
+           {
+             id: "audit-01",
+@@ -248,8 +710,8 @@ describe("meeting service", () => {
+         title: "Approve Supabase parity",
+         organization_id: "org-green-nest",
+         meeting_id: "meeting-supabase",
+-        project_id: "project-a",
+-        project_ids: ["project-a", "project-b"],
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId, supabaseProjectBId],
+         axis_id: "axis-1",
+         workstream_id: "decision",
+         module_id: "meeting",
+@@ -281,7 +743,7 @@ describe("meeting service", () => {
+         organization_id: "org-green-nest",
+         meeting_id: null,
+         project_id: null,
+-        project_ids: ["project-a", "project-b"],
++        project_ids: [supabaseProjectAId, supabaseProjectBId],
+         axis_id: "axis-1",
+         workstream_id: "decision",
+         module_id: "meeting",
+@@ -301,19 +763,41 @@ describe("meeting service", () => {
+         updated_at: "2026-05-24T10:45:00.000Z",
+       },
+     ];
++    supabaseMock.tables.decision_assignments = [
++      {
++        id: "assignment-supabase",
++        decision_id: "decision-supabase",
++        task_id: "task-a",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        assignee_type: "user",
++        assignee_id: "owner-01",
++        department_id: null,
++        title: "Prepare implementation task",
++        description: "Task assignment summary.",
++        kpi: "Done by deadline.",
++        due_date: "2026-05-28",
++        priority: "high",
++        status: "assigned",
++        created_by: "assistant-01",
++        created_at: "2026-05-24T11:00:00.000Z",
++        updated_at: "2026-05-24T11:00:00.000Z",
++      },
++    ];
+     const repository = new SupabaseMeetingRepository();
+ 
+-    const [meetings, decisions] = await Promise.all([
+-      repository.listMeetings({ projectId: "project-a" }),
+-      repository.listDecisions({ projectId: "project-a" }),
++    const [meetings, decisions, assignments] = await Promise.all([
++      repository.listMeetings({ projectId: supabaseProjectAId }),
++      repository.listDecisions({ projectId: supabaseProjectAId }),
++      repository.listDecisionAssignments({ decisionId: "decision-supabase" }),
+     ]);
+ 
+     expect(meetings).toHaveLength(1);
+     expect(meetings[0]).toMatchObject({
+       id: "meeting-supabase",
+       organizationId: "org-green-nest",
+-      projectId: "project-a",
+-      projectIds: ["project-a", "project-b"],
++      projectId: supabaseProjectAId,
++      projectIds: [supabaseProjectAId, supabaseProjectBId],
+       axisId: "axis-1",
+       departmentId: "legal",
+       meetingType: "EXECUTIVE_MEETING",
+@@ -334,6 +818,20 @@ describe("meeting service", () => {
+       ],
+       relatedApprovals: ["proposal-a"],
+       relatedTasks: ["task-a"],
++      relatedRecords: [
++        {
++          id: "proposal-a",
++          relationType: "context",
++          title: "Approval A",
++          type: "approval",
++        },
++        {
++          id: "risk-a",
++          relationType: "context",
++          title: "Risk A",
++          type: "risk",
++        },
++      ],
+     });
+     expect(decisions).toEqual([
+       expect.objectContaining({
+@@ -341,8 +839,8 @@ describe("meeting service", () => {
+         title: "Approve Supabase parity",
+         organizationId: "org-green-nest",
+         meetingId: "meeting-supabase",
+-        projectId: "project-a",
+-        projectIds: ["project-a", "project-b"],
++        projectId: supabaseProjectAId,
++        projectIds: [supabaseProjectAId, supabaseProjectBId],
+         axisId: "axis-1",
+         workstreamId: "decision",
+         moduleId: "meeting",
+@@ -369,15 +867,242 @@ describe("meeting service", () => {
+       expect.objectContaining({
+         id: "decision-supabase-multi",
+         projectId: undefined,
+-        projectIds: ["project-a", "project-b"],
++        projectIds: [supabaseProjectAId, supabaseProjectBId],
+         sourceType: "independent",
+       }),
+     ]);
+-    expect(JSON.stringify({ decisions, meetings })).not.toMatch(
+-      /project_id|meeting_id|decision_text|owner_id|created_at|updated_at/,
++    expect(assignments).toEqual([
++      expect.objectContaining({
++        id: "assignment-supabase",
++        decisionId: "decision-supabase",
++        taskId: "task-a",
++        organizationId: "org-green-nest",
++        projectId: supabaseProjectAId,
++        assigneeType: "user",
++        assigneeId: "owner-01",
++        departmentId: undefined,
++        title: "Prepare implementation task",
++        kpi: "Done by deadline.",
++        dueDate: "2026-05-28",
++        priority: "high",
++        status: "assigned",
++        createdBy: "assistant-01",
++      }),
++    ]);
++    expect(JSON.stringify({ assignments, decisions, meetings })).not.toMatch(
++      /project_id|meeting_id|decision_id|task_id|decision_text|owner_id|created_at|updated_at/,
+     );
+   });
+ 
++  it("filters Supabase meetings by participant and date range", async () => {
++    supabaseMock.tables.meetings = [
++      {
++        id: "meeting-host",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Hosted in range",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-21T09:00:00.000Z",
++        start_time: "2026-05-21T09:00:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [supabaseAssistantId],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++      {
++        id: "meeting-participant",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Participating in range",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-21T15:00:00.000Z",
++        start_time: "2026-05-21T15:00:00.000Z",
++        host_id: supabaseHostId,
++        participants: [supabaseLeaderId],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++      {
++        id: "meeting-outside",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Participating outside range",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-23T09:00:00.000Z",
++        start_time: "2026-05-23T09:00:00.000Z",
++        host_id: supabaseHostId,
++        participants: [supabaseLeaderId],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++    ];
++    const repository = new SupabaseMeetingRepository();
++
++    const meetings = await repository.listMeetings({
++      dateFrom: "2026-05-21",
++      dateTo: "2026-05-21",
++      participantId: supabaseLeaderId,
++    });
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual(["meeting-participant", "meeting-host"]);
++  });
++
++  it("does not interpolate malformed Supabase project or participant filters", async () => {
++    supabaseMock.tables.meetings = [
++      {
++        id: "meeting-safe",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Safe filter target",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-21T09:00:00.000Z",
++        start_time: "2026-05-21T09:00:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [supabaseAssistantId],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++    ];
++    const repository = new SupabaseMeetingRepository();
++
++    await expect(repository.listMeetings({ participantId: "not-a-uuid,host_id.not.is.null" })).resolves.toEqual([]);
++    await expect(repository.listMeetings({ projectId: "not-a-uuid,project_id.not.is.null" })).resolves.toEqual([]);
++    expect(supabaseMock.orExpressions).toEqual([]);
++  });
++
++  it("filters Supabase meetings by organization, axis, department, status, and visibility", async () => {
++    supabaseMock.tables.meetings = [
++      {
++        id: "meeting-full-contract",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        axis_id: "axis-1",
++        department_id: "legal",
++        title: "Matching full contract",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "executive",
++        participant_scope: "project_team",
++        status: "FOLLOW_UP_PENDING",
++        meeting_date: "2026-05-21T09:00:00.000Z",
++        start_time: "2026-05-21T09:00:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++      {
++        id: "meeting-wrong-visibility",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        axis_id: "axis-1",
++        department_id: "legal",
++        title: "Wrong visibility",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "FOLLOW_UP_PENDING",
++        meeting_date: "2026-05-21T10:00:00.000Z",
++        start_time: "2026-05-21T10:00:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++    ];
++    const repository = new SupabaseMeetingRepository();
++
++    const meetings = await repository.listMeetings({
++      axisId: "axis-1",
++      departmentId: "legal",
++      organizationId: "org-green-nest",
++      status: "FOLLOW_UP_PENDING",
++      visibility: "executive",
++    });
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual(["meeting-full-contract"]);
++  });
++
++  it("uses Vietnam business day boundaries for Supabase date-only filters", async () => {
++    supabaseMock.tables.meetings = [
++      {
++        id: "meeting-local-may-21-early",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Early local May 21",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-20T18:30:00.000Z",
++        start_time: "2026-05-20T18:30:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++      {
++        id: "meeting-local-may-22",
++        organization_id: "org-green-nest",
++        project_id: supabaseProjectAId,
++        project_ids: [supabaseProjectAId],
++        title: "Local May 22",
++        meeting_type: "PROJECT_MEETING",
++        visibility: "project",
++        participant_scope: "project_team",
++        status: "SCHEDULED",
++        meeting_date: "2026-05-21T18:30:00.000Z",
++        start_time: "2026-05-21T18:30:00.000Z",
++        host_id: supabaseLeaderId,
++        participants: [],
++        summary: null,
++        created_by: "assistant-01",
++        created_at: "2026-05-20T08:00:00.000Z",
++        updated_at: "2026-05-20T08:00:00.000Z",
++      },
++    ];
++    const repository = new SupabaseMeetingRepository();
++
++    const meetings = await repository.listMeetings({
++      dateFrom: "2026-05-21",
++      dateTo: "2026-05-21",
++    });
++
++    expect(meetings.map((meeting) => meeting.id)).toEqual(["meeting-local-may-21-early"]);
++  });
++
+   it("converts a decision/action item to a task", async () => {
+     const project = await createProject({ name: "GreenNest Action", status: "active" }, projectRepository);
+     const meeting = await createMeeting(
+@@ -410,4 +1135,35 @@ describe("meeting service", () => {
+     expect(updatedDecisions[0].taskId).toBe(task.id);
+     await expect(convertDecisionToTask(decision.id, meetingRepository, taskRepository, projectRepository)).rejects.toThrow();
+   });
++
++  it("keeps legacy one-task conversion limited to decisions with a single projectId", async () => {
++    await meetingRepository.createDecision({
++      id: "decision-multi-only",
++      organizationId: "org-green-nest",
++      projectIds: ["project-a", "project-b"],
++      decisionText: "Multi-project decision cannot be converted by legacy one-task flow",
++      status: "open",
++      createdAt: "2026-05-20T09:00:00.000Z",
++      updatedAt: "2026-05-20T09:00:00.000Z",
++    });
++
++    await expect(
++      convertDecisionToTask("decision-multi-only", meetingRepository, taskRepository, projectRepository),
++    ).rejects.toThrow("Chỉ decision gắn một dự án mới có thể chuyển thành task.");
++
++    await meetingRepository.createDecision({
++      id: "decision-primary-and-multi",
++      organizationId: "org-green-nest",
++      projectId: "project-a",
++      projectIds: ["project-a", "project-b"],
++      decisionText: "Primary project plus multi-project scope cannot be converted",
++      status: "open",
++      createdAt: "2026-05-20T09:00:00.000Z",
++      updatedAt: "2026-05-20T09:00:00.000Z",
++    });
++
++    await expect(
++      convertDecisionToTask("decision-primary-and-multi", meetingRepository, taskRepository, projectRepository),
++    ).rejects.toThrow("Chỉ decision gắn đúng một dự án mới có thể chuyển thành task.");
++  });
+ });
+
+--- UNTRACKED FILE DIFF: _bmad-output/implementation-artifacts/6-3-tao-va-sua-meeting-voi-related-records.md ---
+diff --git a/_bmad-output/implementation-artifacts/6-3-tao-va-sua-meeting-voi-related-records.md b/_bmad-output/implementation-artifacts/6-3-tao-va-sua-meeting-voi-related-records.md
+new file mode 100644
+index 0000000..70ffdfc
+--- /dev/null
++++ b/_bmad-output/implementation-artifacts/6-3-tao-va-sua-meeting-voi-related-records.md
+@@ -0,0 +1,201 @@
++﻿# Story 6.3: Tạo Và Sửa Meeting Với Related Records
++
++Status: review
++
++Generated: 2026-06-03
++
++Requirements Covered: FR-073, FR-075, FR-114, NFR-005, NFR-006, UX-DR23
++
++## Story
++
++As a người có quyền tạo họp,
++I want tạo/sửa meeting với participants, external participants và related records,
++so that cuộc họp liên kết đúng project, approval, risk, decision, task hoặc hồ sơ.
++
++## Acceptance Criteria
++
++1. Given user có quyền `meeting.create` trong scope hợp lệ, when submit create meeting form, then hệ thống lưu đầy đủ `title`, `meetingType`, `hostId`, `participants`, `externalParticipants`, `meetingDate/startTime`, `endTime`, `agenda`, `visibility`, `participantScope`, `organizationId`, `projectId/projectIds`, `axisId`, `departmentId`, `roomId` placeholder và `status` hợp lệ.
++2. Given user có quyền `meeting.update` và meeting nằm trong scope của user, when submit edit meeting form, then hệ thống cập nhật các field mutable của meeting gồm metadata họp, thời gian, host, participants, external participants, agenda, room placeholder, minutes/summary nếu form còn hiển thị và related records; project/organization/axis/department scope hiện có hiển thị read-only và được giữ nguyên.
++3. Given meeting liên quan approval/proposal, risk/blocker, decision, task hoặc document, when user chọn related records, then service lưu liên kết qua meeting service contract, validate từng related record bằng scoped service/helper tương ứng, và component không gọi repository module khác trực tiếp.
++4. Given related record không tồn tại hoặc nằm ngoài scope của user, when create/edit meeting submit record id đó, then server action/service từ chối mutation và không ghi meeting partial.
++5. Given room booking chưa thuộc MVP, when form hiển thị `roomId`, then field chỉ là placeholder/mock, không bắt buộc và không chặn tạo/sửa meeting.
++6. Given validation hoặc permission fail, when form trả lỗi, then UI hiển thị lỗi gần field hoặc action area bằng tiếng Việt rõ ràng, không render dữ liệu ngoài scope, và giữ lại input người dùng khi validation fail. Action state là cách triển khai chấp nhận được.
++7. Given create/edit meeting thành công, then meeting audit log ghi actor/action/timestamp tối thiểu cho `meeting.created` và `meeting.updated`, đặc biệt khi participants hoặc related records thay đổi.
++
++## Tasks / Subtasks
++
++- [x] Mở rộng domain contract và persistence cho related records (AC: 1, 2, 3, 7)
++  - [x] Thêm `MeetingRelatedRecord` hoặc contract tương đương cho meeting với type tối thiểu: `proposal`/`approval`, `risk`, `decision`, `task`, `document`, `project`, `custom`; mỗi link có `id`, `type`, `relationType`, optional `title`.
++  - [x] Thêm `relatedRecords: MeetingRelatedRecord[]` vào `Meeting`, `MeetingInput`, `MeetingUpdateInput`; giữ `relatedApprovals` và `relatedTasks` để tương thích với Story 6.1/6.2.
++  - [x] Nếu thêm field mới vào Supabase, tạo migration additive cho `public.meetings.related_records jsonb not null default '[]'::jsonb`; cập nhật JSON repository, Supabase row mapper, patch mapper và normalize mapper.
++  - [x] Sync compatibility arrays: approval/proposal links vẫn phản ánh vào `relatedApprovals`, task links vẫn phản ánh vào `relatedTasks`; không xóa hai field này.
++  - [x] Document links dùng related record type `document`; không overload `attachments[].documentId` trừ khi user thật sự attach file.
++
++- [x] Cập nhật validation và service mutation (AC: 1, 2, 3, 4, 7)
++  - [x] Extend `meetingInputSchema` và `meetingUpdateSchema` để parse repeated FormData hoặc comma-separated arrays cho `relatedApprovals`, `relatedTasks`, `relatedDecisions`, `relatedRisks`, `relatedDocuments`.
++  - [x] Dedupe related ids theo type, trim empty values, reject malformed link objects hoặc unsupported relation type.
++  - [x] `createMeeting` lưu related records thay vì luôn khởi tạo `relatedApprovals: []` và `relatedTasks: []`.
++  - [x] `updateMeeting` cập nhật full mutable meeting fields hiện có; hiện `updateMeetingAction` chỉ gửi `title`, `meetingDate`, `summary`, cần sửa để không làm edit form thành lưu thiếu.
++  - [x] Append audit entry `meeting.updated` khi update thành công; ghi summary ngắn cho participants/related record changes, không log raw sensitive payload.
++  - [x] Không tạo/sửa proposal, risk, decision, task hoặc document khi chỉ link meeting; related records là link metadata.
++
++- [x] Enforce permission và scoped related-record validation server-side (AC: 1, 2, 3, 4, 6)
++  - [x] Tiếp tục dùng `assertCan(currentUser, "meeting.create")`, `canCreateProjectMeeting`, `canCreateOrganizationMeeting` trong create action.
++  - [x] Tiếp tục dùng `getScopedMeeting(currentUser, meetingId)` và `assertCan(currentUser, "meeting.update", meeting)` trong update action.
++  - [x] Validate related proposal/approval ids bằng `getScopedProposal`; validate task ids bằng `getScopedTask`; validate document ids bằng `getScopedDocument`; validate decision ids bằng `getScopedDecision`.
++  - [x] Cho risk/blocker, thêm scoped wrapper trong `src/lib/permissions/scoped-resources.ts` hoặc dùng `listExecutiveRiskRecordsForDashboard` + `filterExecutiveRiskRecordsForScope`/`canReadExecutiveRiskRecordInScope`; không expose risk ngoài scope.
++  - [x] Trong Story 6.3, project/org/axis/department scope ở edit là immutable: render read-only và update action không nhận hidden scope field làm mutation. Nếu cần đổi scope meeting, tạo story riêng với scoped target validation và RLS parity.
++
++- [x] Cập nhật create/edit pages và MeetingForm UX (AC: 1, 2, 3, 5, 6)
++  - [x] `src/app/(dashboard)/meetings/new/page.tsx` load scoped picker data cần thiết qua service/helper, chỉ truyền DTO an toàn cho form.
++  - [x] `src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx` load existing meeting qua `getScopedMeeting`, load scoped picker options, preselect existing related records.
++  - [x] `MeetingForm` hiển thị create/edit fields cho participants nội bộ, external participants, host, agenda, start/end, visibility, participant scope, room placeholder và related record pickers.
++  - [x] Related picker có label tiếng Việt, helper text ngắn, empty state theo scope, và không hiển thị option user không có quyền xem.
++  - [x] Scope hiện có ở edit phải rõ ràng bằng read-only display; không đưa control/hidden input có thể đổi project/org/axis/department scope trong story này.
++  - [x] Form dài dùng action area rõ ràng hoặc sticky action area theo pattern hiện có; text tiếng Việt không tràn container trên mobile.
++
++- [x] Cập nhật detail/list surface nếu cần để thấy related records (AC: 3, 6)
++  - [x] Meeting detail page hiển thị summary related records đã chọn bằng DTO an toàn, có link chỉ khi user có quyền xem record.
++  - [x] Không hiển thị raw financial amount, raw transcript/minutes hoặc nội dung tài liệu nhạy cảm trong related record preview.
++  - [x] Giữ list/filter của Story 6.2 ổn định; không làm regress multi-project table, empty states hoặc date filters.
++
++- [x] Tests bắt buộc (AC: 1-7)
++  - [x] Mở rộng `tests/unit/meeting-service.test.ts` cho create/update với participants, external participants, room placeholder, related records, audit update và JSON/Supabase mapper parity.
++  - [x] Mở rộng hoặc thêm `tests/unit/meeting-actions.test.ts` cho repeated FormData values, permission create/update, unauthorized related record rejection và no partial write.
++  - [x] Thêm component tests cho `MeetingForm` create/edit: render options đúng scope, preserve default values, room placeholder optional, edit scope read-only.
++  - [x] Nếu thêm migration/RLS/policy, mở rộng `tests/unit/meeting-rls-policy.test.ts` hoặc policy test tương ứng để kiểm tra `related_records` không làm yếu meeting scope RLS.
++  - [x] Chạy `npm run typecheck`, `npm run lint`, `npm test`. Nếu chỉ chạy targeted vì thời gian, ghi rõ targeted command và lý do trong Dev Agent Record.
++
++## Dev Notes
++
++### Current Implementation Snapshot
++
++- `src/modules/meetings/types.ts` hiện có `Meeting.relatedApprovals` và `Meeting.relatedTasks`, `MeetingAttachment.documentId`, nhưng chưa có generic meeting related-record contract cho risk/decision/document. `DecisionLinkedRecord` có type union đủ rộng nhưng đang thuộc decision domain.
++- `src/modules/meetings/validation.ts` hiện parse participants/externalParticipants/projectIds bằng string hoặc array; chưa parse related ids cho meeting.
++- `src/modules/meetings/actions.ts` hiện `formDataToMeetingInput` đọc core fields, `createMeetingAction` đã check `meeting.create` + scoped create. `formDataToMeetingUpdateInput` hiện chỉ trả `title`, `meetingDate`, `summary`, nên edit form đang có nguy cơ hiển thị nhiều field nhưng chỉ lưu ba field.
++- `src/modules/meetings/services/meeting-service.ts` hiện `createMeeting` khởi tạo `relatedApprovals: []`, `relatedTasks: []`; `updateMeeting` patch nhiều field nếu input có, nhưng action chưa truyền đủ input.
++- `src/modules/meetings/services/meeting-repository.ts` đã map JSON/Supabase cho `related_approvals`, `related_tasks`, `attachments`, nhưng chưa có `related_records` generic.
++- `src/modules/meetings/components/meeting-form.tsx` hiện là form server-friendly đơn giản, có participants/external participants dạng comma-separated, chưa có related picker và edit chưa có project selector nhưng vẫn render org/axis/department inputs.
++- `src/app/(dashboard)/meetings/[meetingId]/page.tsx` hiện hiển thị metadata, participants, agenda, minutes/summary và decision list; chưa hiển thị related records tổng hợp.
++- Database migration `database/migrations/202605230001_add_meeting_engine_fields.sql` đã thêm `related_approvals uuid[]`, `related_tasks uuid[]`, `attachments jsonb`; `database/migrations/202606020003_harden_meeting_scope_rls.sql` harden scope theo `project_id/project_ids`, host, participants, organization/axis/department.
++
++### Architecture And Boundary Rules
++
++- Use Next.js App Router Server Actions for internal mutations; components must not call Supabase or repositories directly.
++- Keep modular monolith boundaries: meeting module owns meeting mutation; proposal/task/document/risk/decision modules are accessed via services or scoped helpers only.
++- Permission is server/service-side, deny-by-default. UI hiding is not security.
++- Preserve repository parity: JSON repository and Supabase repository must map the same camelCase domain fields.
++- No new library is needed. Current baseline from `package.json`: Next `^15.3.2`, React `^19.0.0`, Tailwind `^3.4.17`, lucide-react `^0.511.0`, Zod `^3.24.4`, Vitest `^3.1.3`, Testing Library React `^16.3.0`, Playwright `^1.52.0`.
++
++### Related Record Contract Guidance
++
++- Approval/proposal: current safe path is `getScopedProposal` from `src/lib/permissions/scoped-resources.ts`; existing `relatedApprovals` can store proposal approval ids for compatibility.
++- Task: use `getScopedTask`; tasks already support `linkedEntityType`, but this story only links existing tasks to meeting metadata.
++- Document: use `getScopedDocument`; store as meeting related record type `document`, not as attachment unless there is an uploaded/attached file.
++- Decision: use `getScopedDecision`; do not create official decisions in this story. Story 6.6 owns decision tracking after meeting.
++- Risk/blocker: risk service exposes `canReadExecutiveRiskRecordInScope` and `filterExecutiveRiskRecordsForScope`; add a small scoped helper if needed so form/action code does not duplicate access-scope logic.
++- Related records must be immutable links unless user explicitly edits the link set. Selecting a related record must not transition approval/risk/task/decision status.
++
++### Previous Story Intelligence
++
++- Story 6.1 established the Meeting contract, organization-only and multi-project scope, repository parity, scoped create checks and RLS parity. Build on that instead of creating a second meeting module.
++- Story 6.1 also made `projectIds` repeated FormData important; keep `formData.getAll()` behavior for multi-project scope and related record arrays.
++- Story 6.2 added meeting list filters and executive visibility. Do not regress URL filter parsing, business-day date handling, multi-project project display or unauthorized empty states.
++- Review note carried forward from Story 6.2: decision scope immutability had been flagged in `src/modules/meetings/services/meeting-repository.ts`. If this story touches decision update or decision linked records, preserve existing decision project scope and do not widen it accidentally.
++- The current worktree is already dirty with many uncommitted Story 4/5/6 changes. Do not reset or revert unrelated files; read current local code before editing.
++
++### UX Requirements
++
++- Labels, helper text and validation messages must be Vietnamese-first.
++- Required fields need visible markers; validation errors should be close to the field or action area.
++- Empty related picker state must distinguish "không có record trong scope" from permission denial without leaking hidden record names.
++- Permission denial must not render sensitive data then hide it.
++- Use existing Tailwind/shadcn-style primitives. Buttons use clear hierarchy; one primary submit per form action area.
++- Mobile layout must stack cleanly; no fixed-width text containers for Vietnamese labels.
++
++### Out Of Scope
++
++- No real room booking, video call, transcript ingestion or AI summary generation.
++- No automatic follow-up task creation; Story 6.5 owns follow-up actions linked to tasks.
++- No official decision creation/tracking workflow; Story 6.6 owns decision tracking after meeting.
++- No broad refactor of command center, dashboard or approval workflow beyond providing scoped related picker data.
++
++### References
++
++- [Source: `_bmad-output/planning-artifacts/epics/epic-6-one-meeting-engine-cho-iu-hnh.md`]
++- [Source: `_bmad-output/planning-artifacts/epics/requirements-inventory.md`]
++- [Source: `_bmad-output/planning-artifacts/architecture/core-architectural-decisions.md`]
++- [Source: `_bmad-output/planning-artifacts/architecture/implementation-patterns-consistency-rules.md`]
++- [Source: `_bmad-output/planning-artifacts/architecture/project-structure-boundaries.md`]
++- [Source: `_bmad-output/planning-artifacts/ux-design-specification/ux-consistency-patterns.md`]
++- [Source: `_bmad-output/planning-artifacts/ux-design-specification/component-strategy.md`]
++- [Source: `_bmad-output/planning-artifacts/ux-design-specification/responsive-design-accessibility.md`]
++- [Source: `docs/context/meetings.md`]
++- [Source: `docs/context/permissions-audit.md`]
++- [Source: `docs/context/testing.md`]
++- [Source: `_bmad-output/implementation-artifacts/6-1-meeting-engine-types-scope-va-repository-contract.md`]
++- [Source: `_bmad-output/implementation-artifacts/6-2-meeting-list-filters-va-executive-visibility.md`]
++- [Source: `src/modules/meetings/types.ts`]
++- [Source: `src/modules/meetings/validation.ts`]
++- [Source: `src/modules/meetings/actions.ts`]
++- [Source: `src/modules/meetings/services/meeting-service.ts`]
++- [Source: `src/modules/meetings/services/meeting-repository.ts`]
++- [Source: `src/modules/meetings/components/meeting-form.tsx`]
++- [Source: `src/lib/permissions/scoped-resources.ts`]
++- [Source: `src/modules/executive/services/risk-record-service.ts`]
++- [Source: `database/migrations/202605230001_add_meeting_engine_fields.sql`]
++- [Source: `database/migrations/202606020003_harden_meeting_scope_rls.sql`]
++- [Source: `tests/unit/meeting-service.test.ts`]
++- [Source: `tests/unit/meeting-list-filters.test.tsx`]
++
++## Dev Agent Record
++
++### Agent Model Used
++
++GPT-5 Codex
++
++### Debug Log References
++
++- 2026-06-03: RED targeted tests added for meeting related records; initial run failed on missing scoped validation/full update/form picker support.
++- 2026-06-03: `npm test -- tests/unit/meeting-service.test.ts tests/unit/meeting-actions.test.ts tests/unit/meeting-form.test.tsx` -> passed 27 tests.
++- 2026-06-03: `npm test -- tests/unit/meeting-rls-policy.test.ts` -> passed 3 tests.
++- 2026-06-03: `npm run typecheck` -> passed.
++- 2026-06-03: `npm run lint` -> passed.
++- 2026-06-03: `npm test` -> passed 84 test files / 571 tests.
++
++### Completion Notes List
++
++- Added generic `MeetingRelatedRecord` support for proposal/approval, risk, decision, task, document, project and custom links while preserving `relatedApprovals` and `relatedTasks` compatibility arrays.
++- Added additive Supabase migration for `public.meetings.related_records`, JSON/Supabase mapper parity, normalization and compatibility backfill.
++- Updated meeting create/update validation and service mutation so related ids are deduped, full mutable edit fields are saved, immutable scope fields are not accepted on edit, and `meeting.updated` audit entries are appended.
++- Enforced server-side scoped validation for proposal/approval, task, document, decision and risk/blocker links before mutation, preventing partial meeting writes for out-of-scope related ids.
++- Updated create/edit meeting pages and `MeetingForm` with scoped picker DTOs, repeated FormData related arrays, host/projectIds controls, room placeholder, edit read-only scope display and related defaults.
++- Added meeting detail related-record summary that resolves labels/links through scoped helpers and avoids rendering out-of-scope related record data.
++- Expanded service/action/form/RLS tests and completed full regression validation.
++
++### File List
++
++- _bmad-output/implementation-artifacts/6-3-tao-va-sua-meeting-voi-related-records.md
++- _bmad-output/implementation-artifacts/sprint-status.yaml
++- database/migrations/202606030001_add_meeting_related_records.sql
++- src/app/(dashboard)/meetings/[meetingId]/edit/page.tsx
++- src/app/(dashboard)/meetings/[meetingId]/page.tsx
++- src/app/(dashboard)/meetings/new/page.tsx
++- src/lib/permissions/scoped-resources.ts
++- src/modules/meetings/actions.ts
++- src/modules/meetings/components/meeting-form.tsx
++- src/modules/meetings/services/meeting-related-record-options.ts
++- src/modules/meetings/services/meeting-repository.ts
++- src/modules/meetings/services/meeting-service.ts
++- src/modules/meetings/types.ts
++- src/modules/meetings/validation.ts
++- tests/unit/meeting-actions.test.ts
++- tests/unit/meeting-form.test.tsx
++- tests/unit/meeting-rls-policy.test.ts
++- tests/unit/meeting-service.test.ts
++
++### Change Log
++
++- 2026-06-03: Story created and marked ready-for-dev.
++- 2026-06-03: Implemented related-record create/edit meeting flow and marked ready for review.
++
+
+--- UNTRACKED FILE DIFF: database/migrations/202606030001_add_meeting_related_records.sql ---
+diff --git a/database/migrations/202606030001_add_meeting_related_records.sql b/database/migrations/202606030001_add_meeting_related_records.sql
+new file mode 100644
+index 0000000..82d447d
+--- /dev/null
++++ b/database/migrations/202606030001_add_meeting_related_records.sql
+@@ -0,0 +1,33 @@
++-- Story 6.3: generic related-record links for One Meeting Engine.
++-- Existing related_approvals and related_tasks stay for backward compatibility.
++
++alter table public.meetings
++  add column if not exists related_records jsonb not null default '[]'::jsonb;
++
++update public.meetings
++set related_records = (
++  select coalesce(jsonb_agg(record), '[]'::jsonb)
++  from (
++    select jsonb_build_object(
++      'type', 'approval',
++      'id', approval_id::text,
++      'relationType', 'context'
++    ) as record
++    from unnest(coalesce(related_approvals, '{}'::uuid[])) as approval_id
++    union all
++    select jsonb_build_object(
++      'type', 'task',
++      'id', task_id::text,
++      'relationType', 'context'
++    ) as record
++    from unnest(coalesce(related_tasks, '{}'::uuid[])) as task_id
++  ) records
++)
++where related_records = '[]'::jsonb
++  and (
++    cardinality(coalesce(related_approvals, '{}'::uuid[])) > 0
++    or cardinality(coalesce(related_tasks, '{}'::uuid[])) > 0
++  );
++
++create index if not exists idx_meetings_related_records
++  on public.meetings using gin(related_records);
+
+--- UNTRACKED FILE DIFF: src/modules/meetings/services/meeting-related-record-options.ts ---
+diff --git a/src/modules/meetings/services/meeting-related-record-options.ts b/src/modules/meetings/services/meeting-related-record-options.ts
+new file mode 100644
+index 0000000..0803d4c
+--- /dev/null
++++ b/src/modules/meetings/services/meeting-related-record-options.ts
+@@ -0,0 +1,67 @@
++import type { Document } from "@/modules/documents/types";
++import type { ExecutiveRiskRecord } from "@/modules/executive/types";
++import type { Decision } from "@/modules/meetings/types";
++import type { Proposal } from "@/modules/proposals/types";
++import type { Task } from "@/modules/tasks/types";
++
++export type MeetingRelatedRecordOption = {
++  id: string;
++  label: string;
++  helper?: string;
++};
++
++export type MeetingRelatedRecordOptions = {
++  approvals: MeetingRelatedRecordOption[];
++  decisions: MeetingRelatedRecordOption[];
++  documents: MeetingRelatedRecordOption[];
++  risks: MeetingRelatedRecordOption[];
++  tasks: MeetingRelatedRecordOption[];
++};
++
++export const emptyMeetingRelatedRecordOptions: MeetingRelatedRecordOptions = {
++  approvals: [],
++  decisions: [],
++  documents: [],
++  risks: [],
++  tasks: [],
++};
++
++function trimSummary(value: string, maxLength = 96) {
++  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
++}
++
++export function buildMeetingRelatedRecordOptions(input: {
++  decisions?: Array<Pick<Decision, "decisionText" | "id" | "projectId" | "projectIds" | "status" | "title">>;
++  documents?: Array<Pick<Document, "docType" | "id" | "projectId" | "status" | "title">>;
++  proposals?: Array<Pick<Proposal, "code" | "id" | "projectId" | "status" | "title">>;
++  risks?: Array<Pick<ExecutiveRiskRecord, "id" | "level" | "projectId" | "status" | "title">>;
++  tasks?: Array<Pick<Task, "id" | "projectId" | "status" | "title">>;
++}): MeetingRelatedRecordOptions {
++  return {
++    approvals: (input.proposals ?? []).map((proposal) => ({
++      id: proposal.id,
++      label: `${proposal.code} - ${proposal.title}`,
++      helper: [proposal.status, proposal.projectId].filter(Boolean).join(" · ") || undefined,
++    })),
++    decisions: (input.decisions ?? []).map((decision) => ({
++      id: decision.id,
++      label: trimSummary(decision.title ?? decision.decisionText),
++      helper: [decision.status, decision.projectId ?? decision.projectIds?.join(", ")].filter(Boolean).join(" · ") || undefined,
++    })),
++    documents: (input.documents ?? []).map((document) => ({
++      id: document.id,
++      label: document.title,
++      helper: [document.docType, document.status, document.projectId].filter(Boolean).join(" · ") || undefined,
++    })),
++    risks: (input.risks ?? []).map((risk) => ({
++      id: risk.id,
++      label: risk.title,
++      helper: [risk.level, risk.status, risk.projectId].filter(Boolean).join(" · ") || undefined,
++    })),
++    tasks: (input.tasks ?? []).map((task) => ({
++      id: task.id,
++      label: task.title,
++      helper: [task.status, task.projectId].filter(Boolean).join(" · ") || undefined,
++    })),
++  };
++}
+
+--- UNTRACKED FILE DIFF: tests/unit/meeting-form.test.tsx ---
+diff --git a/tests/unit/meeting-form.test.tsx b/tests/unit/meeting-form.test.tsx
+new file mode 100644
+index 0000000..1aab0e8
+--- /dev/null
++++ b/tests/unit/meeting-form.test.tsx
+@@ -0,0 +1,101 @@
++import { render, screen, within } from "@testing-library/react";
++import React from "react";
++import { describe, expect, it } from "vitest";
++
++import { MeetingForm } from "@/modules/meetings/components/meeting-form";
++import type { Meeting } from "@/modules/meetings/types";
++import type { Project } from "@/modules/projects/types";
++
++const project: Project = {
++  code: "GN-001",
++  createdAt: "2026-06-01T00:00:00.000Z",
++  id: "project-a",
++  name: "GreenNest One",
++  status: "active",
++  updatedAt: "2026-06-01T00:00:00.000Z",
++};
++
++function buildMeeting(patch: Partial<Meeting> = {}): Meeting {
++  return {
++    aiSummary: { status: "DRAFT" },
++    attachments: [],
++    auditLog: [],
++    createdAt: "2026-06-01T00:00:00.000Z",
++    decisions: [],
++    externalParticipants: ["UBND"],
++    followUpActions: [],
++    id: "meeting-01",
++    meetingDate: "2026-06-05T09:00:00.000Z",
++    meetingType: "PROJECT_MEETING",
++    organizationId: "org-green-nest",
++    participants: ["leader-01"],
++    participantScope: "project_team",
++    projectId: "project-a",
++    projectIds: ["project-a"],
++    relatedApprovals: ["proposal-a"],
++    relatedRecords: [
++      {
++        id: "proposal-a",
++        relationType: "context",
++        title: "Approval A",
++        type: "approval",
++      },
++    ],
++    relatedTasks: [],
++    startTime: "2026-06-05T09:00:00.000Z",
++    status: "SCHEDULED",
++    title: "Weekly meeting",
++    updatedAt: "2026-06-01T00:00:00.000Z",
++    visibility: "project",
++    ...patch,
++  };
++}
++
++describe("MeetingForm", () => {
++  it("renders related record pickers with scoped options", () => {
++    render(
++      <MeetingForm
++        action={() => undefined}
++        projects={[project]}
++        relatedRecordOptions={{
++          approvals: [{ id: "proposal-a", label: "Approval A", helper: "Project A" }],
++          decisions: [{ id: "decision-a", label: "Decision A" }],
++          documents: [{ id: "document-a", label: "Document A" }],
++          risks: [{ id: "risk-a", label: "Risk A" }],
++          tasks: [{ id: "task-a", label: "Task A" }],
++        }}
++        submitLabel="Tạo biên bản họp"
++      />,
++    );
++
++    expect(within(screen.getByLabelText("Approval/Proposal liên quan")).getByRole("option", { name: /Approval A/ })).toBeInTheDocument();
++    expect(within(screen.getByLabelText("Risk/Blocker liên quan")).getByRole("option", { name: /Risk A/ })).toBeInTheDocument();
++    expect(within(screen.getByLabelText("Document liên quan")).getByRole("option", { name: /Document A/ })).toBeInTheDocument();
++  });
++
++  it("renders meeting scope as read-only on edit while preserving related defaults", () => {
++    render(
++      <MeetingForm
++        action={() => undefined}
++        meeting={buildMeeting()}
++        projects={[project]}
++        relatedRecordOptions={{
++          approvals: [{ id: "proposal-a", label: "Approval A" }],
++          decisions: [],
++          documents: [],
++          risks: [],
++          tasks: [],
++        }}
++        submitLabel="Lưu biên bản"
++      />,
++    );
++
++    expect(screen.getByText("Scope cuộc họp")).toBeInTheDocument();
++    expect(screen.getByText(/org-green-nest/)).toBeInTheDocument();
++    expect(screen.queryByLabelText("Organization ID")).not.toBeInTheDocument();
++    expect(screen.queryByLabelText("Trục")).not.toBeInTheDocument();
++
++    const approvalSelect = screen.getByLabelText("Approval/Proposal liên quan") as HTMLSelectElement;
++    expect(approvalSelect.selectedOptions[0]?.value).toBe("proposal-a");
++  });
++});
+
+--- UNTRACKED FILE DIFF: tests/unit/meeting-rls-policy.test.ts ---
+diff --git a/tests/unit/meeting-rls-policy.test.ts b/tests/unit/meeting-rls-policy.test.ts
+new file mode 100644
+index 0000000..ccc7223
+--- /dev/null
++++ b/tests/unit/meeting-rls-policy.test.ts
+@@ -0,0 +1,68 @@
++import { readFile } from "node:fs/promises";
++
++import { describe, expect, it } from "vitest";
++
++const meetingPolicyFiles = [
++  "database/migrations/202606020003_harden_meeting_scope_rls.sql",
++  "database/policies/001_mvp_rls.sql",
++];
++const relatedRecordsMigration = "database/migrations/202606030001_add_meeting_related_records.sql";
++
++function extractFunction(sql: string, name: string) {
++  const match = new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`).exec(sql);
++
++  expect(match, `Missing SQL function ${name}`).not.toBeNull();
++
++  return match?.[0] ?? "";
++}
++
++describe("meeting RLS policy parity", () => {
++  it.each(meetingPolicyFiles)("mirrors scoped project_ids and organization-only meeting policy in %s", async (filePath) => {
++    const sql = await readFile(filePath, "utf8");
++    const accessScope = extractFunction(sql, "current_user_can_access_meeting_scope");
++    const createScope = extractFunction(sql, "current_user_can_create_meeting_scope");
++
++    expect(sql).toContain("current_user_can_access_meeting_scope");
++    expect(sql).toContain("current_user_can_create_meeting_scope");
++    expect(sql).toContain("current_user_has_matching_scope_assignment");
++    expect(sql).toContain("from public.access_scope_assignments asa");
++    expect(sql).toContain("permission_key = any(asa.permission_keys)");
++    expect(sql).toContain(
++      "public.current_user_can_access_meeting_scope(id, project_id, project_ids, host_id, participants, organization_id, axis_id, department_id)",
++    );
++    expect(sql).toContain(
++      "public.current_user_can_create_meeting_scope(project_id, project_ids, host_id, organization_id, axis_id, department_id)",
++    );
++
++    expect(accessScope).toContain("from unnest(");
++    expect(accessScope).toContain("coalesce(meeting_project_ids, '{}'::uuid[])");
++    expect(accessScope).toContain("public.current_user_has_matching_scope_assignment(");
++    expect(accessScope).toContain("and not public.current_user_uses_assignment_scope()");
++    expect(accessScope).not.toContain("select\n    public.current_user_has_internal_permission('meeting.view')\n    or");
++
++    expect(createScope).toContain("from public.projects project_record");
++    expect(createScope).toContain("project_record.id = project_id");
++    expect(createScope).toContain("public.current_user_has_matching_scope_assignment(");
++    expect(createScope).toContain("and not public.current_user_uses_assignment_scope()");
++    expect(createScope).not.toContain("or public.current_user_has_internal_permission('meeting.create')");
++  });
++
++  it("adds related_records as metadata without widening meeting RLS scope", async () => {
++    const migration = await readFile(relatedRecordsMigration, "utf8");
++    const policySql = await Promise.all(meetingPolicyFiles.map((filePath) => readFile(filePath, "utf8")));
++
++    expect(migration).toContain("add column if not exists related_records jsonb not null default '[]'::jsonb");
++    expect(migration).toContain("using gin(related_records)");
++    expect(migration).not.toContain("create policy");
++    expect(migration).not.toContain("current_user_can_access_meeting_scope");
++
++    for (const sql of policySql) {
++      const accessScope = extractFunction(sql, "current_user_can_access_meeting_scope");
++
++      expect(accessScope).not.toContain("related_records");
++      expect(sql).toContain(
++        "public.current_user_can_access_meeting_scope(id, project_id, project_ids, host_id, participants, organization_id, axis_id, department_id)",
++      );
++    }
++  });
++});

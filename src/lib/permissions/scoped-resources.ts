@@ -1,5 +1,7 @@
-import type { PermissionUser } from "@/lib/permissions/can";
+import { can, type PermissionUser } from "@/lib/permissions/can";
 import {
+  type AccessScope,
+  canAccessScopedAction,
   canReadDocumentInScope,
   canReadDecisionInScope,
   canReadMeetingInScope,
@@ -14,10 +16,13 @@ import {
   filterProjectsForScope,
   filterTasksForScope,
   requiresAssignmentScopeForRole,
-  resolveAccessScope
+  resolveAccessScope,
+  usesAssignmentModel
 } from "@/lib/permissions/access-scope";
 import { getDocument, listDocuments } from "@/modules/documents/services/document-service";
 import type { DocumentListFilters } from "@/modules/documents/types";
+import { riskRecordRepository, type ExecutiveRiskRecordListFilters, type RiskRecordRepository } from "@/modules/executive/services/risk-record-repository";
+import type { ExecutiveRiskRecord } from "@/modules/executive/types";
 import { listLegalSteps } from "@/modules/legal/services/legal-service";
 import type { LegalStepListFilters } from "@/modules/legal/types";
 import { getDecision, getMeeting, listDecisions, listMeetings } from "@/modules/meetings/services/meeting-service";
@@ -166,6 +171,135 @@ export async function getScopedMeeting(user: PermissionUser, meetingId: string) 
   }
 
   return canReadMeetingInScope(meeting, resolveScopedResourceScope(user, inputs)) ? meeting : undefined;
+}
+
+function canReadRiskRecordInScope(
+  record: Pick<ExecutiveRiskRecord, "createdBy" | "id" | "moduleId" | "organizationId" | "ownerId" | "projectId">,
+  scope: AccessScope,
+) {
+  const user = { id: scope.userId, role: scope.role };
+
+  if (usesAssignmentModel(scope)) {
+    return canAccessScopedAction(
+      user,
+      "risk.view",
+      {
+        moduleId: record.moduleId ?? "risk",
+        organizationId: record.organizationId,
+        projectId: record.projectId,
+        recordId: record.id,
+      },
+      {
+        now: scope.evaluatedAt,
+        rolePermissionCatalog: scope.rolePermissionCatalog,
+        scopeAssignments: scope.scopeAssignments,
+      },
+    );
+  }
+
+  if (!can(user, "risk.view")) {
+    return false;
+  }
+
+  if (scope.kind === "internal_full") {
+    return true;
+  }
+
+  if (record.ownerId === scope.userId || record.createdBy === scope.userId) {
+    return true;
+  }
+
+  return record.projectId ? scope.assignedProjectIds.has(record.projectId) : false;
+}
+
+export async function listScopedExecutiveRiskRecords(
+  user: PermissionUser,
+  filters: ExecutiveRiskRecordListFilters = {},
+  repository: RiskRecordRepository = riskRecordRepository,
+) {
+  const [records, inputs] = await Promise.all([repository.listRiskRecords(filters), getScopeInputs()]);
+  const scope = resolveScopedResourceScope(user, inputs);
+
+  return records.filter((record) => canReadRiskRecordInScope(record, scope));
+}
+
+export async function getScopedExecutiveRiskRecord(
+  user: PermissionUser,
+  riskId: string,
+  repository: RiskRecordRepository = riskRecordRepository,
+) {
+  const [record, inputs] = await Promise.all([repository.getRiskRecord(riskId), getScopeInputs()]);
+
+  if (!record) {
+    return undefined;
+  }
+
+  return canReadRiskRecordInScope(record, resolveScopedResourceScope(user, inputs)) ? record : undefined;
+}
+
+function normalizeScopeValue(value?: string) {
+  const normalized = value?.trim();
+
+  return normalized ? normalized : undefined;
+}
+
+export async function canCreateProjectMeeting(
+  user: PermissionUser,
+  target: { organizationId?: string; projectId: string; axisId?: string; departmentId?: string },
+) {
+  if (!requiresAssignmentScopeForRole(user.role)) {
+    return true;
+  }
+
+  const inputs = await getScopeInputs();
+
+  return canAccessScopedAction(
+    user,
+    "meeting.create",
+    {
+      organizationId: normalizeScopeValue(target.organizationId),
+      projectId: target.projectId,
+      axisId: normalizeScopeValue(target.axisId),
+      workstreamId: normalizeScopeValue(target.departmentId) ?? "meeting",
+      moduleId: "meeting",
+    },
+    {
+      rolePermissionCatalog: inputs.rolePermissionCatalog,
+      scopeAssignments: inputs.scopeAssignments,
+    },
+  );
+}
+
+export async function canCreateOrganizationMeeting(
+  user: PermissionUser,
+  target: { organizationId?: string; axisId?: string; departmentId?: string } = {},
+) {
+  const organizationId = normalizeScopeValue(target.organizationId);
+
+  if (!organizationId) {
+    return false;
+  }
+
+  if (!requiresAssignmentScopeForRole(user.role)) {
+    return true;
+  }
+
+  const inputs = await getScopeInputs();
+
+  return canAccessScopedAction(
+    user,
+    "meeting.create",
+    {
+      organizationId,
+      axisId: normalizeScopeValue(target.axisId),
+      workstreamId: normalizeScopeValue(target.departmentId) ?? "meeting",
+      moduleId: "meeting",
+    },
+    {
+      rolePermissionCatalog: inputs.rolePermissionCatalog,
+      scopeAssignments: inputs.scopeAssignments,
+    },
+  );
 }
 
 export async function listScopedDecisions(user: PermissionUser, filters: DecisionListFilters = {}) {

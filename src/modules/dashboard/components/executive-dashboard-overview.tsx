@@ -65,13 +65,6 @@ function priorityLabel(item: ExecutiveDashboardSourceItem, fallback: string) {
   return fallback;
 }
 
-const riskPriorityLabels: Record<ExecutiveRiskItem["severity"], string> = {
-  critical: "Critical",
-  high: "High",
-  low: "Low",
-  medium: "Medium",
-};
-
 function deadlinePriorityLabel(item: ExecutiveDashboardSourceItem) {
   const normalized = `${item.status} ${item.deadline ?? ""} ${item.reason ?? ""}`.toLowerCase();
 
@@ -113,8 +106,8 @@ function riskPriority(item: ExecutiveRiskItem): ExecutivePriorityQueueItem {
 
   return {
     ...item,
-    groupLabel: "Risk",
-    priorityLabel: priorityLabel(item, riskPriorityLabels[item.severity]),
+    groupLabel: "Rủi ro",
+    priorityLabel: priorityLabel(item, item.severityLabel),
     score: scoreBase(item) + dueScore(item) + severityScore,
   };
 }
@@ -417,11 +410,11 @@ export function ExecutiveDashboardOverview({
     ? "Khong co lich hop trong scope hien tai."
     : "Khong co quyen xem lich hop trong scope hien tai.";
   const riskEmptyLabel = data.permissions.canViewRisk
-    ? "Khong co risk high/critical trong scope hien tai."
-    : "Khong co quyen xem risk trong scope hien tai.";
+    ? "Không có risk cao/nghiêm trọng trong scope hiện tại."
+    : "Không có quyền xem risk trong scope hiện tại.";
   const riskCategoryEmptyLabel = data.permissions.canViewRisk
-    ? "Khong co category risk trong scope hien tai."
-    : "Khong co quyen xem category risk trong scope hien tai.";
+    ? "Không có category risk trong scope hiện tại."
+    : "Không có quyền xem category risk trong scope hiện tại.";
   const priorityEmptyLabel =
     canViewDeadlineSources || data.permissions.canViewRisk
       ? "Khong co item uu tien trong scope hien tai."
@@ -480,9 +473,15 @@ export function ExecutiveDashboardOverview({
           />
           <ExecutiveRiskSummary
             canDrillDown={canDrillDown}
+            canCreateRisk={data.permissions.canCreateRisk}
+            canUpdateRisk={data.permissions.canUpdateRisk}
+            canOverrideRisk={data.permissions.canOverrideRisk}
+            canCloseRisk={data.permissions.canCloseRisk}
+            canCloseHighRisk={data.permissions.canCloseHighRisk}
             categoryEmptyLabel={riskCategoryEmptyLabel}
             emptyLabel={riskEmptyLabel}
             portfolio={data.projectPortfolio}
+            riskMutationOptions={data.riskMutationOptions}
             riskSummary={data.riskSummary}
             onSelectSource={handleSelectSource}
           />

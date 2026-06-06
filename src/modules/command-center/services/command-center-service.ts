@@ -44,7 +44,11 @@ import { getExecutiveCommonCenterData } from "@/modules/dashboard/services/execu
 import { getExecutiveDashboardData } from "@/modules/dashboard/services/executive-dashboard-service";
 import { getExecutiveMorningBriefingData } from "@/modules/dashboard/services/executive-morning-briefing-service";
 import { canAccessExecutiveModule } from "@/modules/executive/constants";
+import { getDecisionAssignmentCenterData } from "@/modules/executive/services/decision-assignment-center-service";
 import { getExecutiveLeadershipData } from "@/modules/executive/services/executive-service";
+import type { DecisionAssignmentCenterFilters } from "@/modules/executive/types";
+import { getHistoryArchiveCenterData } from "@/modules/reports/services/history-archive-center-service";
+import type { HistoryArchiveFilters } from "@/modules/reports/types";
 import { listActiveDelegationsForDelegate } from "@/modules/settings/services/leadership-delegation-service";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
 import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
@@ -111,6 +115,16 @@ function buildAxes(
                         },
                       ]
                     : []),
+                  {
+                    label: "Decision & Assignment Center",
+                    href: "/command-center?view=executive-decision-log",
+                    viewKey: "executive-decision-log",
+                  },
+                  {
+                    label: "History & Archive",
+                    href: "/command-center?view=executive-history",
+                    viewKey: "executive-history",
+                  },
                   {
                     label: "Private Workspace",
                     href: "/command-center?view=executive-private-workspace",
@@ -675,10 +689,51 @@ function buildScopedPermissionSet(
   );
 }
 
+function selectedScopeProjectId(
+  scopeAssignments: ScopeAssignment[],
+  selectedScopeId?: string,
+) {
+  if (!selectedScopeId || selectedScopeId === "all") {
+    return undefined;
+  }
+
+  const projectIds = [
+    ...new Set(
+      scopeAssignments
+        .map((assignment) => assignment.projectId)
+        .filter(
+          (projectId): projectId is string =>
+            Boolean(projectId) && projectId !== "*",
+        ),
+    ),
+  ];
+
+  return projectIds.length === 1 ? projectIds[0] : undefined;
+}
+
+function applySelectedScopeProjectFilter(
+  filters: HistoryArchiveFilters,
+  scopeAssignments: ScopeAssignment[],
+  selectedScopeId?: string,
+) {
+  const projectId = selectedScopeProjectId(scopeAssignments, selectedScopeId);
+
+  if (!projectId || (filters.projectId && filters.projectId !== "all")) {
+    return filters;
+  }
+
+  return {
+    ...filters,
+    projectId,
+  };
+}
+
 export async function getCommandCenterData(
   user: PermissionUser,
   options: {
     delegations?: LeadershipDelegation[];
+    decisionCenterFilters?: DecisionAssignmentCenterFilters;
+    historyArchiveFilters?: HistoryArchiveFilters;
     rolePermissionCatalog?: RolePermissionCatalog;
     scopeAssignments?: ScopeAssignment[];
     selectedScopeId?: string;
@@ -731,6 +786,13 @@ export async function getCommandCenterData(
     ...scopedPermissions,
     ...delegatedPermissions,
   ]);
+  const historyArchiveFilters = options.historyArchiveFilters
+    ? applySelectedScopeProjectFilter(
+        options.historyArchiveFilters,
+        effectiveScopeAssignments,
+        options.selectedScopeId,
+      )
+    : undefined;
   const canViewExecutive =
     !selectedScopeInvalid &&
     canOpenCommandCenter(
@@ -775,6 +837,8 @@ export async function getCommandCenterData(
     executiveData,
     executiveDashboard,
     executiveMorningBriefing,
+    decisionAssignmentCenter,
+    historyArchiveCenter,
   ] = await Promise.all([
     canViewOperations
       ? getDashboardData(user, {
@@ -803,6 +867,24 @@ export async function getCommandCenterData(
           requireScopeAssignments,
           rolePermissionCatalog,
           selectedScopeId: options.selectedScopeId,
+          scopeAssignments: effectiveScopeAssignments,
+        })
+      : null,
+    canViewExecutive
+      ? getDecisionAssignmentCenterData(user, options.decisionCenterFilters ?? {}, {
+          requireScopeAssignments,
+          rolePermissionCatalog,
+          scopeAssignments: effectiveScopeAssignments,
+          selectedScopeId: options.selectedScopeId,
+        })
+      : null,
+    canViewExecutive && historyArchiveFilters
+      ? getHistoryArchiveCenterData(user, historyArchiveFilters, {
+          preservedParams: {
+            view: "executive-history",
+            ...(options.selectedScopeId ? { scopeId: options.selectedScopeId } : {}),
+          },
+          rolePermissionCatalog,
           scopeAssignments: effectiveScopeAssignments,
         })
       : null,
@@ -881,6 +963,8 @@ export async function getCommandCenterData(
       scopedPermissions: commandCenterScopedPermissions,
     }),
     approvalCenter,
+    decisionAssignmentCenter,
+    historyArchiveCenter,
     availableViews: {
       notifications: canViewExecutive,
       operationsDashboard: canViewOperations,

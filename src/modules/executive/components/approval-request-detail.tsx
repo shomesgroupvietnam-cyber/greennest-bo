@@ -15,6 +15,7 @@ import type {
   ApprovalCenterDetailSource,
   ApprovalCenterFinancialAccess,
 } from "@/modules/executive/types";
+import { AiApprovalAssistantPanel } from "@/modules/ai/components/ai-approval-assistant-panel";
 
 import { ApprovalActionPanel } from "./approval-action-panel";
 
@@ -406,6 +407,10 @@ export function ApprovalRequestDetail({
         </div>
 
         <aside className="space-y-5">
+          {detail.aiAssistant ? (
+            <AiApprovalAssistantPanel assistant={detail.aiAssistant} />
+          ) : null}
+
           <ApprovalActionPanel detail={detail} />
 
           <section

@@ -1,4 +1,5 @@
 import type { WorkspaceDefinition } from "@/modules/workspaces/config";
+import type { ExecutiveAiSummary } from "@/modules/ai/types";
 import type {
   DashboardData,
   ExecutiveDashboardKpi,
@@ -78,6 +79,11 @@ export type PrivateWorkspacePermissions = {
   canViewFinance: boolean;
   canCreateProposal: boolean;
   canCreateMeeting: boolean;
+  canCreateRisk: boolean;
+  canUpdateRisk: boolean;
+  canOverrideRisk: boolean;
+  canCloseRisk: boolean;
+  canCloseHighRisk: boolean;
   canDrillDown: boolean;
   mutationMode: PrivateWorkspaceMutationMode;
 };
@@ -161,6 +167,7 @@ export type ExecutivePrivateWorkspaceData = {
   decisionItems: PrivateWorkspaceSectionItem[];
   meetingItems: PrivateWorkspaceSectionItem[];
   assistantSupport: AssistantPrivateWorkspaceSupport;
+  aiSummary: ExecutiveAiSummary;
   sourceCounts: ExecutivePrivateWorkspaceSourceCounts;
   emptyState?: ExecutivePrivateWorkspaceEmptyState;
 };

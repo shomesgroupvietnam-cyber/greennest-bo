@@ -203,7 +203,7 @@ export const EXECUTIVE_PAGE_NAV_ITEMS: Array<{
   },
   {
     key: "decision-log",
-    label: "Nhat ky quyet dinh",
-    href: "/executive/decision-log",
+    label: "Decision & Assignment Center",
+    href: "/executive/decisions",
   },
 ];

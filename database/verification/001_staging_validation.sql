@@ -36,7 +36,7 @@ order by table_name;
 -- 2. Expected baseline row counts.
 select 'roles' as check_name, count(*) as actual_count, 18 as expected_minimum from public.roles
 union all
-select 'permissions', count(*), 62 from public.permissions
+select 'permissions', count(*), 63 from public.permissions
 union all
 select 'role_permissions', count(*), 1 from public.role_permissions;
 
@@ -75,7 +75,7 @@ with expected_permissions(key) as (
     ('document.view'), ('document.create'), ('document.update'), ('document.approve'), ('document.archive'),
     ('legal.view'), ('legal.update'), ('legal.approve'), ('legal.configure_template'),
     ('meeting.view'), ('meeting.create'), ('meeting.update'), ('decision.create'), ('decision.approve'),
-    ('report.view'), ('report.create'),
+    ('report.view'), ('report.create'), ('report.export'),
     ('knowledge.view'), ('knowledge.create'), ('knowledge.create_candidate'), ('knowledge.promote'), ('knowledge.review'), ('knowledge.approve'), ('knowledge.manage_source_registry'),
     ('design.view'), ('design.create'), ('design.update'), ('design.review'), ('design.approve_change'),
     ('construction.view'), ('construction.update'), ('site_diary.create'), ('quality.update'), ('acceptance.approve'),

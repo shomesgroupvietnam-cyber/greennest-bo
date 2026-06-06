@@ -98,21 +98,27 @@ export async function runAiCoordinator(
   const repos = resolveCoordinatorRepositories(repositories);
   const scopeDataset = buildUserScopeDataset(await loadScopeDataset(repos), user);
   const routingPlan = classifyIntentAndRoute(job);
-  const toolResults = await Promise.all([
-    getProjectContext({ job, user, repositories: repos, scopeDataset }),
-    getTaskContext({ job, user, repositories: repos, scopeDataset }),
-    getDocumentReadinessContext({ job, user, repositories: repos, scopeDataset }),
-    getLegalStatusContext({ job, user, repositories: repos, scopeDataset }),
-    getMeetingDecisionContext({ job, user, repositories: repos, scopeDataset }),
-    getReportSnapshotContext({ job, user, repositories: repos, scopeDataset }),
-    retrieveKnowledgeContext({ job, user, repositories: repos })
-  ]);
-  const contextBlocks = toolResults.flatMap((result) => result.blocks);
-  const citations = toolResults.flatMap((result) => result.citations);
-  const ragContext = toolResults.find((result) => result.key === "knowledge")?.content ?? "";
-  const actionProposals = createActionProposal(job, user);
+  const approvalAssistant = job.intent === "AI Approval Assistant";
+  const toolResults = approvalAssistant
+    ? []
+    : await Promise.all([
+        getProjectContext({ job, user, repositories: repos, scopeDataset }),
+        getTaskContext({ job, user, repositories: repos, scopeDataset }),
+        getDocumentReadinessContext({ job, user, repositories: repos, scopeDataset }),
+        getLegalStatusContext({ job, user, repositories: repos, scopeDataset }),
+        getMeetingDecisionContext({ job, user, repositories: repos, scopeDataset }),
+        getReportSnapshotContext({ job, user, repositories: repos, scopeDataset }),
+        retrieveKnowledgeContext({ job, user, repositories: repos })
+      ]);
+  const contextBlocks = approvalAssistant ? [] : toolResults.flatMap((result) => result.blocks);
+  const promptJob = sanitizeJobForScope(job, scopeDataset);
+  const citations = approvalAssistant
+    ? approvalAssistantCitations(promptJob)
+    : toolResults.flatMap((result) => result.citations);
+  const ragContext = approvalAssistant ? "" : toolResults.find((result) => result.key === "knowledge")?.content ?? "";
+  const actionProposals = createActionProposal(job, user, scopeDataset);
   const promptPackage = buildAiPromptPackage({
-    job,
+    job: promptJob,
     routingPlan,
     contextBlocks,
     ragContext,
@@ -121,7 +127,7 @@ export async function runAiCoordinator(
   });
   const provider = options.provider ?? getAiProviderFromEnv();
   const providerResult = await provider.generateAnswer({
-    job,
+    job: promptJob,
     routingPlan,
     contextBlocks: promptPackage.contextBlocks,
     ragContext: promptPackage.ragContext,
@@ -462,9 +468,51 @@ export async function retrieveKnowledgeContext(input: CoordinatorKnowledgeToolIn
   };
 }
 
-export function createActionProposal(job: AiJob, user: PermissionUser): AiActionProposalDraft[] {
+export function createActionProposal(job: AiJob, user: PermissionUser, scopeDataset: ScopeDataset): AiActionProposalDraft[] {
   if (!job.payload.wantsActionProposal || !can(user, "ai.propose_action")) {
     return [];
+  }
+
+  if (job.intent === "AI Approval Assistant") {
+    return [];
+  }
+
+  const safeProjectId = resolveVisibleProjectId(job.projectId, scopeDataset);
+
+  if (job.projectId && !safeProjectId) {
+    return [];
+  }
+
+  const advisoryText = `${job.module} ${job.intent} ${job.payload.prompt.slice(0, 1000)}`.toLowerCase();
+
+  if (
+    Boolean(safeProjectId) &&
+    (job.module === "project" || job.module === "general") &&
+    shouldCreateRiskProposal(advisoryText)
+  ) {
+    return [
+      {
+        projectId: safeProjectId,
+        module: job.module,
+        actionKey: "create_risk_record",
+        targetEntityType: "risk",
+        proposedPayload: {
+          recordType: "risk",
+          title: "De xuat risk tu AI",
+          reason: "AI de xuat canh bao risk tu context nguoi dung duoc phep xem.",
+          categoryKey: "operation",
+          level: "medium",
+          deadline: todayString(),
+          ownerId: user.id,
+          projectId: safeProjectId,
+          nextAction: "Nguoi co quyen can review citation va xac nhan truoc khi tao official risk.",
+        },
+        rationale: "Coordinator chi tao draft risk suggestion, khong ghi vao executive_risk_records.",
+        requiredPermission: "risk.create",
+        status: "proposed",
+        workflowStatus: "DRAFT",
+      },
+    ];
   }
 
   const requiredPermission: PermissionAction = job.module === "documents" ? "document.update" : "task.create";
@@ -472,15 +520,14 @@ export function createActionProposal(job: AiJob, user: PermissionUser): AiAction
 
   return [
     {
-      projectId: job.projectId,
+      projectId: safeProjectId,
       module: job.module,
       actionKey,
       targetEntityType: actionKey === "request_document_update" ? "document" : "task",
       proposedPayload: {
-        title: `De xuat tu AI: ${job.intent}`,
-        description: `Tao tu AI proposal. Prompt goc: ${job.payload.prompt.slice(0, 500)}`,
-        sourcePrompt: job.payload.prompt.slice(0, 500),
-        projectId: job.projectId,
+        title: "De xuat tu AI",
+        description: "De xuat tu AI dua tren context da loc quyen. Can nguoi dung review citation va xac nhan truoc khi ghi du lieu.",
+        projectId: safeProjectId,
         status: "todo",
         priority: "medium",
         category: "ai_proposal",
@@ -564,6 +611,17 @@ function emptyToolResult(key: string) {
   };
 }
 
+function approvalAssistantCitations(job: AiJob): AiCoordinatorCitationDraft[] {
+  return job.scopeSnapshot.resourceRefs.map((ref) =>
+    internalCitation(
+      ref.entityType,
+      ref.entityId,
+      `${ref.entityType} ${ref.entityId}`,
+      ref.entityType === "project" ? ref.entityId : job.projectId
+    )
+  );
+}
+
 function internalCitation(entityType: string, entityId: string, title: string, projectId?: string): AiCoordinatorCitationDraft {
   return {
     citationType: "internal_record",
@@ -605,6 +663,56 @@ function filterByProjectId<T extends { projectId?: string; id?: string }>(items:
   }
 
   return items.filter((item) => item.projectId === projectId || item.id === projectId);
+}
+
+function resolveVisibleProjectId(projectId: string | undefined, scopeDataset: ScopeDataset) {
+  if (!projectId) {
+    return undefined;
+  }
+
+  return filterProjectsForScope(scopeDataset.projects, scopeDataset.scope).some((project) => project.id === projectId) ? projectId : undefined;
+}
+
+function sanitizeJobForScope(job: AiJob, scopeDataset: ScopeDataset): AiJob {
+  if (!job.projectId || resolveVisibleProjectId(job.projectId, scopeDataset)) {
+    return job;
+  }
+
+  return {
+    ...job,
+    projectId: undefined,
+    scopeSnapshot: {
+      ...job.scopeSnapshot,
+      projectId: undefined
+    }
+  };
+}
+
+function shouldCreateRiskProposal(text: string) {
+  if (
+    includesAny(text, [
+      "no risk",
+      "not a risk",
+      "not risk",
+      "not blocked",
+      "not a blocker",
+      "khong co risk",
+      "không có risk",
+      "khong co rui ro",
+      "không có rủi ro",
+      "khong co blocker",
+      "không có blocker",
+      "khong bi blocked",
+      "không bị blocked"
+    ])
+  ) {
+    return false;
+  }
+
+  const hasRiskTerm = includesAny(text, ["risk", "rui ro", "rủi ro", "blocker", "blocked", "canh bao", "cảnh báo"]);
+  const hasActionIntent = includesAny(text, ["de xuat", "đề xuất", "tao", "tạo", "canh bao", "cảnh báo", "draft", "lap", "lập"]);
+
+  return hasRiskTerm && hasActionIntent;
 }
 
 function includesAny(text: string, terms: string[]) {

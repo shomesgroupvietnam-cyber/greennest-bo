@@ -32,6 +32,7 @@ export type AiRepository = {
   listCitations(filters?: { interactionId?: string; jobId?: string }): Promise<AiCitation[]>;
   createActionProposals(proposals: AiActionProposal[]): Promise<AiActionProposal[]>;
   getActionProposal(proposalId: string): Promise<AiActionProposal | undefined>;
+  claimActionProposal(proposalId: string, patch: Partial<AiActionProposal>): Promise<AiActionProposal | undefined>;
   updateActionProposal(proposalId: string, patch: Partial<AiActionProposal>): Promise<AiActionProposal>;
   listActionProposals(filters?: { interactionId?: string; jobId?: string }): Promise<AiActionProposal[]>;
 };
@@ -157,6 +158,24 @@ export class JsonAiRepository implements AiRepository {
     const store = await this.readStore();
 
     return store.actionProposals.find((proposal) => proposal.id === proposalId);
+  }
+
+  async claimActionProposal(proposalId: string, patch: Partial<AiActionProposal>) {
+    const store = await this.readStore();
+    const existing = store.actionProposals.find((proposal) => proposal.id === proposalId);
+
+    if (!existing || existing.status !== "proposed") {
+      return undefined;
+    }
+
+    const updated = { ...existing, ...patch, id: existing.id, createdAt: existing.createdAt };
+
+    await this.writeStore({
+      ...store,
+      actionProposals: store.actionProposals.map((proposal) => (proposal.id === proposalId ? updated : proposal))
+    });
+
+    return updated;
   }
 
   async updateActionProposal(proposalId: string, patch: Partial<AiActionProposal>) {
@@ -725,6 +744,45 @@ export class SupabaseAiRepository implements AiRepository {
   async getActionProposal(proposalId: string) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.from("ai_action_proposals").select("*").eq("id", proposalId).maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data ? toActionProposal(data as AiActionProposalRow) : undefined;
+  }
+
+  async claimActionProposal(proposalId: string, patch: Partial<AiActionProposal>) {
+    const supabase = await createSupabaseServerClient();
+    const rowPatch = patchKeys<AiActionProposal>(patch, {
+      id: "id",
+      interactionId: "interaction_id",
+      jobId: "job_id",
+      requestedBy: "requested_by",
+      projectId: "project_id",
+      module: "module",
+      actionKey: "action_key",
+      targetEntityType: "target_entity_type",
+      targetEntityId: "target_entity_id",
+      proposedPayload: "proposed_payload",
+      rationale: "rationale",
+      requiredPermission: "required_permission",
+      workflowStatus: "workflow_status",
+      status: "status",
+      decidedBy: "decided_by",
+      decidedAt: "decided_at",
+      decisionNotes: "decision_notes",
+      executionResult: "execution_result",
+      createdAt: "created_at",
+      updatedAt: "updated_at"
+    });
+    const { data, error } = await supabase
+      .from("ai_action_proposals")
+      .update(rowPatch)
+      .eq("id", proposalId)
+      .eq("status", "proposed")
+      .select("*")
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);

@@ -10,6 +10,7 @@ import type {
 
 import {
   externalSearchLogRepository,
+  type ExternalSearchLogListFilters,
   type ExternalSearchLogRepository
 } from "./external-search-log-repository";
 import {
@@ -172,8 +173,13 @@ export async function importExternalSourceCandidate(
   });
 }
 
-export async function listExternalSearchLogs(repository: ExternalSearchLogRepository = externalSearchLogRepository) {
-  return repository.listLogs();
+export type { ExternalSearchLogListFilters };
+
+export async function listExternalSearchLogs(
+  filters: ExternalSearchLogListFilters = {},
+  repository: ExternalSearchLogRepository = externalSearchLogRepository
+) {
+  return repository.listLogs(filters);
 }
 
 export function getFriendlyExternalSearchErrorMessage(error: unknown) {

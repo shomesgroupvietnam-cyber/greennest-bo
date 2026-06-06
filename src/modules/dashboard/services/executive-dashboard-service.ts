@@ -16,13 +16,33 @@ import {
 } from "@/lib/date/business-day";
 import { can, type PermissionAction, type PermissionUser } from "@/lib/permissions/can";
 import type { NotificationRepository } from "@/lib/notifications/notification-repository";
+import { queueRiskEscalationNotification } from "@/lib/notifications/notification-service";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import { canAccessExecutiveModule } from "@/modules/executive/constants";
 import { getExecutiveLeadershipData } from "@/modules/executive/services/executive-service";
+import {
+  buildExecutiveRiskItem,
+  buildExecutiveRiskMap,
+  buildExecutiveRiskItemFromRecord,
+} from "@/modules/executive/services/risk-status-service";
+import {
+  filterExecutiveRiskRecordsForScope,
+} from "@/modules/executive/services/risk-record-service";
+import {
+  resolveRiskEscalationPolicyForRecord,
+  resolveRiskEscalationState,
+  resolveRiskOverdueState,
+} from "@/modules/executive/services/risk-alert-service";
+import {
+  riskRecordRepository,
+  type RiskRecordRepository,
+} from "@/modules/executive/services/risk-record-repository";
 import type {
   ExecutiveDecisionLogItem,
   ExecutiveLeadershipActionItem,
   ExecutiveProjectRow,
+  ExecutiveRiskRecord,
+  ExecutiveRiskGroupMetadata,
   LeadershipApproval,
 } from "@/modules/executive/types";
 import {
@@ -49,12 +69,17 @@ import type { Proposal } from "@/modules/proposals/types";
 import {
   findMatchingApprovalThresholdPolicy,
   listActiveApprovalThresholds,
+  listActiveRiskGroups,
 } from "@/modules/settings/services/policy-settings-service";
 import type { PolicySettingsRepository } from "@/modules/settings/services/policy-settings-repository";
 import {
   leadershipDelegationRepository,
   type LeadershipDelegationRepository,
 } from "@/modules/settings/services/leadership-delegation-repository";
+import {
+  getLeadershipDelegationStatus,
+  isDelegationActionAllowed,
+} from "@/modules/settings/services/leadership-delegation-service";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
 import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
 import type {
@@ -62,6 +87,7 @@ import type {
   LeadershipDelegation,
   PolicyScope,
   RiskSeverity,
+  RiskGroupConfig,
   RolePermissionCatalog,
   ScopeAssignment,
 } from "@/modules/settings/types";
@@ -81,6 +107,7 @@ import type {
   ExecutiveProjectPortfolioItem,
   ExecutiveRecentDecisions,
   ExecutiveRiskItem,
+  ExecutiveRiskMutationOptions,
   ExecutiveRiskSummary,
 } from "../types";
 import { enrichExecutiveDashboardDataSources } from "./executive-drilldown-source";
@@ -89,6 +116,7 @@ type ExecutiveDashboardRepositories = {
   projects?: ProjectRepository;
   proposals?: ProposalRepository;
   meetings?: MeetingRepository;
+  riskRecords?: RiskRecordRepository;
 };
 
 export type ExecutiveDashboardOptions = {
@@ -116,6 +144,12 @@ const executiveScopedPermissions = [
   "decision.approve",
   "proposal.view",
   "proposal.approve",
+  "risk.view",
+  "risk.create",
+  "risk.update",
+  "risk.override",
+  "risk.close",
+  "risk.close_high",
 ] satisfies PermissionAction[];
 
 const nonPendingApprovalStatuses = new Set([
@@ -127,6 +161,7 @@ const nonPendingApprovalStatuses = new Set([
   "returned",
 ]);
 const finalDecisionStatuses = new Set(["done", "approved", "rejected"]);
+const terminalMeetingFollowUpStatuses = new Set(["done", "cancelled"]);
 
 function isBeforeDay(value: string | undefined, today: Date) {
   return isBeforeBusinessDay(value, today);
@@ -140,6 +175,10 @@ function isDueTodayOrOverdue(value: string | undefined, today: Date) {
   return isDueOnOrBeforeBusinessDay(value, today);
 }
 
+function isOpenMeetingFollowUp(action: Pick<Meeting["followUpActions"][number], "status">) {
+  return !terminalMeetingFollowUpStatuses.has(String(action.status ?? "open"));
+}
+
 function formatVnd(amount: number) {
   return `${new Intl.NumberFormat("vi-VN").format(amount)} VND`;
 }
@@ -150,6 +189,11 @@ type DashboardEscalationContext = {
   options: Pick<ExecutiveDashboardOptions, "auditWriter" | "notificationRepository">;
   policies: ApprovalThresholdPolicy[];
   user: PermissionUser;
+};
+
+type RiskAlertDashboardContext = DashboardEscalationContext & {
+  generatedAt: string;
+  riskGroups: RiskMutationGroup[];
 };
 
 function toEscalationPolicy(policy: ApprovalThresholdPolicy | undefined, fallbackLabel?: string) {
@@ -232,6 +276,65 @@ function actionPolicy(
   );
 }
 
+async function riskRecordToDashboardItem(
+  record: ExecutiveRiskRecord,
+  context: RiskAlertDashboardContext,
+): Promise<ExecutiveRiskItem> {
+  const policy = resolveRiskEscalationPolicyForRecord(record, context.policies);
+  const scope: PolicyScope = {
+    axisId: record.axisId,
+    moduleId: record.moduleId ?? "risk",
+    organizationId: record.organizationId,
+    projectId: record.projectId,
+    recordId: record.id,
+    workstreamId: record.workstreamId,
+  };
+  const overdue = resolveRiskOverdueState({
+    deadline: record.deadline,
+    nextAction: record.nextAction,
+    now: context.now,
+    ownerLabel: record.ownerName ?? record.ownerId,
+    policyLabel: policy?.labelVi,
+    recordStatus: record.status,
+    thresholdDays: policy?.escalateAfterDays,
+  });
+  const escalation = resolveRiskEscalationState({
+    delegations: context.delegations,
+    now: context.now,
+    overdue,
+    policy,
+    record,
+    scope,
+  });
+  const notificationResult = await queueRiskEscalationNotification(
+    {
+      escalation,
+      overdue,
+      source: {
+        ownerId: record.ownerId,
+        ownerLabel: record.ownerName ?? record.ownerId,
+        scope,
+        sourceId: record.id,
+        title: record.title,
+      },
+      user: context.user,
+    },
+    {
+      auditWriter: context.options.auditWriter,
+      notificationRepository: context.options.notificationRepository,
+      now: context.now,
+    },
+  );
+
+  return buildExecutiveRiskItemFromRecord({
+    escalation: notificationResult.escalation,
+    generatedAt: context.generatedAt,
+    overdue,
+    record,
+    riskGroups: context.riskGroups,
+  });
+}
+
 async function resolveDashboardPolicies(options: ExecutiveDashboardOptions) {
   if (options.approvalPolicies) {
     return options.approvalPolicies;
@@ -248,6 +351,160 @@ async function resolveDashboardDelegations(options: ExecutiveDashboardOptions) {
   return (options.delegationRepository ?? leadershipDelegationRepository).listDelegations({
     active: true,
   });
+}
+
+function permissionCatalogItem(
+  rolePermissionCatalog: RolePermissionCatalog,
+  actionKey: PermissionAction,
+) {
+  return rolePermissionCatalog.permissions.find(
+    (permission) => permission.key === actionKey,
+  );
+}
+
+function delegatedRiskActionKeys(input: {
+  delegation: LeadershipDelegation;
+  now: Date;
+  rolePermissionCatalog: RolePermissionCatalog;
+  user: PermissionUser;
+}) {
+  if (
+    input.delegation.delegateUserId !== input.user.id ||
+    getLeadershipDelegationStatus(input.delegation, input.now) !== "active"
+  ) {
+    return [];
+  }
+
+  return (["risk.create", "risk.update", "risk.override"] as PermissionAction[]).filter((actionKey) => {
+    if (!input.delegation.actionKeys.includes(actionKey)) {
+      return false;
+    }
+
+    const permission = permissionCatalogItem(
+      input.rolePermissionCatalog,
+      actionKey,
+    );
+
+    return Boolean(permission && isDelegationActionAllowed(actionKey, permission));
+  });
+}
+
+type RiskMutationGroup = RiskGroupConfig | ExecutiveRiskGroupMetadata;
+
+function normalizeScopeDimension(value?: string) {
+  if (value === "axis-1" || value === "axis1") {
+    return "project_management";
+  }
+
+  return value;
+}
+
+function dimensionsCompatible(assignmentValue?: string, delegationValue?: string) {
+  if (
+    !assignmentValue ||
+    assignmentValue === "*" ||
+    !delegationValue ||
+    delegationValue === "*"
+  ) {
+    return true;
+  }
+
+  return normalizeScopeDimension(assignmentValue) === normalizeScopeDimension(delegationValue);
+}
+
+function delegationMatchesAssignment(
+  delegation: LeadershipDelegation,
+  assignment: ScopeAssignment,
+) {
+  return (
+    dimensionsCompatible(assignment.organizationId, delegation.organizationId) &&
+    dimensionsCompatible(assignment.projectId, delegation.projectId) &&
+    dimensionsCompatible(assignment.axisId, delegation.axisId) &&
+    dimensionsCompatible(assignment.workstreamId, delegation.workstreamId) &&
+    dimensionsCompatible(assignment.moduleId, delegation.moduleId) &&
+    dimensionsCompatible(assignment.recordId, delegation.recordId)
+  );
+}
+
+function delegationMatchesSelectedScope(input: {
+  delegation: LeadershipDelegation;
+  scopeAssignments: ScopeAssignment[];
+  selectedScopeActive: boolean;
+}) {
+  if (!input.selectedScopeActive) {
+    return true;
+  }
+
+  return input.scopeAssignments.some((assignment) =>
+    delegationMatchesAssignment(input.delegation, assignment),
+  );
+}
+
+function riskGroupKey(group: RiskMutationGroup) {
+  return "riskKey" in group ? group.riskKey : group.key;
+}
+
+function riskGroupLabel(group: RiskMutationGroup) {
+  return "labelVi" in group ? group.labelVi : group.label;
+}
+
+function buildRiskMutationOptions(input: {
+  delegations: LeadershipDelegation[];
+  projects: Project[];
+  riskGroups: RiskMutationGroup[];
+  rolePermissionCatalog: RolePermissionCatalog;
+  scopeAssignments: ScopeAssignment[];
+  selectedScopeActive: boolean;
+  today: Date;
+  user: PermissionUser;
+}): ExecutiveRiskMutationOptions {
+  const delegationOptions = input.delegations
+    .filter((delegation) =>
+      delegationMatchesSelectedScope({
+        delegation,
+        scopeAssignments: input.scopeAssignments,
+        selectedScopeActive: input.selectedScopeActive,
+      }),
+    )
+    .map((delegation) => ({
+      actionKeys: delegatedRiskActionKeys({
+        delegation,
+        now: input.today,
+        rolePermissionCatalog: input.rolePermissionCatalog,
+        user: input.user,
+      }),
+      delegation,
+    }))
+    .filter((entry) => entry.actionKeys.length > 0)
+    .map(({ actionKeys, delegation }) => ({
+      actionKeys,
+      axisId: delegation.axisId,
+      delegationId: delegation.id,
+      label: `${delegation.principalUserId} (${actionKeys.join(", ")})`,
+      moduleId: delegation.moduleId,
+      organizationId: delegation.organizationId,
+      principalUserId: delegation.principalUserId,
+      projectId: delegation.projectId,
+      workstreamId: delegation.workstreamId,
+    }));
+
+  return {
+    categories: input.riskGroups
+      .map((group) => ({
+        id: riskGroupKey(group),
+        label: riskGroupLabel(group),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label)),
+    delegations: delegationOptions,
+    owners: [],
+    projects: input.projects
+      .filter((project) => !project.archivedAt && project.status !== "archived")
+      .map((project) => ({
+        id: project.id,
+        label: project.name,
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label)),
+  };
 }
 
 function toneForHealth(health: "green" | "yellow" | "red"): ExecutiveDashboardTone {
@@ -701,31 +958,23 @@ function buildApprovalSummary(items: ExecutiveApprovalItem[], today: Date) {
   };
 }
 
-function buildRiskSummary(actions: ExecutiveLeadershipActionItem[]): ExecutiveRiskSummary {
-  const riskItems: ExecutiveRiskItem[] = actions
+function buildRiskSummary(
+  actions: ExecutiveLeadershipActionItem[],
+  riskGroups: RiskMutationGroup[],
+  generatedAt: string,
+  officialRiskItems: ExecutiveRiskItem[] = [],
+): ExecutiveRiskSummary {
+  const derivedRiskItems: ExecutiveRiskItem[] = actions
     .filter(
       (action) =>
         action.type === "risk" ||
         action.riskLevel === "high" ||
         action.riskLevel === "critical",
     )
-    .map((action) => ({
-      id: `risk-${action.id}`,
-      sourceType: "risk",
-      sourceId: action.id,
-      projectId: action.projectId,
-      href: action.href,
-      title: action.title,
-      status: action.status,
-      tone: action.tone,
-      owner: action.ownerName,
-      deadline: action.deadline,
-      reason: action.impactSummary,
-      severity: action.riskLevel,
-      category: action.riskCategory,
-    }));
+    .map((action) => buildExecutiveRiskItem({ action, generatedAt, riskGroups }));
+  const riskItems = [...officialRiskItems, ...derivedRiskItems];
   const byCategory = riskItems.reduce<Record<string, number>>((result, item) => {
-    const category = item.category ?? "uncategorized";
+    const category = item.categoryLabel;
     result[category] = (result[category] ?? 0) + 1;
 
     return result;
@@ -735,7 +984,23 @@ function buildRiskSummary(actions: ExecutiveLeadershipActionItem[]): ExecutiveRi
     critical: riskItems.filter((item) => item.severity === "critical").length,
     high: riskItems.filter((item) => item.severity === "high").length,
     byCategory,
+    riskMap: buildExecutiveRiskMap(riskItems),
     items: riskItems.slice(0, 10),
+  };
+}
+
+function emptyRiskSummary(): ExecutiveRiskSummary {
+  return {
+    byCategory: {},
+    critical: 0,
+    high: 0,
+    riskMap: {
+      affectedProjectCount: 0,
+      categories: [],
+      matrix: [],
+      total: 0,
+    },
+    items: [],
   };
 }
 
@@ -759,6 +1024,7 @@ function buildDeadlineSummary(
   actions: ExecutiveLeadershipActionItem[],
   decisions: Decision[],
   meetings: Meeting[],
+  riskItems: ExecutiveRiskItem[] = [],
 ): ExecutiveDeadlineSummary {
   const items: ExecutiveDashboardSourceItem[] = [
     ...approvals
@@ -787,6 +1053,12 @@ function buildDeadlineSummary(
         deadline: action.deadline,
         reason: action.decisionRequired,
       })),
+    ...riskItems
+      .filter((item) => isDueTodayOrOverdue(item.deadline, today))
+      .map((item) => ({
+        ...item,
+        tone: isBeforeDay(item.deadline, today) ? ("red" as const) : item.tone,
+      })),
     ...decisions
       .filter(
         (decision) =>
@@ -796,7 +1068,11 @@ function buildDeadlineSummary(
       .map(decisionToSourceItem),
     ...meetings.flatMap((meeting) =>
       meeting.followUpActions
-        .filter((action) => isDueTodayOrOverdue(action.dueDate, today))
+        .filter(
+          (action) =>
+            isOpenMeetingFollowUp(action) &&
+            isDueTodayOrOverdue(action.dueDate, today),
+        )
         .map((action) => ({
           id: `meeting-follow-up-${action.id}`,
           sourceType: "meeting" as const,
@@ -818,7 +1094,23 @@ function buildDeadlineSummary(
     overdue: items.filter((item) => isBeforeDay(item.deadline, today)).length,
     today: items.filter((item) => isSameDay(item.deadline, today)).length,
     items: items
-      .sort((a, b) => (a.deadline ?? "").localeCompare(b.deadline ?? ""))
+      .sort((a, b) => {
+        const aAlertPriority =
+          a.overdue?.isOverdue || a.escalation?.required
+            ? 0
+            : isBeforeDay(a.deadline, today) ? 1 : 2;
+        const bAlertPriority =
+          b.overdue?.isOverdue || b.escalation?.required
+            ? 0
+            : isBeforeDay(b.deadline, today) ? 1 : 2;
+
+        return (
+          aAlertPriority - bAlertPriority ||
+          (a.deadline ?? "").localeCompare(b.deadline ?? "") ||
+          a.title.localeCompare(b.title) ||
+          a.sourceId.localeCompare(b.sourceId)
+        );
+      })
       .slice(0, 12),
   };
 }
@@ -891,7 +1183,11 @@ function buildMeetingSnapshot(
   const followUpsOverdue = repositoryMeetings.reduce(
     (total, meeting) =>
       total +
-      meeting.followUpActions.filter((action) => isBeforeDay(action.dueDate, today)).length,
+      meeting.followUpActions.filter(
+        (action) =>
+          isOpenMeetingFollowUp(action) &&
+          isBeforeDay(action.dueDate, today),
+      ).length,
     0,
   );
 
@@ -950,35 +1246,35 @@ function buildKpis(
   return [
     {
       id: "project-portfolio",
-      label: "Du an trong scope",
+      label: "Dự án trong scope",
       value: portfolio.total,
       tone: portfolio.red > 0 ? "red" : "blue",
       sourceType: "project",
     },
     {
       id: "project-health-red",
-      label: "Du an do",
+      label: "Dự án đỏ",
       value: portfolio.red,
       tone: portfolio.red > 0 ? "red" : "emerald",
       sourceType: "project",
     },
     {
       id: "pending-approvals",
-      label: "Cho duyet",
+      label: "Chờ duyệt",
       value: approvals.pending,
       tone: approvals.overdue > 0 ? "red" : "amber",
       sourceType: "leadership_approval",
     },
     {
       id: "high-risks",
-      label: "Rui ro cao",
+      label: "Rủi ro cao",
       value: risks.high + risks.critical,
       tone: risks.critical > 0 ? "red" : "amber",
       sourceType: "risk",
     },
     {
       id: "today-deadlines",
-      label: "Deadline hom nay",
+      label: "Deadline hôm nay",
       value: deadlines.today + deadlines.overdue,
       tone: deadlines.overdue > 0 ? "red" : "purple",
     },
@@ -993,6 +1289,7 @@ export async function getExecutiveDashboardData(
     projects: options.repositories?.projects ?? projectRepository,
     proposals: options.repositories?.proposals ?? proposalRepository,
     meetings: options.repositories?.meetings ?? meetingRepository,
+    riskRecords: options.repositories?.riskRecords ?? riskRecordRepository,
   };
   const today = options.today ?? new Date();
   const [allScopeAssignments, rolePermissionCatalog] = await Promise.all([
@@ -1016,6 +1313,13 @@ export async function getExecutiveDashboardData(
       rolePermissionCatalog,
       scopeAssignments: effectiveScopeAssignments,
     });
+  const canViewOfficialRisk = can(user, "risk.view") || hasScopedGrant("risk.view");
+  const canViewRiskSignals =
+    canViewOfficialRisk ||
+    can(user, "project.view") ||
+    can(user, "proposal.view") ||
+    hasScopedGrant("project.view") ||
+    hasScopedGrant("proposal.view");
   const permissions = {
     canViewProjects: can(user, "project.view") || hasScopedGrant("project.view"),
     canViewProposals: can(user, "proposal.view") || hasScopedGrant("proposal.view"),
@@ -1025,11 +1329,12 @@ export async function getExecutiveDashboardData(
       can(user, "decision.approve") ||
       hasScopedGrant("meeting.view") ||
       hasScopedGrant("decision.approve"),
-    canViewRisk:
-      can(user, "project.view") ||
-      can(user, "proposal.view") ||
-      hasScopedGrant("project.view") ||
-      hasScopedGrant("proposal.view"),
+    canViewRisk: canViewRiskSignals,
+    canCreateRisk: can(user, "risk.create") || hasScopedGrant("risk.create"),
+    canUpdateRisk: can(user, "risk.update") || hasScopedGrant("risk.update"),
+    canOverrideRisk: can(user, "risk.override") || hasScopedGrant("risk.override"),
+    canCloseRisk: can(user, "risk.close") || hasScopedGrant("risk.close"),
+    canCloseHighRisk: can(user, "risk.close_high") || hasScopedGrant("risk.close_high"),
     canViewFinance: can(user, "finance.view") || hasScopedGrant("finance.view"),
     canDrillDown:
       can(user, "project.view") ||
@@ -1052,6 +1357,8 @@ export async function getExecutiveDashboardData(
     executiveData,
     approvalPolicies,
     delegations,
+    rawRiskRecords,
+    activeRiskGroups,
   ] =
     await Promise.all([
       permissions.canViewProjects ? listProjects({}, repositories.projects) : [],
@@ -1066,8 +1373,16 @@ export async function getExecutiveDashboardData(
             scopeAssignments: effectiveScopeAssignments,
           })
         : null,
-      permissions.canViewProposals || canViewExecutive ? resolveDashboardPolicies(options) : [],
-      permissions.canViewProposals || canViewExecutive ? resolveDashboardDelegations(options) : [],
+      permissions.canViewProposals || canViewExecutive || permissions.canViewRisk
+        ? resolveDashboardPolicies(options)
+        : [],
+      permissions.canViewProposals || canViewExecutive || permissions.canViewRisk
+        ? resolveDashboardDelegations(options)
+        : [],
+      canViewOfficialRisk ? repositories.riskRecords.listRiskRecords({}) : [],
+      permissions.canViewRisk || permissions.canCreateRisk || permissions.canUpdateRisk
+        ? listActiveRiskGroups(options.policyRepository)
+        : [],
     ]);
   const accessScope = resolveAccessScope(user, {
     memberships,
@@ -1079,6 +1394,37 @@ export async function getExecutiveDashboardData(
   const scopedProposals = filterProposalsForScope(rawProposals, accessScope);
   const scopedMeetings = filterMeetingsForScope(rawMeetings, accessScope);
   const scopedDecisions = filterDecisionsForScope(rawDecisions, accessScope);
+  const scopedRiskRecords = canViewOfficialRisk
+    ? filterExecutiveRiskRecordsForScope(rawRiskRecords, accessScope)
+    : [];
+  const riskGroupsForDisplay =
+    activeRiskGroups.length > 0 ? activeRiskGroups : executiveData?.riskGroups ?? [];
+  const riskMutationOptions = buildRiskMutationOptions({
+    delegations,
+    projects: scopedProjects,
+    riskGroups: riskGroupsForDisplay,
+    rolePermissionCatalog,
+    scopeAssignments: effectiveScopeAssignments,
+    selectedScopeActive,
+    today,
+    user,
+  });
+
+  permissions.canCreateRisk =
+    permissions.canCreateRisk ||
+    riskMutationOptions.delegations.some((delegation) =>
+      delegation.actionKeys.includes("risk.create"),
+    );
+  permissions.canUpdateRisk =
+    permissions.canUpdateRisk ||
+    riskMutationOptions.delegations.some((delegation) =>
+      delegation.actionKeys.includes("risk.update"),
+    );
+  permissions.canOverrideRisk =
+    permissions.canOverrideRisk ||
+    riskMutationOptions.delegations.some((delegation) =>
+      delegation.actionKeys.includes("risk.override"),
+    );
   const finance = buildFinancialAccess(
     user,
     effectiveScopeAssignments,
@@ -1147,13 +1493,37 @@ export async function getExecutiveDashboardData(
     (item) => !nonPendingApprovalStatuses.has(item.status),
   );
   const approvalSummary = buildApprovalSummary(allApprovalItems, today);
-  const riskSummary = buildRiskSummary(executiveData?.leadershipActionItems ?? []);
+  const generatedAt = new Date().toISOString();
+  const officialRiskItems = canViewOfficialRisk
+    ? await Promise.all(
+        scopedRiskRecords.map((record) =>
+          riskRecordToDashboardItem(record, {
+            delegations,
+            generatedAt,
+            now: today,
+            options,
+            policies: approvalPolicies,
+            riskGroups: riskGroupsForDisplay,
+            user,
+          }),
+        ),
+      )
+    : [];
+  const riskSummary = permissions.canViewRisk
+    ? buildRiskSummary(
+        executiveData?.leadershipActionItems ?? [],
+        riskGroupsForDisplay,
+        generatedAt,
+        officialRiskItems,
+      )
+    : emptyRiskSummary();
   const todayDeadlines = buildDeadlineSummary(
     today,
     openApprovalItems,
     executiveData?.leadershipActionItems ?? [],
     scopedDecisions,
     scopedMeetings,
+    officialRiskItems,
   );
   const recentDecisions = buildRecentDecisions(
     executiveData?.decisionLog ?? [],
@@ -1171,7 +1541,7 @@ export async function getExecutiveDashboardData(
   );
 
   const dashboardData: ExecutiveDashboardData = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     scope: {
       selectedScopeId: options.selectedScopeId ?? "all",
       scopeLabel: executiveData?.scopeLabel ?? "Scoped executive dashboard",
@@ -1189,6 +1559,7 @@ export async function getExecutiveDashboardData(
     financialSummary,
     approvalSummary,
     riskSummary,
+    riskMutationOptions,
     todayDeadlines,
     recentDecisions,
     meetingSnapshot,

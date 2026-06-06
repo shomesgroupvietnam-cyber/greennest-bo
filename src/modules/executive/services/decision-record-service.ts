@@ -4,6 +4,7 @@ import {
   requiresAssignmentScopeForRole
 } from "@/lib/permissions/access-scope";
 import {
+  getScopedDecision as defaultGetScopedDecision,
   getScopedDocument as defaultGetScopedDocument,
   getScopedMeeting as defaultGetScopedMeeting,
   getScopedProject as defaultGetScopedProject,
@@ -19,12 +20,16 @@ import type { ProposalDetail } from "@/modules/proposals/types";
 import type {
   CreateDecisionRecordInput,
   Decision,
+  DecisionVersion,
+  DecisionVersionField,
+  DecisionVersionValue,
   DecisionLinkedRecord,
   DecisionScopeInput,
   DecisionSourceType,
+  UpdateDecisionRecordInput,
   Meeting
 } from "@/modules/meetings/types";
-import { createDecisionRecordInputSchema } from "@/modules/meetings/validation";
+import { createDecisionRecordInputSchema, updateDecisionRecordInputSchema } from "@/modules/meetings/validation";
 import { meetingRepository, type MeetingRepository } from "@/modules/meetings/services/meeting-repository";
 import type { Project } from "@/modules/projects/types";
 import type { Task } from "@/modules/tasks/types";
@@ -32,16 +37,19 @@ import type { AuditLog } from "@/modules/users/types";
 
 type AuditWriter = (input: Omit<AuditLog, "id" | "createdAt">) => Promise<unknown>;
 type ScopePermissionChecker = (actor: PermissionUser, scope: DecisionScopeInput) => Promise<boolean>;
+type ScopedDecisionLoader = (actor: PermissionUser, decisionId: string) => Promise<Decision | undefined>;
 
 export type DecisionRecordServiceDependencies = {
   repository?: MeetingRepository;
   userRepository?: Pick<UserRepository, "getUser" | "listProjectMemberships">;
   getScopedDocument?: (actor: PermissionUser, documentId: string) => Promise<Document | undefined>;
+  getScopedDecision?: ScopedDecisionLoader;
   getScopedMeeting?: (actor: PermissionUser, meetingId: string) => Promise<Meeting | undefined>;
   getScopedProposal?: (actor: PermissionUser, proposalId: string) => Promise<ProposalDetail | undefined>;
   getScopedProject?: (actor: PermissionUser, projectId: string) => Promise<Project | undefined>;
   getScopedTask?: (actor: PermissionUser, taskId: string) => Promise<Task | undefined>;
   canCreateDecisionInScope?: ScopePermissionChecker;
+  canUpdateDecisionInScope?: ScopePermissionChecker;
   auditWriter?: AuditWriter;
   idGenerator?: () => string;
   now?: () => string;
@@ -73,6 +81,10 @@ function unique(values: Array<string | undefined>) {
 
 function projectIdsForScope(scope: DecisionScopeInput) {
   return unique([scope.projectId, ...(scope.projectIds ?? [])]);
+}
+
+function uniqueSorted(values: Array<string | undefined>) {
+  return unique(values).sort((left, right) => left.localeCompare(right));
 }
 
 function normalizeScope(scope: DecisionScopeInput = {}): DecisionScopeInput {
@@ -119,6 +131,33 @@ function scopeFromInput(input: ReturnType<typeof createDecisionRecordInputSchema
     axisId: input.scope?.axisId ?? input.axisId,
     workstreamId: input.scope?.workstreamId ?? input.workstreamId,
     moduleId: input.scope?.moduleId ?? input.moduleId
+  });
+}
+
+function scopeFromDecision(decision: Decision): DecisionScopeInput {
+  return normalizeScope({
+    organizationId: decision.organizationId,
+    projectId: decision.projectId,
+    projectIds: decision.projectIds,
+    axisId: decision.axisId,
+    workstreamId: decision.workstreamId,
+    moduleId: decision.moduleId
+  });
+}
+
+function scopeFromUpdateInput(
+  input: ReturnType<typeof updateDecisionRecordInputSchema.parse>,
+  decision: Decision
+) {
+  const projectIds = input.scope?.projectIds !== undefined ? input.scope.projectIds : input.projectIds;
+
+  return normalizeScope({
+    organizationId: input.scope?.organizationId ?? input.organizationId ?? decision.organizationId,
+    projectId: input.scope?.projectId ?? input.projectId ?? decision.projectId,
+    projectIds: projectIds ?? decision.projectIds,
+    axisId: input.scope?.axisId ?? input.axisId ?? decision.axisId,
+    workstreamId: input.scope?.workstreamId ?? input.workstreamId ?? decision.workstreamId,
+    moduleId: input.scope?.moduleId ?? input.moduleId ?? decision.moduleId
   });
 }
 
@@ -389,6 +428,7 @@ function auditNewValue(decision: Decision) {
     title: decision.title,
     status: decision.status,
     priority: decision.priority,
+    kpi: decision.kpi,
     ownerId: decision.ownerId,
     dueDate: decision.dueDate,
     source: {
@@ -405,6 +445,174 @@ function auditNewValue(decision: Decision) {
     },
     linkedRecordCount: decision.linkedRecords?.length ?? 0
   };
+}
+
+const versionedDecisionFields: DecisionVersionField[] = [
+  "decisionText",
+  "ownerId",
+  "priority",
+  "kpi",
+  "dueDate",
+  "status",
+  "organizationId",
+  "projectId",
+  "projectIds",
+  "axisId",
+  "workstreamId",
+  "moduleId",
+  "linkedRecords"
+];
+
+const mutableDecisionFields: DecisionVersionField[] = ["title", ...versionedDecisionFields];
+
+function stableJson(value: unknown) {
+  return JSON.stringify(value, (_key, item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return item;
+    }
+
+    return Object.keys(item)
+      .sort()
+      .reduce<Record<string, unknown>>((result, key) => {
+        result[key] = (item as Record<string, unknown>)[key];
+
+        return result;
+      }, {});
+  });
+}
+
+function normalizeLinkedRecords(records: DecisionLinkedRecord[] | undefined) {
+  return (records ?? []).map((record) => ({
+    type: record.type,
+    id: record.id.trim(),
+    relationType: record.relationType,
+    title: record.title?.trim() || undefined
+  }));
+}
+
+function normalizedDecisionValue(field: DecisionVersionField, decision: Decision) {
+  switch (field) {
+    case "title":
+      return decision.title?.trim() || undefined;
+    case "decisionText":
+      return decision.decisionText.trim();
+    case "projectIds":
+      return uniqueSorted(decision.projectIds ?? []);
+    case "linkedRecords":
+      return normalizeLinkedRecords(decision.linkedRecords);
+    default:
+      return decision[field] ?? undefined;
+  }
+}
+
+function valuesEqual(left: unknown, right: unknown) {
+  return stableJson(left) === stableJson(right);
+}
+
+function changedDecisionFields(before: Decision, after: Decision) {
+  return mutableDecisionFields.filter(
+    (field) => !valuesEqual(normalizedDecisionValue(field, before), normalizedDecisionValue(field, after))
+  );
+}
+
+function pickVersionValues(decision: Decision, fields: DecisionVersionField[]): DecisionVersionValue {
+  return fields.reduce<DecisionVersionValue>((result, field) => {
+    result[field] = normalizedDecisionValue(field, decision);
+
+    return result;
+  }, {});
+}
+
+function auditUpdateValue(
+  decision: Decision,
+  changedFields: DecisionVersionField[],
+  versionNumber: number | undefined,
+  reason: string | undefined
+) {
+  return {
+    decisionId: decision.id,
+    changedFields,
+    versionNumber,
+    scope: {
+      organizationId: decision.organizationId,
+      projectId: decision.projectId,
+      projectIds: decision.projectIds,
+      axisId: decision.axisId,
+      workstreamId: decision.workstreamId,
+      moduleId: decision.moduleId
+    },
+    ownerId: decision.ownerId,
+    priority: decision.priority,
+    status: decision.status,
+    dueDate: decision.dueDate,
+    reasonProvided: Boolean(reason)
+  };
+}
+
+function decisionPatchFromUpdate(
+  input: ReturnType<typeof updateDecisionRecordInputSchema.parse>,
+  decision: Decision
+): Partial<Decision> {
+  const scope = scopeFromUpdateInput(input, decision);
+  const decisionText = input.content ?? input.decisionText;
+
+  return {
+    ...(input.title !== undefined ? { title: input.title } : {}),
+    ...(decisionText !== undefined ? { decisionText } : {}),
+    organizationId: scope.organizationId,
+    projectId: scope.projectId,
+    projectIds: projectIdsForScope(scope),
+    axisId: scope.axisId,
+    workstreamId: scope.workstreamId,
+    moduleId: scope.moduleId,
+    ...(input.linkedRecords !== undefined ? { linkedRecords: normalizeLinkedRecords(input.linkedRecords) } : {}),
+    ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}),
+    ...(input.priority !== undefined ? { priority: input.priority } : {}),
+    ...(input.kpi !== undefined ? { kpi: input.kpi } : {}),
+    ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {})
+  };
+}
+
+function restoreDecisionPatch(decision: Decision): Partial<Decision> {
+  return {
+    title: decision.title,
+    organizationId: decision.organizationId,
+    projectId: decision.projectId,
+    projectIds: decision.projectIds,
+    axisId: decision.axisId,
+    workstreamId: decision.workstreamId,
+    moduleId: decision.moduleId,
+    decisionText: decision.decisionText,
+    linkedRecords: decision.linkedRecords,
+    ownerId: decision.ownerId,
+    priority: decision.priority,
+    kpi: decision.kpi,
+    dueDate: decision.dueDate,
+    status: decision.status,
+    updatedAt: decision.updatedAt
+  };
+}
+
+async function canUpdateDecisionScope(
+  actor: PermissionUser,
+  scope: DecisionScopeInput,
+  dependencies: DecisionRecordServiceDependencies,
+  getScopedProject: (actor: PermissionUser, projectId: string) => Promise<Project | undefined>
+) {
+  if (dependencies.canUpdateDecisionInScope) {
+    return dependencies.canUpdateDecisionInScope(actor, scope);
+  }
+
+  if (dependencies.canCreateDecisionInScope) {
+    return dependencies.canCreateDecisionInScope(actor, scope);
+  }
+
+  return defaultCanCreateDecisionInScope(actor, scope, getScopedProject);
+}
+
+function sameDecisionScope(left: DecisionScopeInput, right: DecisionScopeInput) {
+  return valuesEqual(normalizeScope(left), normalizeScope(right));
 }
 
 export async function createDecisionRecord(
@@ -474,6 +682,7 @@ export async function createDecisionRecord(
     linkedRecords,
     ownerId: parsedInput.ownerId,
     priority: parsedInput.priority,
+    kpi: parsedInput.kpi,
     dueDate: parsedInput.dueDate,
     status: parsedInput.status,
     createdBy: actor.id,
@@ -494,4 +703,176 @@ export async function createDecisionRecord(
   });
 
   return createdDecision;
+}
+
+export async function updateDecisionRecord(
+  input: UpdateDecisionRecordInput,
+  actor: PermissionUser,
+  dependencies: DecisionRecordServiceDependencies = {}
+) {
+  const repository = dependencies.repository ?? meetingRepository;
+  const users = dependencies.userRepository ?? userRepository;
+  const getScopedDecision =
+    dependencies.getScopedDecision ??
+    (dependencies.repository
+      ? async (_actor: PermissionUser, decisionId: string) => repository.getDecision(decisionId)
+      : defaultGetScopedDecision);
+  const getScopedDocument = dependencies.getScopedDocument ?? defaultGetScopedDocument;
+  const getScopedMeeting = dependencies.getScopedMeeting ?? defaultGetScopedMeeting;
+  const getScopedProposal = dependencies.getScopedProposal ?? defaultGetScopedProposal;
+  const getScopedProject = dependencies.getScopedProject ?? defaultGetScopedProject;
+  const getScopedTask = dependencies.getScopedTask ?? defaultGetScopedTask;
+  const auditWriter = dependencies.auditWriter ?? createAuditLog;
+  const idGenerator = dependencies.idGenerator ?? createId;
+  const timestamp = (dependencies.now ?? now)();
+  const parsedInput = updateDecisionRecordInputSchema.parse(input);
+  const decision = await getScopedDecision(actor, parsedInput.decisionId);
+
+  if (!decision) {
+    throw new Error("Ban khong co quyen doc decision hoac decision khong ton tai.");
+  }
+
+  const currentScope = scopeFromDecision(decision);
+  const nextScope = scopeFromUpdateInput(parsedInput, decision);
+
+  if (decision.sourceType && decision.sourceType !== "independent") {
+    assertCompatibleScope(currentScope, nextScope);
+  }
+
+  const canUpdateCurrent = await canUpdateDecisionScope(actor, currentScope, dependencies, getScopedProject);
+  const canUpdateNext = sameDecisionScope(currentScope, nextScope)
+    ? canUpdateCurrent
+    : await canUpdateDecisionScope(actor, nextScope, dependencies, getScopedProject);
+
+  if (!canUpdateCurrent || !canUpdateNext) {
+    throw new Error("Ban khong co quyen cap nhat decision trong pham vi nay.");
+  }
+
+  await assertOwnerWithinScope(
+    parsedInput.ownerId ?? decision.ownerId,
+    actor,
+    nextScope,
+    users
+  );
+
+  if (parsedInput.linkedRecords) {
+    await assertLinkedRecordsReadable(actor, parsedInput.linkedRecords, {
+      getScopedDocument,
+      getScopedMeeting,
+      getScopedProject,
+      getScopedProposal,
+      getScopedTask
+    });
+  }
+
+  const normalizedPatch = decisionPatchFromUpdate(parsedInput, decision);
+  const proposedDecision: Decision = {
+    ...decision,
+    ...normalizedPatch,
+    id: decision.id,
+    createdAt: decision.createdAt,
+    createdBy: decision.createdBy,
+    sourceType: decision.sourceType,
+    sourceId: decision.sourceId,
+    taskId: decision.taskId,
+    updatedAt: timestamp
+  };
+  const changedFields = changedDecisionFields(decision, proposedDecision);
+
+  if (changedFields.length === 0) {
+    return decision;
+  }
+
+  const versionedChangedFields = versionedDecisionFields.filter((field) => changedFields.includes(field));
+  const existingVersions = await repository.listDecisionVersions(decision.id);
+  const versionNumber =
+    versionedChangedFields.length > 0
+      ? Math.max(0, ...existingVersions.map((version) => version.versionNumber)) + 1
+      : undefined;
+  const version = versionNumber
+    ? {
+        id: idGenerator(),
+        decisionId: decision.id,
+        versionNumber,
+        changedFields: versionedChangedFields,
+        previousValue: pickVersionValues(decision, versionedChangedFields),
+        newValue: pickVersionValues(proposedDecision, versionedChangedFields),
+        reason: parsedInput.reason,
+        createdBy: actor.id,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      }
+    : undefined;
+  const auditOldValue = auditUpdateValue(decision, changedFields, versionNumber, parsedInput.reason);
+  const auditNewValue = auditUpdateValue(proposedDecision, changedFields, versionNumber, parsedInput.reason);
+
+  if (repository.updateDecisionWithVersionAndAudit) {
+    return repository.updateDecisionWithVersionAndAudit({
+      decisionId: decision.id,
+      patch: {
+        ...normalizedPatch,
+        updatedAt: timestamp
+      },
+      version,
+      auditLog: {
+        actorId: actor.id,
+        entityType: "decision",
+        entityId: decision.id,
+        action: "decision.updated",
+        oldValue: auditOldValue,
+        newValue: auditNewValue
+      }
+    });
+  }
+
+  let createdVersion: DecisionVersion | undefined;
+  let updatedDecision: Decision | undefined;
+
+  try {
+    if (version) {
+      createdVersion = await repository.createDecisionVersion(version);
+    }
+
+    updatedDecision = await repository.updateDecision(decision.id, {
+      ...normalizedPatch,
+      updatedAt: timestamp
+    });
+
+    await auditWriter({
+      actorId: actor.id,
+      entityType: "decision",
+      entityId: decision.id,
+      action: "decision.updated",
+      oldValue: auditOldValue,
+      newValue: auditUpdateValue(updatedDecision, changedFields, versionNumber, parsedInput.reason)
+    });
+
+    return updatedDecision;
+  } catch (error) {
+    const rollbackErrors: string[] = [];
+
+    if (updatedDecision) {
+      try {
+        await repository.updateDecision(decision.id, restoreDecisionPatch(decision));
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError instanceof Error ? rollbackError.message : String(rollbackError));
+      }
+    }
+
+    if (createdVersion) {
+      try {
+        await repository.deleteDecisionVersions([createdVersion.id]);
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError instanceof Error ? rollbackError.message : String(rollbackError));
+      }
+    }
+
+    if (rollbackErrors.length > 0) {
+      const originalMessage = error instanceof Error ? error.message : String(error);
+
+      throw new Error(`${originalMessage} Rollback decision update failed: ${rollbackErrors.join("; ")}`);
+    }
+
+    throw error;
+  }
 }

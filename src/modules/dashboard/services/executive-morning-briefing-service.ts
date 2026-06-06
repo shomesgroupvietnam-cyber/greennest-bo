@@ -3,6 +3,10 @@ import {
   isBeforeBusinessDay,
   isSameBusinessDay,
 } from "@/lib/date/business-day";
+import {
+  buildExecutiveAiSummaryDraft,
+  type ExecutiveAiSummaryBuildOptions,
+} from "@/modules/ai/services/executive-ai-summary-service";
 
 import {
   getExecutiveDashboardData,
@@ -17,6 +21,10 @@ import type {
   ExecutiveMorningBriefingSummary,
   ExecutiveRiskItem,
 } from "../types";
+
+export type ExecutiveMorningBriefingOptions = ExecutiveDashboardOptions & {
+  aiSummary?: ExecutiveAiSummaryBuildOptions;
+};
 
 function isBeforeDay(value: string | undefined, today: Date) {
   return isBeforeBusinessDay(value, today);
@@ -133,17 +141,6 @@ function buildDecisionsToday(
   ]).slice(0, 6);
 }
 
-function sourceHasContext(data: ExecutiveDashboardData) {
-  return (
-    data.projectPortfolio.items.length > 0 ||
-    data.riskSummary.items.length > 0 ||
-    data.approvalSummary.items.length > 0 ||
-    data.todayDeadlines.items.length > 0 ||
-    data.recentDecisions.items.length > 0 ||
-    data.meetingSnapshot.items.length > 0
-  );
-}
-
 function buildSummaryText(input: {
   criticalRiskCount: number;
   overdueApprovalCount: number;
@@ -151,13 +148,13 @@ function buildSummaryText(input: {
   todayDecisionCount: number;
 }) {
   const parts = [
-    `${input.criticalRiskCount} risk high/critical can theo doi`,
+    `${input.criticalRiskCount} risk cao/nghiêm trọng cần theo dõi`,
     `${input.overdueApprovalCount} approval qua han hoac dang do`,
     `${input.todayDecisionCount} viec can quyet/decision trong ngay`,
     `${input.redProjectCount} du an do`,
   ];
 
-  return `Ban tom tat goi y: ${parts.join("; ")}. Vui long kiem tra citation noi bo truoc khi ra quyet dinh.`;
+  return `Bản tóm tắt gợi ý: ${parts.join("; ")}. Vui lòng kiểm tra citation nội bộ trước khi ra quyết định.`;
 }
 
 function buildSummary(input: {
@@ -165,10 +162,19 @@ function buildSummary(input: {
   decisionsToday: ExecutiveDashboardSourceItem[];
   generatedAt: string;
   overdueApprovals: ExecutiveApprovalItem[];
-  today: Date;
   topRisks: ExecutiveRiskItem[];
 }): ExecutiveMorningBriefingSummary {
-  if (!sourceHasContext(input.data)) {
+  const citationSources = dedupeBySource([
+    ...input.topRisks,
+    ...input.overdueApprovals,
+    ...input.decisionsToday,
+    ...input.data.projectPortfolio.items,
+    ...input.data.todayDeadlines.items,
+    ...input.data.recentDecisions.items,
+    ...input.data.meetingSnapshot.items,
+  ]).slice(0, 8);
+
+  if (citationSources.length === 0) {
     return {
       citations: [],
       generatedFrom: [],
@@ -181,15 +187,6 @@ function buildSummary(input: {
   const redProjects = input.data.projectPortfolio.items.filter(
     (item) => item.health === "red",
   );
-  const citationSources = dedupeBySource([
-    ...input.topRisks,
-    ...input.overdueApprovals,
-    ...input.decisionsToday,
-    ...input.data.projectPortfolio.items,
-    ...input.data.meetingSnapshot.items.filter((item) =>
-      isSameDay(item.deadline, input.today),
-    ),
-  ]).slice(0, 8);
 
   return {
     citations: citationSources.map(buildCitation),
@@ -200,7 +197,7 @@ function buildSummary(input: {
       "ExecutiveDashboardData.recentDecisions",
       "ExecutiveDashboardData.projectPortfolio",
     ],
-    status: "placeholder",
+    status: "draft",
     text: buildSummaryText({
       criticalRiskCount: input.topRisks.filter((risk) =>
         risk.severity === "critical" || risk.severity === "high",
@@ -215,7 +212,7 @@ function buildSummary(input: {
 
 export async function getExecutiveMorningBriefingData(
   user: PermissionUser,
-  options: ExecutiveDashboardOptions = {},
+  options: ExecutiveMorningBriefingOptions = {},
 ): Promise<ExecutiveMorningBriefingData> {
   const today = options.today ?? new Date();
   const data = await getExecutiveDashboardData(user, options);
@@ -223,6 +220,25 @@ export async function getExecutiveMorningBriefingData(
   const overdueApprovals = buildOverdueApprovals(data, today);
   const decisionsToday = buildDecisionsToday(data, today);
   const generatedAt = new Date().toISOString();
+  const baseSummary = buildSummary({
+    data,
+    decisionsToday,
+    generatedAt,
+    overdueApprovals,
+    topRisks,
+  });
+  const summary = await buildExecutiveAiSummaryDraft(
+    user,
+    {
+      citations: baseSummary.citations,
+      generatedAt: baseSummary.updatedAt,
+      generatedFrom: baseSummary.generatedFrom,
+      sourceText:
+        baseSummary.status === "insufficient_context" ? "" : baseSummary.text,
+      view: "morning_briefing",
+    },
+    options.aiSummary,
+  );
 
   return {
     decisionsToday,
@@ -240,14 +256,14 @@ export async function getExecutiveMorningBriefingData(
     },
     scope: data.scope,
     sourceCounts: data.sourceCounts,
-    summary: buildSummary({
-      data,
-      decisionsToday,
-      generatedAt,
-      overdueApprovals,
-      today,
-      topRisks,
-    }),
+    summary: {
+      ...summary,
+      citations: summary.citations.map((citation) => ({
+        ...citation,
+        sourceType:
+          citation.sourceType as ExecutiveMorningBriefingCitation["sourceType"],
+      })),
+    },
     topRisks,
   };
 }

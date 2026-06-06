@@ -1,4 +1,13 @@
 import type { Role } from "@/constants/roles";
+import type { AiApprovalAssistant } from "@/modules/ai/types";
+import type { TaskPriority, TaskStatus } from "@/constants/statuses";
+import type {
+  Decision,
+  DecisionAssignmentAssigneeType,
+  DecisionAssignmentStatus,
+  DecisionHistoryEvent,
+  DecisionSourceType,
+} from "@/modules/meetings/types";
 
 export type ExecutiveTone =
   | "blue"
@@ -228,6 +237,157 @@ export type ExecutiveEscalationRule = {
 };
 
 export type ExecutiveRiskGroupMetadata = {
+  id: string;
+  key: ConfiguredRiskGroupKey;
+  label: string;
+  description?: string;
+  defaultSeverity: ExecutiveRiskLevel;
+  moduleId?: string;
+  sortOrder: number;
+  isDefault: boolean;
+};
+
+export type NormalizedRiskLevel = {
+  key: ExecutiveRiskLevel;
+  labelVi: string;
+  tone: ExecutiveTone;
+};
+
+export type RiskStatusKey = "green" | "yellow" | "red";
+
+export type RiskConfirmationState = "suggested" | "confirmed" | "overridden";
+export type RiskSignalPermissionState = "allowed" | "read_only" | "denied";
+
+export type RiskSignalSourceType =
+  | "project"
+  | "proposal"
+  | "leadership_approval"
+  | "executive_action"
+  | "meeting"
+  | "decision"
+  | "risk"
+  | "document"
+  | "legal"
+  | "task";
+
+export type ExecutiveRiskRecordType = "risk" | "blocker";
+
+export type ExecutiveRiskRecordStatus =
+  | "open"
+  | "monitoring"
+  | "in_progress"
+  | "blocked"
+  | "closed"
+  | "resolved";
+
+export type ExecutiveRiskRecord = {
+  id: string;
+  recordType: ExecutiveRiskRecordType;
+  title: string;
+  categoryKey: ConfiguredRiskGroupKey;
+  level: ExecutiveRiskLevel;
+  reason: string;
+  description?: string;
+  organizationId?: string;
+  projectId?: string;
+  axisId?: string;
+  workstreamId?: string;
+  moduleId?: string;
+  ownerId: string;
+  ownerName?: string;
+  deadline: string;
+  nextAction: string;
+  status: ExecutiveRiskRecordStatus;
+  statusOverride?: RiskStatusKey;
+  statusOverrideReason?: string;
+  statusOverrideBy?: string;
+  statusOverrideAt?: string;
+  statusOverrideSourceStatus?: RiskStatusKey;
+  closedReason?: string;
+  closedBy?: string;
+  closedAt?: string;
+  sourceType?: RiskSignalSourceType;
+  sourceId?: string;
+  createdBy: string;
+  updatedBy: string;
+  onBehalfOf?: string;
+  delegationId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateExecutiveRiskRecordInput = {
+  recordType?: ExecutiveRiskRecordType;
+  title?: string;
+  categoryKey?: string;
+  level?: ExecutiveRiskLevel;
+  reason?: string;
+  description?: string;
+  organizationId?: string;
+  projectId?: string;
+  axisId?: string;
+  workstreamId?: string;
+  moduleId?: string;
+  ownerId?: string;
+  deadline?: string;
+  nextAction?: string;
+  status?: ExecutiveRiskRecordStatus;
+  sourceType?: RiskSignalSourceType;
+  sourceId?: string;
+  onBehalfOf?: string;
+  delegationId?: string;
+};
+
+export type UpdateExecutiveRiskRecordInput = Partial<
+  Omit<
+    CreateExecutiveRiskRecordInput,
+    "recordType" | "onBehalfOf" | "delegationId"
+  >
+> & {
+  riskId: string;
+  recordType?: ExecutiveRiskRecordType;
+  onBehalfOf?: string;
+  delegationId?: string;
+};
+
+export type OverrideExecutiveRiskStatusInput = {
+  riskId: string;
+  statusOverride: RiskStatusKey;
+  reason: string;
+  onBehalfOf?: string;
+  delegationId?: string;
+};
+
+export type CloseExecutiveRiskRecordInput = {
+  riskId: string;
+  status: Extract<ExecutiveRiskRecordStatus, "closed" | "resolved">;
+  reason: string;
+  onBehalfOf?: string;
+  delegationId?: string;
+};
+
+export type RiskStatusSourceData = {
+  sourceType: RiskSignalSourceType;
+  sourceId: string;
+  projectId?: string;
+  status?: string;
+  severity: ExecutiveRiskLevel;
+  title: string;
+  reason: string;
+  href?: string;
+  permissionState?: RiskSignalPermissionState;
+};
+
+export type RiskStatusSuggestion = {
+  status: RiskStatusKey;
+  labelVi: string;
+  reason: string;
+  sourceData: RiskStatusSourceData[];
+  generatedAt: string;
+  confirmationState: RiskConfirmationState;
+};
+
+export type RiskCategoryMetadata = {
   id: string;
   key: ConfiguredRiskGroupKey;
   label: string;
@@ -661,6 +821,9 @@ export type ApprovalEscalationState = {
   reason?: string;
 };
 
+export type RiskOverdueState = ApprovalOverdueState;
+export type RiskEscalationState = ApprovalEscalationState;
+
 export type ApprovalCenterFinancialAccess =
   | "allowed"
   | "no_permission"
@@ -793,6 +956,7 @@ export type ApprovalCenterDetailAction = {
 };
 
 export type ApprovalCenterDetailData = {
+  aiAssistant?: AiApprovalAssistant;
   generatedAt: string;
   backHref: string;
   selectedScopeId?: string;
@@ -858,6 +1022,105 @@ export type ExecutiveDecisionLogItem = DecisionLog & {
   source: string;
   version: string;
   status: "effective" | "follow_up" | "superseded";
+};
+
+export type DecisionAssignmentCenterLinkedSource = {
+  id: string;
+  type: DecisionSourceType | "project" | "task" | "document" | "risk" | "custom";
+  entityId: string;
+  relationType: string;
+  label: string;
+  href?: string;
+  state: "linked" | "no_permission" | "placeholder";
+};
+
+export type DecisionAssignmentCenterSource = {
+  type?: DecisionSourceType;
+  id?: string;
+  label: string;
+  href?: string;
+};
+
+export type DecisionAssignmentCenterAssignmentItem = {
+  assignmentId: string;
+  decisionId: string;
+  taskId?: string;
+  taskHref?: string;
+  projectId: string;
+  assigneeType: DecisionAssignmentAssigneeType;
+  assigneeId?: string;
+  departmentId?: string;
+  title: string;
+  description?: string;
+  kpi?: string;
+  dueDate?: string;
+  priority: TaskPriority;
+  status: DecisionAssignmentStatus;
+  executionStatus?: TaskStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DecisionAssignmentCenterItem = {
+  decisionId: string;
+  title: string;
+  summary: string;
+  status: Decision["status"];
+  priority?: Decision["priority"];
+  ownerId?: string;
+  projectId?: string;
+  projectIds: string[];
+  dueDate?: string;
+  kpi?: string;
+  source: DecisionAssignmentCenterSource;
+  assignmentCount: number;
+  openAssignmentCount: number;
+  latestVersionNumber?: number;
+  updatedAt: string;
+};
+
+export type DecisionAssignmentCenterDetail = DecisionAssignmentCenterItem & {
+  decisionText: string;
+  createdBy?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  linkedSources: DecisionAssignmentCenterLinkedSource[];
+  assignments: DecisionAssignmentCenterAssignmentItem[];
+  history: DecisionHistoryEvent[];
+};
+
+export type DecisionAssignmentCenterPermissionState = {
+  canView: boolean;
+  canCreateDecision: boolean;
+  canAssignDecision: boolean;
+  canUpdateDecision: boolean;
+  canViewAudit: boolean;
+};
+
+export type DecisionAssignmentCenterFilters = {
+  search?: string;
+  status?: Decision["status"] | "all";
+  priority?: TaskPriority | "all";
+  projectId?: string | "all";
+  ownerId?: string | "all";
+  assigneeId?: string | "all";
+  selectedDecisionId?: string;
+};
+
+export type DecisionAssignmentCenterData = {
+  generatedAt: string;
+  scopeLabel: string;
+  summary: {
+    totalDecisions: number;
+    openAssignments: number;
+    overdueAssignments: number;
+    highPriorityDecisions: number;
+    dueSoonAssignments: number;
+  };
+  permissions: DecisionAssignmentCenterPermissionState;
+  filters: DecisionAssignmentCenterFilters;
+  items: DecisionAssignmentCenterItem[];
+  selectedDecision?: DecisionAssignmentCenterDetail;
 };
 
 export type ExecutiveAiInsight = {

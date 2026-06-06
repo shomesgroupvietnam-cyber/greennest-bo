@@ -192,6 +192,20 @@ function buildLinkedRecords(
     });
   }
 
+  if (
+    item.moduleId &&
+    !records.some((record) => record.type === "module" && record.id === item.moduleId)
+  ) {
+    records.push({
+      id: item.moduleId,
+      permissionState: "read_only",
+      reason: "Module lien quan duoc cung cap nhu metadata read-only.",
+      status: "linked",
+      title: `Module ${item.moduleId}`,
+      type: "module",
+    });
+  }
+
   return records;
 }
 

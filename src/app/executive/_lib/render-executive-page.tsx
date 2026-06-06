@@ -21,8 +21,10 @@ export async function renderExecutivePage(
   const viewByPath: Record<string, string> = {
     "/executive": "executive-dashboard",
     "/executive/approvals": "executive-approvals",
+    "/executive/decisions": "executive-decision-log",
     "/executive/decision-log": "executive-decision-log",
     "/executive/directives": "executive-directives",
+    "/executive/history": "executive-history",
     "/executive/investment-plans": "executive-investment-plans",
     "/executive/leadership-team": "executive-leadership-team",
     "/executive/meetings": "executive-meetings",

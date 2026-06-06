@@ -95,6 +95,7 @@ const permissionLabels: Partial<Record<PermissionAction, string>> = {
   "proposal.request_change": "Yêu cầu chỉnh sửa đề xuất",
   "proposal.configure_flow": "Cấu hình luồng đề xuất",
   "proposal.archive": "Lưu trữ đề xuất",
+  "risk.view": "Xem risk điều hành",
   "investment.view": "Xem đầu tư",
   "investment.create": "Tạo hồ sơ đầu tư",
   "investment.update": "Cập nhật đầu tư",
@@ -124,6 +125,14 @@ const permissionLabels: Partial<Record<PermissionAction, string>> = {
   "ai.configure": "Cấu hình AI",
 };
 
+permissionLabels["risk.create"] = "Tao risk/blocker dieu hanh";
+permissionLabels["risk.update"] = "Cap nhat risk/blocker dieu hanh";
+permissionLabels["risk.override"] = "Xac nhan/override trang thai risk";
+permissionLabels["risk.close"] = "Dong risk/blocker";
+permissionLabels["risk.close_high"] = "Dong risk/blocker high-critical";
+permissionLabels["report.create"] = "Tao bao cao/snapshot";
+permissionLabels["report.export"] = "Xuat du lieu/bao cao";
+
 const sensitivePermissions = new Set<PermissionAction>([
   "finance.view",
   "finance.create",
@@ -133,6 +142,8 @@ const sensitivePermissions = new Set<PermissionAction>([
   "payment.approve",
   "audit.view",
   "delegation.manage",
+  "risk.close",
+  "risk.close_high",
   "ai.use_rag",
   "ai.view_insight",
 ]);
@@ -169,16 +180,22 @@ function inferActionType(key: PermissionAction): PermissionActionType {
     return "admin";
   }
 
+  if (key.includes(".export")) {
+    return "export";
+  }
+
   if (key.includes(".create") || key.includes(".request")) {
     return "create";
   }
 
-  if (key.includes(".update") || key.includes(".review") || key.includes(".promote")) {
+  if (
+    key.includes(".update") ||
+    key.includes(".review") ||
+    key.includes(".promote") ||
+    key.includes(".override") ||
+    key.includes(".close")
+  ) {
     return "update";
-  }
-
-  if (key.includes(".export") || key === "report.create") {
-    return "export";
   }
 
   return "view";

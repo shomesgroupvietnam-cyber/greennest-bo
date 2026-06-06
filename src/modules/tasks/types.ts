@@ -1,6 +1,8 @@
 import type { TaskPriority, TaskStatus } from "@/constants/statuses";
 import type { EntityId, TimestampFields } from "@/types/common";
 
+export type TaskLinkedEntityType = "decision" | "meeting" | "proposal" | "document" | "risk" | "custom";
+
 export type Task = TimestampFields & {
   id: EntityId;
   projectId: EntityId;
@@ -11,6 +13,9 @@ export type Task = TimestampFields & {
   status: TaskStatus;
   priority: TaskPriority;
   category?: string;
+  linkedEntityType?: TaskLinkedEntityType;
+  linkedEntityId?: EntityId;
+  createdBy?: EntityId;
 };
 
 export type TaskInput = {
@@ -22,6 +27,12 @@ export type TaskInput = {
   status: TaskStatus;
   priority: TaskPriority;
   category?: string;
+};
+
+export type TaskCreationMetadata = {
+  linkedEntityType?: TaskLinkedEntityType;
+  linkedEntityId?: EntityId;
+  createdBy?: EntityId;
 };
 
 export type TaskUpdateInput = TaskInput;

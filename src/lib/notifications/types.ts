@@ -15,7 +15,8 @@ export type NotificationOutboxStatus =
 export type NotificationOutboxSourceType =
   | "proposal"
   | "leadership_approval"
-  | "executive_action";
+  | "executive_action"
+  | "risk";
 
 export type NotificationOutboxRecipient = Pick<
   ApprovalEscalationTarget,

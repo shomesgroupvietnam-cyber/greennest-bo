@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   ensureMockNotificationOutboxItem,
+  queueRiskEscalationNotification,
   type NotificationRepository,
 } from "@/lib/notifications/notification-service";
+import type { ApprovalEscalationState, ApprovalOverdueState } from "@/modules/executive/types";
 import type { NotificationOutboxItem } from "@/lib/notifications/types";
 
 class InMemoryNotificationRepository implements NotificationRepository {
@@ -112,5 +114,97 @@ describe("notification outbox service", () => {
       status: "updated",
     });
     expect(await repository.list()).toHaveLength(1);
+  });
+
+  it("queues risk escalation notifications with risk source dedupe and safe recipients", async () => {
+    const repository = new InMemoryNotificationRepository();
+    const audits: Array<{ newValue?: unknown }> = [];
+    const overdue: ApprovalOverdueState = {
+      daysOverdue: 4,
+      isOverdue: true,
+      nextAction: "Kiem tra risk va nhac owner.",
+      ownerLabel: "Owner One",
+      reason: "Risk qua han 4 ngay.",
+      severity: "critical",
+    };
+    const escalation: ApprovalEscalationState = {
+      policyId: "policy-risk",
+      policyLabel: "Risk escalation",
+      reason: "Risk high nam trong policy escalation.",
+      required: true,
+      status: "none",
+      targets: [
+        {
+          kind: "owner",
+          label: "Owner One",
+          scopeMatched: true,
+          userId: "owner-01",
+        },
+        {
+          kind: "policy_escalation",
+          label: "tong_giam_doc",
+          roleKey: "tong_giam_doc",
+          scopeMatched: true,
+        },
+      ],
+      thresholdDays: 3,
+      trigger: "critical_overdue",
+    };
+
+    const result = await queueRiskEscalationNotification(
+      {
+        escalation,
+        overdue,
+        source: {
+          ownerId: "owner-01",
+          ownerLabel: "Owner One",
+          scope: {
+            moduleId: "risk",
+            projectId: "project-a",
+            recordId: "risk-a",
+          },
+          sourceId: "risk-a",
+          title: "Risk phap ly qua han",
+        },
+        user: { id: "ceo-01", role: "tong_giam_doc" },
+      },
+      {
+        auditWriter: async (input) => {
+          audits.push(input);
+          return {
+            ...input,
+            createdAt: "2026-06-02T00:00:00.000Z",
+            id: `audit-${audits.length}`,
+          };
+        },
+        notificationRepository: repository,
+        now: new Date("2026-06-02T00:00:00.000Z"),
+      },
+    );
+    const queued = await repository.list();
+
+    expect(result.escalation).toMatchObject({
+      notificationId: expect.any(String),
+      status: "queued",
+    });
+    expect(queued).toHaveLength(1);
+    expect(queued[0]).toMatchObject({
+      dedupeKey: "risk:risk-a:policy-risk:critical_overdue",
+      moduleId: "risk",
+      projectId: "project-a",
+      recordId: "risk-a",
+      sourceId: "risk-a",
+      sourceType: "risk",
+      title: "Risk qua han: risk-a - Risk phap ly qua han",
+    });
+    expect(audits[0]?.newValue).toMatchObject({
+      daysOverdue: 4,
+      moduleId: "risk",
+      ownerId: "owner-01",
+      ownerLabel: "Owner One",
+      projectId: "project-a",
+      recordId: "risk-a",
+      thresholdDays: 3,
+    });
   });
 });

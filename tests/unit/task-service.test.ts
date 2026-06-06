@@ -38,11 +38,21 @@ describe("task service", () => {
         category: "Pháp lý"
       },
       taskRepository,
-      projectRepository
+      projectRepository,
+      {
+        linkedEntityType: "decision",
+        linkedEntityId: "decision-01",
+        createdBy: "leader-01"
+      }
     );
 
     expect(task.projectId).toBe(project.id);
     expect(task.title).toBe("Chuẩn bị hồ sơ pháp lý");
+    expect(task).toMatchObject({
+      linkedEntityType: "decision",
+      linkedEntityId: "decision-01",
+      createdBy: "leader-01"
+    });
     await expect(
       createTask(
         {
@@ -55,6 +65,68 @@ describe("task service", () => {
         projectRepository
       )
     ).rejects.toThrow("Dự án không tồn tại");
+  });
+
+  it("requires date-only due dates and complete linked entity metadata", async () => {
+    const project = await createProject({ name: "GreenNest Linkage", status: "active" }, projectRepository);
+
+    await expect(
+      createTask(
+        {
+          projectId: project.id,
+          title: "Invalid datetime",
+          dueDate: "2026-05-20T00:00:00.000Z",
+          status: "todo",
+          priority: "medium"
+        },
+        taskRepository,
+        projectRepository
+      )
+    ).rejects.toThrow("Deadline");
+
+    await expect(
+      createTask(
+        {
+          projectId: project.id,
+          title: "Half linked",
+          status: "todo",
+          priority: "medium"
+        },
+        taskRepository,
+        projectRepository,
+        { linkedEntityType: "decision" }
+      )
+    ).rejects.toThrow("linkedEntityId");
+  });
+
+  it("creates a task linked directly to a meeting follow-up workflow", async () => {
+    const project = await createProject(
+      { name: "GreenNest Meeting Link", status: "active" },
+      projectRepository
+    );
+
+    const task = await createTask(
+      {
+        projectId: project.id,
+        title: "Follow up meeting action",
+        status: "todo",
+        priority: "medium",
+        category: "meeting"
+      },
+      taskRepository,
+      projectRepository,
+      {
+        linkedEntityType: "meeting",
+        linkedEntityId: "meeting-01",
+        createdBy: "assistant-01"
+      }
+    );
+
+    expect(task).toMatchObject({
+      linkedEntityType: "meeting",
+      linkedEntityId: "meeting-01",
+      createdBy: "assistant-01"
+    });
   });
 
   it("filters overdue and upcoming tasks from due date and status", async () => {
@@ -134,5 +206,46 @@ describe("task service", () => {
     expect(updatedTask.priority).toBe("high");
     expect(updatedTask.assigneeId).toBe("legal-manager");
     expect(updatedTask.dueDate).toBe("2026-05-22");
+  });
+
+  it("preserves decision linkage and creator metadata when updating normal task fields", async () => {
+    const project = await createProject({ name: "GreenNest Decisions", status: "active" }, projectRepository);
+    const task = await createTask(
+      {
+        projectId: project.id,
+        title: "Follow decision",
+        status: "todo",
+        priority: "medium",
+        category: "decision"
+      },
+      taskRepository,
+      projectRepository,
+      {
+        linkedEntityType: "decision",
+        linkedEntityId: "decision-01",
+        createdBy: "leader-01"
+      }
+    );
+
+    const updatedTask = await updateTask(
+      task.id,
+      {
+        projectId: project.id,
+        title: "Follow decision",
+        assigneeId: "legal-manager",
+        dueDate: "2026-05-22",
+        status: "in_progress",
+        priority: "high",
+        category: "decision"
+      },
+      taskRepository,
+      projectRepository
+    );
+
+    expect(updatedTask).toMatchObject({
+      linkedEntityType: "decision",
+      linkedEntityId: "decision-01",
+      createdBy: "leader-01"
+    });
   });
 });

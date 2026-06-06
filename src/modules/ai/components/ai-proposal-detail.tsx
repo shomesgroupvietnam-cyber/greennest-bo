@@ -13,6 +13,7 @@ type AiProposalDetailProps = {
 
 export function AiProposalDetail({ proposal, project, showTechnicalDetails = false }: AiProposalDetailProps) {
   const summary = buildAiProposalDisplaySummary(proposal, project);
+  const returnTo = readString(proposal.proposedPayload.returnToHref);
 
   return (
     <div className="space-y-5">
@@ -71,6 +72,7 @@ export function AiProposalDetail({ proposal, project, showTechnicalDetails = fal
         <section className="grid gap-3 md:grid-cols-2">
           <form action={acceptAiActionProposalAction} className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
             <input name="proposalId" type="hidden" value={proposal.id} />
+            {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
             <label className="block text-sm font-medium text-emerald-900">
               Ghi chú chấp nhận
               <textarea className="mt-1 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="decisionNotes" />
@@ -81,6 +83,7 @@ export function AiProposalDetail({ proposal, project, showTechnicalDetails = fal
           </form>
           <form action={rejectAiActionProposalAction} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-4">
             <input name="proposalId" type="hidden" value={proposal.id} />
+            {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
             <label className="block text-sm font-medium text-red-900">
               Lý do từ chối
               <textarea className="mt-1 min-h-20 w-full rounded-md border px-3 py-2 text-sm text-slate-900" name="decisionNotes" />
@@ -125,4 +128,10 @@ function getStatusClassName(status: AiActionProposal["status"]) {
   }
 
   return "rounded-md bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800";
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
 }

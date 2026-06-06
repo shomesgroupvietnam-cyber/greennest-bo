@@ -161,7 +161,14 @@ describe("Module 1 acceptance seed contract", () => {
     const superAdminPermissions = rolesByKey.get("super_admin")?.permissionKeys ?? [];
 
     expect(chairmanPermissions).toEqual(
-      expect.arrayContaining(["proposal.approve", "finance.view", "decision.approve"]),
+      expect.arrayContaining([
+        "proposal.approve",
+        "finance.view",
+        "decision.approve",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+      ]),
     );
     for (const permission of chairmanBoDeniedPermissions) {
       expect(chairmanPermissions).not.toContain(permission);
@@ -240,7 +247,15 @@ describe("Module 1 acceptance seed contract", () => {
       expect(adminPermissions).not.toContain(permission);
     }
     expect(chairmanPermissions).toEqual(
-      expect.arrayContaining(["proposal.approve", "proposal.reject", "proposal.request_change", "finance.view"]),
+      expect.arrayContaining([
+        "proposal.approve",
+        "proposal.reject",
+        "proposal.request_change",
+        "finance.view",
+        "risk.view",
+        "risk.create",
+        "risk.update",
+      ]),
     );
     for (const permission of chairmanBoDeniedPermissions) {
       expect(chairmanPermissions).not.toContain(permission);
@@ -262,6 +277,18 @@ describe("Module 1 acceptance seed contract", () => {
     expect(catalog.permissions.find((permission) => permission.key === "finance.view")).toMatchObject({
       sensitive: true,
       actionType: "view",
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.view")).toMatchObject({
+      actionType: "view",
+      module: "risk",
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.create")).toMatchObject({
+      actionType: "create",
+      module: "risk",
+    });
+    expect(catalog.permissions.find((permission) => permission.key === "risk.update")).toMatchObject({
+      actionType: "update",
+      module: "risk",
     });
 
     expect(scopes.assignments).toEqual(
@@ -329,6 +356,17 @@ describe("Module 1 acceptance seed contract", () => {
       delegateUserId: "assistant-01",
       projectId: "demo-project-riverside",
       actionKeys: ["proposal.create"],
+      active: true,
+    });
+    expect(
+      delegations.delegations.find(
+        (delegation) => delegation.id === "delegation-assistant-ceo-riverside-risk-create-update",
+      ),
+    ).toMatchObject({
+      principalUserId: "ceo-01",
+      delegateUserId: "assistant-01",
+      projectId: "demo-project-riverside",
+      actionKeys: ["risk.create", "risk.update"],
       active: true,
     });
     expect(delegations.delegations.flatMap((delegation) => delegation.actionKeys)).not.toEqual(
@@ -507,6 +545,25 @@ describe("Module 1 acceptance seed contract", () => {
       ),
     ).resolves.toMatchObject({
       delegationId: "delegation-assistant-ceo-riverside-proposal-create",
+      principalUserId: "ceo-01",
+      delegateUserId: "assistant-01",
+    });
+
+    await expect(
+      assertDelegatedActionAllowed(
+        {
+          actor: assistant,
+          principalUserId: "ceo-01",
+          actionKey: "risk.update",
+          scope: {
+            projectId: "demo-project-riverside",
+            moduleId: "risk",
+          },
+        },
+        { repository: delegationRepository, catalogRepository, now },
+      ),
+    ).resolves.toMatchObject({
+      delegationId: "delegation-assistant-ceo-riverside-risk-create-update",
       principalUserId: "ceo-01",
       delegateUserId: "assistant-01",
     });

@@ -7,6 +7,79 @@ const roleValues = Object.keys(ROLES) as [
   ...Array<keyof typeof ROLES>,
 ];
 const optionalTextSchema = z.string().trim().optional();
+const requiredDateOnlySchema = z
+  .string({ required_error: "Vui long chon deadline xu ly." })
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Deadline phai theo dinh dang YYYY-MM-DD.");
+const requiredText = (message: string) =>
+  z.string({ required_error: message }).trim().min(1, message);
+const optionalTrimmedTextSchema = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : undefined))
+  .optional();
+
+const executiveRiskBaseInputObject = z.object({
+  recordType: z.enum(["risk", "blocker"], {
+    required_error: "Vui long chon loai ban ghi.",
+  }),
+  title: requiredText("Vui long nhap tieu de."),
+  categoryKey: requiredText("Vui long chon nhom risk."),
+  level: z.enum(["low", "medium", "high", "critical"], {
+    required_error: "Vui long chon muc do.",
+  }),
+  reason: requiredText("Vui long nhap ly do / mo ta."),
+  description: optionalTrimmedTextSchema,
+  organizationId: optionalTrimmedTextSchema,
+  projectId: optionalTrimmedTextSchema,
+  axisId: optionalTrimmedTextSchema,
+  workstreamId: optionalTrimmedTextSchema,
+  moduleId: optionalTrimmedTextSchema,
+  ownerId: requiredText("Vui long chon nguoi phu trach."),
+  deadline: requiredDateOnlySchema,
+  nextAction: requiredText("Vui long nhap hanh dong tiep theo."),
+  status: z.enum(["open", "monitoring", "in_progress", "blocked"], {
+    required_error: "Vui long chon trang thai.",
+  }),
+  sourceType: z
+    .enum([
+      "project",
+      "proposal",
+      "leadership_approval",
+      "executive_action",
+      "meeting",
+      "decision",
+      "risk",
+      "document",
+      "legal",
+      "task",
+    ])
+    .optional(),
+  sourceId: optionalTrimmedTextSchema,
+  onBehalfOf: optionalTrimmedTextSchema,
+  delegationId: optionalTrimmedTextSchema,
+});
+
+function refineExecutiveRiskScope(
+  value: z.infer<typeof executiveRiskBaseInputObject>,
+  context: z.RefinementCtx,
+) {
+  if (!value.projectId && !(value.organizationId && value.moduleId)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Can chon du an hoac nhap organization/module lien quan.",
+      path: ["projectId"],
+    });
+  }
+
+  if (value.sourceId && !value.sourceType) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Can chon loai source khi co source id.",
+      path: ["sourceType"],
+    });
+  }
+}
 
 export const investmentPlanSchema = z.object({
   id: z.string().min(1),
@@ -104,6 +177,57 @@ export const decisionLogSchema = z.object({
   aiRecommendation: optionalTextSchema,
 });
 
+export const createExecutiveRiskRecordInputSchema =
+  executiveRiskBaseInputObject.superRefine(refineExecutiveRiskScope);
+
+export const updateExecutiveRiskRecordInputSchema =
+  executiveRiskBaseInputObject
+    .partial()
+    .extend({
+      riskId: requiredText("Thieu ma risk/blocker can cap nhat."),
+    })
+    .superRefine((value, context) => {
+      if (value.projectId === undefined && value.moduleId === undefined) {
+        return;
+      }
+
+      if (!value.projectId && !(value.organizationId && value.moduleId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Can chon du an hoac nhap organization/module lien quan.",
+          path: ["projectId"],
+        });
+      }
+
+      if (value.sourceId && !value.sourceType) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Can chon loai source khi co source id.",
+          path: ["sourceType"],
+        });
+      }
+    });
+
+export const overrideExecutiveRiskStatusInputSchema = z.object({
+  riskId: requiredText("Thieu ma risk/blocker can override."),
+  statusOverride: z.enum(["green", "yellow", "red"], {
+    required_error: "Vui long chon trang thai xac nhan.",
+  }),
+  reason: requiredText("Vui long nhap ly do override."),
+  onBehalfOf: optionalTrimmedTextSchema,
+  delegationId: optionalTrimmedTextSchema,
+});
+
+export const closeExecutiveRiskRecordInputSchema = z.object({
+  riskId: requiredText("Thieu ma risk/blocker can dong."),
+  status: z.enum(["closed", "resolved"], {
+    required_error: "Vui long chon trang thai dong.",
+  }),
+  reason: requiredText("Vui long nhap ly do dong risk/blocker."),
+  onBehalfOf: optionalTrimmedTextSchema,
+  delegationId: optionalTrimmedTextSchema,
+});
+
 export type InvestmentPlanSchema = z.infer<typeof investmentPlanSchema>;
 export type InvestmentPlanInputSchema = z.infer<
   typeof investmentPlanInputSchema
@@ -113,3 +237,15 @@ export type ExecutiveDirectiveSchema = z.infer<typeof executiveDirectiveSchema>;
 export type LeadershipMeetingSchema = z.infer<typeof leadershipMeetingSchema>;
 export type ApprovalRequestSchema = z.infer<typeof approvalRequestSchema>;
 export type DecisionLogSchema = z.infer<typeof decisionLogSchema>;
+export type CreateExecutiveRiskRecordInputSchema = z.infer<
+  typeof createExecutiveRiskRecordInputSchema
+>;
+export type UpdateExecutiveRiskRecordInputSchema = z.infer<
+  typeof updateExecutiveRiskRecordInputSchema
+>;
+export type OverrideExecutiveRiskStatusInputSchema = z.infer<
+  typeof overrideExecutiveRiskStatusInputSchema
+>;
+export type CloseExecutiveRiskRecordInputSchema = z.infer<
+  typeof closeExecutiveRiskRecordInputSchema
+>;

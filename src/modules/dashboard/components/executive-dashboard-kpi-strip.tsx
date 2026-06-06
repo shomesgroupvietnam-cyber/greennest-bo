@@ -96,9 +96,9 @@ export function ExecutiveDashboardKpiStrip({
     },
     {
       icon: AlertTriangle,
-      label: "Risk map",
+      label: "Bản đồ risk",
       value: data.riskSummary.critical + data.riskSummary.high,
-      helper: `Critical ${data.riskSummary.critical} | High ${data.riskSummary.high}`,
+      helper: `Nghiêm trọng ${data.riskSummary.critical} | Cao ${data.riskSummary.high}`,
     },
     {
       icon: CalendarClock,

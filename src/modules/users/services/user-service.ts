@@ -10,6 +10,7 @@ import {
 } from "@/modules/users/validation";
 import type {
   AuditLog,
+  AuditLogListFilters,
   ProjectMembership,
   ProjectMembershipInput,
   User,
@@ -204,7 +205,13 @@ export async function createAuditLog(
 }
 
 export async function listAuditLogs(
+  filtersOrRepository: AuditLogListFilters | UserRepository = {},
   repository: UserRepository = userRepository,
 ) {
-  return repository.listAuditLogs();
+  const filters =
+    "listAuditLogs" in filtersOrRepository ? {} : filtersOrRepository;
+  const resolvedRepository =
+    "listAuditLogs" in filtersOrRepository ? filtersOrRepository : repository;
+
+  return resolvedRepository.listAuditLogs(filters);
 }

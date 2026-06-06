@@ -225,6 +225,39 @@ describe("ApprovalRequestDetail", () => {
     expect(screen.queryByText("newValue")).not.toBeInTheDocument();
   });
 
+  it("renders the contextual AI approval assistant when server data provides it", () => {
+    render(
+      <ApprovalRequestDetail
+        detail={{
+          ...detail,
+          aiAssistant: {
+            actionProposals: [],
+            citations: [
+              {
+                id: "approval-source-finance-secret",
+                sourceId: "finance-secret",
+                sourceType: "proposal",
+                title: "Approval detail title",
+              },
+            ],
+            generatedFrom: ["requestSummary", "policy"],
+            missingInformation: ["Can bo sung chung tu."],
+            riskNotes: ["Risk: qua han approval."],
+            status: "draft",
+            suggestedQuestions: ["Can hop review khong?"],
+            summaryText: "AI draft approval summary",
+            updatedAt: "2026-06-04T00:00:00.000Z",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("region", { name: "AI Approval Assistant" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("AI draft approval summary")).toBeInTheDocument();
+  });
+
   it("renders enabled approval action controls with required safeguards", () => {
     render(
       <ApprovalRequestDetail

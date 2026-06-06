@@ -107,6 +107,31 @@ describe("AI proposal detail polish", () => {
     expect(screen.queryByText(/"title"/)).not.toBeInTheDocument();
   });
 
+  it("preserves scoped return URL on proposal accept and reject forms", () => {
+    const proposal = buildProposal();
+    const { container } = render(
+      <AiProposalDetail
+        proposal={{
+          ...proposal,
+          proposedPayload: {
+            ...proposal.proposedPayload,
+            returnToHref: "/meetings/meeting-01?scopeId=scope-a",
+          },
+        }}
+        project={project}
+      />,
+    );
+    const returnToInputs = Array.from(
+      container.querySelectorAll('input[name="returnTo"]'),
+    );
+
+    expect(returnToInputs).toHaveLength(2);
+    expect(returnToInputs.map((input) => input.getAttribute("value"))).toEqual([
+      "/meetings/meeting-01?scopeId=scope-a",
+      "/meetings/meeting-01?scopeId=scope-a",
+    ]);
+  });
+
   it("shows technical payload for admin proposal review", () => {
     render(<AiProposalDetail proposal={buildProposal()} project={project} showTechnicalDetails />);
 
@@ -126,6 +151,40 @@ describe("AI proposal detail polish", () => {
     expect(screen.getAllByText("Đã chấp nhận và thực thi").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Đã từ chối").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Thực thi thất bại").length).toBeGreaterThan(0);
+  });
+  it("renders draft risk suggestions with safe business fields", () => {
+    render(
+      <AiProposalDetail
+        proposal={buildProposal({
+          actionKey: "create_risk_record",
+          module: "project",
+          proposedPayload: {
+            categoryKey: "legal",
+            deadline: "2026-06-10",
+            level: "high",
+            nextAction: "Lam viec voi phap ly de xu ly blocker.",
+            ownerId: "owner-01",
+            projectId: "project-001",
+            reason: "Cham giay phep xay dung.",
+            recordType: "risk",
+            sourceId: "document-001",
+            sourceType: "document",
+            title: "Risk phap ly tu AI",
+          },
+          requiredPermission: "risk.create",
+          targetEntityType: "risk",
+          workflowStatus: "DRAFT",
+        })}
+        project={project}
+      />,
+    );
+
+    expect(screen.getByText("De xuat risk/blocker")).toBeInTheDocument();
+    expect(screen.getByText("Tieu de: Risk phap ly tu AI")).toBeInTheDocument();
+    expect(screen.getByText("Muc do: high")).toBeInTheDocument();
+    expect(screen.getByText("Nhom risk: legal")).toBeInTheDocument();
+    expect(screen.getByText("Nguon/citation: document / document-001")).toBeInTheDocument();
+    expect(screen.queryByText(/prompt/i)).not.toBeInTheDocument();
   });
 });
 

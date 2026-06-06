@@ -33,7 +33,7 @@ const SAFE_PROPOSAL_PATTERNS = [
 export function validateAiResponse(input: AiResponseValidationInput): AiResponseValidationMetadata {
   const reasons: AiResponseValidationReason[] = [
     ...validateCitationReferences(input.responseText, input.promptPackage),
-    ...validateHighImpactCitationRequirement(input.responseText, input.module, input.promptPackage),
+    ...validateCitationRequirement(input.responseText, input.module, input.promptPackage),
     ...validateUnsupportedSourceClaims(input.responseText, input.promptPackage),
     ...validateMutationClaims(input.responseText)
   ];
@@ -84,18 +84,28 @@ function validateCitationReferences(responseText: string, promptPackage: AiPromp
     }));
 }
 
-function validateHighImpactCitationRequirement(
+function validateCitationRequirement(
   responseText: string,
   module: AiModule,
   promptPackage: AiPromptPackage
 ): AiResponseValidationReason[] {
-  if (!HIGH_IMPACT_MODULES.has(module) || saysInsufficientData(responseText)) {
-    return [];
-  }
-
   const citedIds = extractCitationIds(responseText);
 
   if (citedIds.length > 0 && citedIds.some((citationId) => promptPackage.citations.some((citation) => citation.citationId === citationId))) {
+    return [];
+  }
+
+  const hasCitableContext = promptPackage.citations.length > 0;
+  const citationRequired = HIGH_IMPACT_MODULES.has(module) || hasCitableContext;
+
+  if (!citationRequired) {
+    return [];
+  }
+
+  if (
+    (saysInsufficientData(responseText) || describesProposalOnly(responseText)) &&
+    !appearsToMakeInternalFactualClaim(responseText)
+  ) {
     return [];
   }
 
@@ -103,7 +113,9 @@ function validateHighImpactCitationRequirement(
     {
       code: "citation_required",
       severity: "blocked",
-      message: "Module nhay cam yeu cau citation hop le cho nhan dinh factual."
+      message: hasCitableContext
+        ? "Phan hoi dung du lieu noi bo phai co citation hop le."
+        : "Module nhay cam yeu cau citation hop le cho nhan dinh factual."
     }
   ];
 }
@@ -147,12 +159,7 @@ function validateMutationClaims(responseText: string): AiResponseValidationReaso
     return [];
   }
 
-  const normalized = normalize(responseText);
-  const describesProposalOnly =
-    SAFE_PROPOSAL_PATTERNS.some((pattern) => pattern.test(responseText)) &&
-    includesAny(normalized, ["de xuat", "đề xuất", "proposed", "xac nhan", "xác nhận"]);
-
-  if (describesProposalOnly) {
+  if (describesProposalOnly(responseText)) {
     return [];
   }
 
@@ -173,6 +180,71 @@ function saysInsufficientData(responseText: string) {
   const normalized = normalize(responseText);
 
   return INSUFFICIENT_DATA_TERMS.some((term) => normalized.includes(term));
+}
+
+function describesProposalOnly(responseText: string) {
+  const normalized = normalize(responseText);
+
+  return (
+    SAFE_PROPOSAL_PATTERNS.some((pattern) => pattern.test(responseText)) &&
+    includesAny(normalized, ["de xuat", "đề xuất", "proposed", "xac nhan", "xác nhận"])
+  );
+}
+
+function appearsToMakeInternalFactualClaim(responseText: string) {
+  const normalized = normalize(responseText);
+  const hasInternalEntity = includesAny(normalized, [
+    "du an",
+    "dự án",
+    "du lieu noi bo",
+    "dữ liệu nội bộ",
+    "ban ghi",
+    "bản ghi",
+    "project",
+    "record",
+    "task",
+    "cong viec",
+    "công việc",
+    "ho so",
+    "hồ sơ",
+    "document",
+    "phap ly",
+    "pháp lý",
+    "legal",
+    "meeting",
+    "bao cao",
+    "báo cáo",
+    "tri thuc",
+    "tri thức",
+    "knowledge"
+  ]);
+  const hasFactualTerm = includesAny(normalized, [
+    " co ",
+    " có ",
+    " dang ",
+    " đang ",
+    " bi ",
+    " bị ",
+    "qua han",
+    "quá hạn",
+    "blocked",
+    "thieu",
+    "thiếu",
+    "can xu ly",
+    "cần xử lý",
+    "trang thai",
+    "trạng thái",
+    "status",
+    "approved",
+    "rejected",
+    "open",
+    "done",
+    "todo",
+    "high",
+    "urgent"
+  ]);
+
+  return (hasInternalEntity && hasFactualTerm) || /\b\d+\b/.test(normalized);
 }
 
 function normalize(text: string) {

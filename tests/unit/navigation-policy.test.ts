@@ -171,6 +171,9 @@ describe("navigation policy matrix", () => {
     expect(
       canOpenCommandCenter(user("tong_giam_doc"), "operations-dashboard"),
     ).toBe(true);
+    expect(
+      canOpenCommandCenter(user("tong_giam_doc"), "executive-history"),
+    ).toBe(true);
     expect(canOpenCommandCenter(user("tong_giam_doc"), "unknown-view")).toBe(
       false,
     );

@@ -4,7 +4,7 @@ import type {
   MeetingParticipantScope,
   MeetingStatus,
   MeetingType,
-  MeetingVisibility
+  MeetingVisibility,
 } from "@/modules/meetings/constants";
 import type { EntityId, TimestampFields } from "@/types/common";
 
@@ -13,11 +13,20 @@ export type MeetingAttachment = {
   name: string;
   url?: string;
   documentId?: EntityId;
+  source?: "document" | "external_url";
+  uploadedBy?: EntityId;
+  uploadedAt?: string;
 };
 
 export type MeetingAiSummary = {
   status: AiSummaryStatus;
   content?: string;
+  approvedBy?: EntityId;
+  approvedAt?: string;
+};
+
+export type MeetingMinutesApproval = {
+  status: AiSummaryStatus;
   approvedBy?: EntityId;
   approvedAt?: string;
 };
@@ -29,6 +38,27 @@ export type MeetingFollowUpAction = {
   dueDate?: string;
   relatedTaskId?: EntityId;
   status?: DecisionStatus;
+};
+
+export type MeetingFollowUpActionInput = {
+  title: string;
+  ownerId?: EntityId;
+  dueDate?: string;
+  status?: DecisionStatus;
+  createRelatedTask?: boolean;
+  taskProjectId?: EntityId;
+};
+
+export type MeetingFollowUpActionStatusInput = {
+  status: DecisionStatus;
+};
+
+export type MeetingFollowUpTaskInput = {
+  taskProjectId?: EntityId;
+};
+
+export type MeetingDecisionTrackingLinkInput = {
+  decisionId: EntityId;
 };
 
 export type MeetingDecisionTracking = {
@@ -46,6 +76,29 @@ export type MeetingAuditEntry = {
   action: string;
   createdAt: string;
   note?: string;
+};
+
+export type MeetingRelatedRecordType =
+  | "proposal"
+  | "approval"
+  | "risk"
+  | "decision"
+  | "task"
+  | "document"
+  | "project"
+  | "custom";
+
+export type MeetingRelatedRecordRelationType =
+  | "source"
+  | "context"
+  | "generated_action"
+  | "dependency";
+
+export type MeetingRelatedRecord = {
+  type: MeetingRelatedRecordType;
+  id: EntityId;
+  relationType: MeetingRelatedRecordRelationType;
+  title?: string;
 };
 
 export type Meeting = TimestampFields & {
@@ -72,19 +125,33 @@ export type Meeting = TimestampFields & {
   transcript?: string;
   aiSummary: MeetingAiSummary;
   meetingMinutes?: string;
+  meetingMinutesApproval?: MeetingMinutesApproval;
   decisions: MeetingDecisionTracking[];
   followUpActions: MeetingFollowUpAction[];
   relatedApprovals: EntityId[];
   relatedTasks: EntityId[];
+  relatedRecords?: MeetingRelatedRecord[];
   auditLog: MeetingAuditEntry[];
   summary?: string;
   createdBy?: EntityId;
 };
 
-export type DecisionSourceType = "independent" | "proposal" | "approval" | "meeting";
+export type DecisionSourceType =
+  | "independent"
+  | "proposal"
+  | "approval"
+  | "meeting";
 
 export type DecisionLinkedRecord = {
-  type: "project" | "proposal" | "approval" | "meeting" | "task" | "document" | "risk" | "custom";
+  type:
+    | "project"
+    | "proposal"
+    | "approval"
+    | "meeting"
+    | "task"
+    | "document"
+    | "risk"
+    | "custom";
   id: string;
   relationType: "source" | "context" | "generated_action" | "dependency";
   title?: string;
@@ -115,12 +182,109 @@ export type Decision = TimestampFields & {
   linkedRecords?: DecisionLinkedRecord[];
   ownerId?: EntityId;
   priority?: TaskPriority;
+  kpi?: string;
   dueDate?: string;
   status: DecisionStatus;
   taskId?: EntityId;
   createdBy?: EntityId;
   decidedBy?: EntityId;
   decidedAt?: string;
+};
+
+export type DecisionVersionField =
+  | "title"
+  | "decisionText"
+  | "ownerId"
+  | "dueDate"
+  | "priority"
+  | "status"
+  | "organizationId"
+  | "projectId"
+  | "projectIds"
+  | "axisId"
+  | "workstreamId"
+  | "moduleId"
+  | "linkedRecords"
+  | "kpi";
+
+export type DecisionVersionValue = Partial<
+  Record<DecisionVersionField, unknown>
+>;
+
+export type DecisionVersion = TimestampFields & {
+  id: EntityId;
+  decisionId: EntityId;
+  versionNumber: number;
+  changedFields: DecisionVersionField[];
+  previousValue: DecisionVersionValue;
+  newValue: DecisionVersionValue;
+  reason?: string;
+  createdBy: EntityId;
+};
+
+export type DecisionHistoryEvent =
+  | {
+      id: EntityId;
+      type: "version";
+      actorId?: EntityId;
+      createdAt: string;
+      versionNumber: number;
+      changedFields: DecisionVersionField[];
+      previousValue?: DecisionVersionValue;
+      newValue?: DecisionVersionValue;
+      reason?: string;
+    }
+  | {
+      id: EntityId;
+      type: "audit";
+      actorId?: EntityId;
+      createdAt: string;
+      action: string;
+      summary?: string;
+      changedFields?: string[];
+    };
+
+export type DecisionAssignmentStatus =
+  | "assigned"
+  | "in_progress"
+  | "done"
+  | "cancelled";
+
+export type DecisionAssignmentAssigneeType = "user" | "department" | "project";
+
+export type DecisionAssignment = TimestampFields & {
+  id: EntityId;
+  decisionId: EntityId;
+  taskId?: EntityId;
+  organizationId?: EntityId;
+  projectId: EntityId;
+  assigneeType: DecisionAssignmentAssigneeType;
+  assigneeId?: EntityId;
+  departmentId?: EntityId;
+  title: string;
+  description?: string;
+  kpi?: string;
+  dueDate?: string;
+  priority: TaskPriority;
+  status: DecisionAssignmentStatus;
+  createdBy: EntityId;
+};
+
+export type DecisionAssignmentInput = {
+  projectId?: EntityId;
+  assigneeType: DecisionAssignmentAssigneeType;
+  assigneeId?: EntityId;
+  departmentId?: EntityId;
+  title: string;
+  description?: string;
+  kpi?: string;
+  dueDate?: string;
+  priority?: TaskPriority;
+};
+
+export type CreateDecisionAssignmentsInput = {
+  decisionId: EntityId;
+  assignments: DecisionAssignmentInput[];
 };
 
 export type MeetingInput = {
@@ -143,9 +307,42 @@ export type MeetingInput = {
   agenda?: string;
   meetingMinutes?: string;
   summary?: string;
+  relatedApprovals?: EntityId[];
+  relatedTasks?: EntityId[];
+  relatedDecisions?: EntityId[];
+  relatedRisks?: EntityId[];
+  relatedDocuments?: EntityId[];
+  relatedRecords?: MeetingRelatedRecord[];
 };
 
-export type MeetingUpdateInput = Omit<MeetingInput, "projectId" | "projectIds">;
+export type MeetingRelatedRecordVisibilityInput = {
+  visibleRelatedApprovals?: EntityId[];
+  visibleRelatedTasks?: EntityId[];
+  visibleRelatedDecisions?: EntityId[];
+  visibleRelatedRisks?: EntityId[];
+  visibleRelatedDocuments?: EntityId[];
+};
+
+export type MeetingUpdateInput = Omit<
+  MeetingInput,
+  "organizationId" | "projectId" | "projectIds" | "axisId" | "departmentId"
+> &
+  MeetingRelatedRecordVisibilityInput;
+
+export type MeetingMinutesUpdateInput = {
+  meetingMinutes?: string;
+  summary?: string;
+};
+
+export type MeetingAttachmentInput = {
+  name: string;
+  url?: string;
+  documentId?: EntityId;
+};
+
+export type MeetingAiSummaryDraftInput = {
+  content?: string;
+};
 
 export type DecisionInput = {
   meetingId: EntityId;
@@ -168,9 +365,25 @@ export type CreateDecisionRecordInput = DecisionScopeInput & {
   linkedRecords?: DecisionLinkedRecord[];
   ownerId?: EntityId;
   priority?: TaskPriority;
+  kpi?: string;
   dueDate?: string;
   status?: DecisionStatus;
   decidedBy?: EntityId;
+  scope?: DecisionScopeInput;
+};
+
+export type UpdateDecisionRecordInput = DecisionScopeInput & {
+  decisionId: EntityId;
+  title?: string;
+  content?: string;
+  decisionText?: string;
+  linkedRecords?: DecisionLinkedRecord[];
+  ownerId?: EntityId;
+  priority?: TaskPriority;
+  kpi?: string;
+  dueDate?: string;
+  status?: DecisionStatus;
+  reason?: string;
   scope?: DecisionScopeInput;
 };
 
@@ -179,9 +392,12 @@ export type MeetingListFilters = {
   organizationId?: EntityId | "all";
   axisId?: string | "all";
   departmentId?: EntityId | "all";
+  participantId?: EntityId | "all";
   meetingType?: MeetingType | "all";
   status?: MeetingStatus | "all";
   visibility?: MeetingVisibility | "all";
+  dateFrom?: string | "all";
+  dateTo?: string | "all";
 };
 
 export type DecisionListFilters = {
@@ -189,4 +405,12 @@ export type DecisionListFilters = {
   projectId?: EntityId | "all";
   ownerId?: EntityId | "all";
   status?: DecisionStatus | "all";
+};
+
+export type DecisionAssignmentListFilters = {
+  decisionId?: EntityId;
+  taskId?: EntityId;
+  projectId?: EntityId | "all";
+  assigneeId?: EntityId | "all";
+  status?: DecisionAssignmentStatus | "all";
 };

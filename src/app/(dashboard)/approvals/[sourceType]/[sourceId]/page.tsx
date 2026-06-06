@@ -5,6 +5,7 @@ import { UnauthorizedState } from "@/components/shared/unauthorized-state";
 import { requireAuthenticatedSession } from "@/lib/permissions/guard";
 import { requiresAssignmentScopeForRole } from "@/lib/permissions/access-scope";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
+import { buildAiApprovalAssistantDraft } from "@/modules/ai/services/ai-approval-assistant-service";
 import { ApprovalRequestDetail } from "@/modules/executive/components/approval-request-detail";
 import { getApprovalCenterDetailData } from "@/modules/proposals/services/approval-center-service";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
@@ -87,12 +88,17 @@ export default async function ApprovalDetailPage({
     );
   }
 
+  const aiAssistant = await buildAiApprovalAssistantDraft(session.user, detail, {
+    createActionProposal: true,
+    useProvider: true,
+  });
+
   return (
     <PageShell
       description="Request summary, policy, linked sources va history hien co."
       title="Approval Detail"
     >
-      <ApprovalRequestDetail detail={detail} />
+      <ApprovalRequestDetail detail={{ ...detail, aiAssistant }} />
     </PageShell>
   );
 }

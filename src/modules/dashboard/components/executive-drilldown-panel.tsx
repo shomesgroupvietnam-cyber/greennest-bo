@@ -13,7 +13,10 @@ import {
 import Link from "next/link";
 
 import { safeInternalHref } from "@/modules/dashboard/services/executive-drilldown-source";
-import type { ExecutiveDashboardSourceItem } from "@/modules/dashboard/types";
+import type {
+  ExecutiveDashboardSourceItem,
+  ExecutiveRiskItem,
+} from "@/modules/dashboard/types";
 
 function valueOrFallback(value: string | undefined, fallback: string) {
   return value && value.trim().length > 0 ? value : fallback;
@@ -25,12 +28,38 @@ function metadataRows(item: ExecutiveDashboardSourceItem) {
     ["Source ID", item.sourceId],
     ["Scope", valueOrFallback(item.scopeLabel, item.projectId ?? "Khong co scope")],
     ["Project", item.projectId ?? "Khong co trong DTO"],
+    ["Module", item.moduleId ?? "Khong co module"],
     ["Status", item.status],
     ["Permission", item.permissionState ?? "read_only"],
     ["Owner", item.owner ?? "Chua gan"],
     ["Deadline", item.deadline ?? "Khong co deadline"],
     ["Reason", item.reason ?? "Khong co reason"],
   ];
+}
+
+type RiskDrilldownItem = ExecutiveDashboardSourceItem &
+  Pick<
+    ExecutiveRiskItem,
+    | "categoryLabel"
+    | "impactLabel"
+    | "likelihoodLabel"
+    | "matrixCellLabel"
+    | "nextAction"
+    | "severityLabel"
+    | "statusSuggestion"
+  >;
+
+function isRiskDrilldownItem(item: ExecutiveDashboardSourceItem): item is RiskDrilldownItem {
+  return (
+    item.sourceType === "risk" &&
+    "categoryLabel" in item &&
+    "impactLabel" in item &&
+    "likelihoodLabel" in item &&
+    "matrixCellLabel" in item &&
+    "nextAction" in item &&
+    "severityLabel" in item &&
+    "statusSuggestion" in item
+  );
 }
 
 function DetailSection({
@@ -180,6 +209,47 @@ export function ExecutiveDrilldownPanel({
               </div>
             ))}
           </div>
+
+          {isRiskDrilldownItem(item) ? (
+            <DetailSection
+              icon={<ShieldAlert className="h-4 w-4 text-red-700" aria-hidden="true" />}
+              title="Ma tran risk"
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Likelihood", item.likelihoodLabel],
+                  ["Impact", item.impactLabel],
+                  ["Matrix", item.matrixCellLabel],
+                  ["Category", item.categoryLabel],
+                  ["Severity", item.severityLabel],
+                  ["Status suggestion", item.statusSuggestion.labelVi],
+                ].map(([label, value]) => (
+                  <div
+                    className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                    key={label}
+                  >
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      {label}
+                    </p>
+                    <p className="mt-1 break-words text-sm font-medium text-slate-900">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  Next action
+                </p>
+                <p className="mt-1 break-words text-sm leading-6 text-slate-700">
+                  {item.nextAction}
+                </p>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {item.statusSuggestion.reason}
+              </p>
+            </DetailSection>
+          ) : null}
 
           <DetailSection
             icon={<ExternalLink className="h-4 w-4 text-slate-600" aria-hidden="true" />}

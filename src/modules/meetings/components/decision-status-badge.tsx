@@ -1,3 +1,5 @@
+import React from "react";
+
 import { DECISION_STATUSES, type DecisionStatus } from "@/constants/statuses";
 
 const statusClassName: Record<DecisionStatus, string> = {
