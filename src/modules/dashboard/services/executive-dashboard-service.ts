@@ -188,6 +188,7 @@ type DashboardEscalationContext = {
   now: Date;
   options: Pick<ExecutiveDashboardOptions, "auditWriter" | "notificationRepository">;
   policies: ApprovalThresholdPolicy[];
+  proposalRepository: ProposalRepository;
   user: PermissionUser;
 };
 
@@ -686,6 +687,12 @@ async function proposalToApprovalItem(
   const financeAllowed = canViewRecordFinance(proposal);
   const isOpen = !nonPendingApprovalStatuses.has(proposal.status);
   const policy = proposalPolicy(proposal, escalationContext.policies);
+  const detail = isOpen
+    ? await escalationContext.proposalRepository.getProposalDetail(proposal.id)
+    : undefined;
+  const currentStep = proposal.currentStepId
+    ? detail?.steps.find((step) => step.id === proposal.currentStepId)
+    : detail?.steps.find((step) => ["pending", "in_review"].includes(step.status));
   const overdue = isOpen
     ? resolveApprovalOverdueState({
         dueDate: proposal.dueDate,
@@ -699,6 +706,11 @@ async function proposalToApprovalItem(
     ? await queueApprovalEscalationNotification(
         {
           escalation: resolveApprovalEscalationState({
+            currentApprover: {
+              label: currentStep?.approverUserId ?? currentStep?.approverRole,
+              roleKey: currentStep?.approverRole,
+              userId: currentStep?.approverUserId,
+            },
             delegationPrincipalIds: [
               proposal.submittedBy,
               proposal.onBehalfOf,
@@ -1448,6 +1460,7 @@ export async function getExecutiveDashboardData(
     now: today,
     options,
     policies: approvalPolicies,
+    proposalRepository: repositories.proposals,
     user,
   };
   const proposalApprovalItems = await Promise.all(scopedProposals.map((proposal) =>
@@ -1503,6 +1516,7 @@ export async function getExecutiveDashboardData(
             now: today,
             options,
             policies: approvalPolicies,
+            proposalRepository: repositories.proposals,
             riskGroups: riskGroupsForDisplay,
             user,
           }),

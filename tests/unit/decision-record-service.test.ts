@@ -95,6 +95,7 @@ function proposalDetail(overrides: Partial<ProposalDetail["proposal"]> = {}): Pr
     },
     steps: [],
     links: [],
+    attachments: [],
     decisions: []
   };
 }

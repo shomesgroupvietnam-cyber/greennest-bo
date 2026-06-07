@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { PermissionUser } from "@/lib/permissions/can";
 import { getApprovalCenterData } from "@/modules/proposals/services/approval-center-service";
-import type { LeadershipApproval } from "@/modules/executive/types";
 import type {
   Proposal,
+  ProposalAttachment,
   ProposalDecision,
   ProposalDetail,
   ProposalLink,
@@ -30,12 +30,18 @@ import type { AuditLog } from "@/modules/users/types";
 class InMemoryProposalRepository implements ProposalRepository {
   private proposals: Proposal[] = [];
   private links: ProposalLink[] = [];
+  private attachments: ProposalAttachment[] = [];
   private steps: ProposalStep[] = [];
   private decisions: ProposalDecision[] = [];
 
-  constructor(proposals: Proposal[], links: ProposalLink[] = []) {
+  constructor(
+    proposals: Proposal[],
+    links: ProposalLink[] = [],
+    attachments: ProposalAttachment[] = [],
+  ) {
     this.proposals = proposals;
     this.links = links;
+    this.attachments = attachments;
   }
 
   async listProposals(filters: ProposalListFilters = {}) {
@@ -59,18 +65,25 @@ class InMemoryProposalRepository implements ProposalRepository {
       proposal,
       steps: this.steps.filter((step) => step.proposalId === proposalId),
       links: this.links.filter((link) => link.proposalId === proposalId),
+      attachments: this.attachments.filter((attachment) => attachment.proposalId === proposalId),
       decisions: this.decisions.filter((decision) => decision.proposalId === proposalId),
     };
   }
 
-  async createProposal(proposal: Proposal, links: ProposalLink[] = []) {
+  async createProposal(
+    proposal: Proposal,
+    links: ProposalLink[] = [],
+    attachments: ProposalAttachment[] = [],
+  ) {
     this.proposals = [proposal, ...this.proposals];
     this.links = [...links, ...this.links];
+    this.attachments = [...attachments, ...this.attachments];
 
     return {
       proposal,
       steps: [],
       links,
+      attachments,
       decisions: [],
     };
   }
@@ -258,7 +271,6 @@ describe("approval center service", () => {
     ]);
 
     const data = await getApprovalCenterData(approver, {
-      leadershipApprovals: [],
       now: new Date("2026-05-29T00:00:00+07:00"),
       repository,
     });
@@ -266,7 +278,6 @@ describe("approval center service", () => {
 
     expect(axisOne).toMatchObject({
       key: "axis_1",
-      label: "Truc 1",
       state: "available",
       total: 6,
     });
@@ -308,7 +319,6 @@ describe("approval center service", () => {
     ]);
 
     const data = await getApprovalCenterData(approver, {
-      leadershipApprovals: [],
       now: new Date("2026-05-29T00:00:00+07:00"),
       repository,
     });
@@ -340,7 +350,6 @@ describe("approval center service", () => {
     });
 
     const data = await getApprovalCenterData(approver, {
-      leadershipApprovals: [],
       now: new Date("2026-05-29T00:00:00+07:00"),
       repository,
     });
@@ -349,6 +358,53 @@ describe("approval center service", () => {
       reviewerLabel: "tong_giam_doc",
       sourceId: "reviewer-metadata",
     });
+  });
+
+  it("surfaces attachment counts and deadline compliance on proposal queue items", async () => {
+    const repository = new InMemoryProposalRepository(
+      [
+        proposal({
+          id: "attachment-ready",
+          title: "Attachment ready proposal",
+        }),
+        proposal({
+          dueDate: undefined,
+          id: "missing-deadline",
+          title: "Missing deadline proposal",
+        }),
+      ],
+      [],
+      [
+        {
+          createdAt: "2026-05-20T00:00:00.000Z",
+          id: "attachment-01",
+          name: "Ho so approval.pdf",
+          proposalId: "attachment-ready",
+          source: "external_url",
+          url: "https://example.com/ho-so-approval.pdf",
+          uploadedAt: "2026-05-20T00:00:00.000Z",
+          uploadedBy: "requester-01",
+        },
+      ],
+    );
+
+    const data = await getApprovalCenterData(approver, {
+      now: new Date("2026-05-29T00:00:00+07:00"),
+      repository,
+    });
+    const ready = data.tabs[0].items.find((item) => item.sourceId === "attachment-ready");
+    const missing = data.tabs[0].items.find((item) => item.sourceId === "missing-deadline");
+
+    expect(ready).toMatchObject({
+      attachmentCount: 1,
+      deadlineCompliance: "valid",
+    });
+    expect(missing).toMatchObject({
+      attachmentCount: 0,
+      deadlineCompliance: "missing_required",
+      dueLabel: "Thieu deadline",
+    });
+    expect(JSON.stringify(data)).not.toContain("No due date");
   });
 
   it("uses updatedAt as the deterministic tie-breaker after due date", async () => {
@@ -366,7 +422,6 @@ describe("approval center service", () => {
     ]);
 
     const data = await getApprovalCenterData(approver, {
-      leadershipApprovals: [],
       now: new Date("2026-05-29T00:00:00+07:00"),
       repository,
     });
@@ -410,7 +465,6 @@ describe("approval center service", () => {
     const data = await getApprovalCenterData(
       { id: "scoped-approver", role: "viewer" },
       {
-        leadershipApprovals: [],
         requireScopeAssignments: true,
         rolePermissionCatalog: createDefaultRolePermissionCatalog(),
         scopeAssignments,
@@ -436,7 +490,6 @@ describe("approval center service", () => {
     const data = await getApprovalCenterData(
       { id: "investment-reviewer", role: "dau_tu_phat_trien" },
       {
-        leadershipApprovals: [],
         repository,
       },
     );
@@ -460,7 +513,6 @@ describe("approval center service", () => {
     const data = await getApprovalCenterData(
       { id: "qa-user", role: "qa_qc_chat_luong" },
       {
-        leadershipApprovals: [],
         requireScopeAssignments: true,
         rolePermissionCatalog: createDefaultRolePermissionCatalog(),
         scopeAssignments: [
@@ -524,7 +576,6 @@ describe("approval center service", () => {
         };
       },
       delegations: [delegation()],
-      leadershipApprovals: [],
       notificationRepository: notifications,
       now: new Date("2026-05-29T00:00:00+07:00"),
       queueEscalationNotifications: true,
@@ -598,97 +649,7 @@ describe("approval center service", () => {
     expect(audits).toHaveLength(1);
   });
 
-  it("adds overdue escalation metadata to leadership approval queue items", async () => {
-    const leadershipApproval: LeadershipApproval = {
-      amount: 75_000_000,
-      amountLabel: "75,000,000 VND",
-      approvalLevel: "CEO",
-      attachments: [],
-      dueDate: "2026-05-25",
-      id: "leadership-overdue",
-      projectId: "project-a",
-      proposalCode: "LD-OVERDUE",
-      reason: "Leadership risk approval",
-      requestedBy: "requester-01",
-      requester: "Requester One",
-      riskLevel: "high",
-      status: "pending",
-      title: "Leadership overdue approval",
-      type: "finance",
-      version: "v1",
-    };
-    const notifications = new InMemoryNotificationRepository();
-    const audits: Array<Omit<AuditLog, "id" | "createdAt">> = [];
-
-    const data = await getApprovalCenterData(approver, {
-      approvalPolicies: [
-        approvalPolicy({
-          approvalLevel: "CEO",
-          approverRoleKey: "tong_giam_doc",
-          escalateAfterDays: 3,
-          labelVi: "Final approval",
-        }),
-      ],
-      auditWriter: async (input: Omit<AuditLog, "id" | "createdAt">) => {
-        audits.push(input);
-        return {
-          ...input,
-          createdAt: "2026-05-29T00:00:00.000Z",
-          id: `audit-leadership-${audits.length}`,
-        };
-      },
-      delegations: [delegation({ moduleId: undefined, principalUserId: "requester-01" })],
-      leadershipApprovals: [leadershipApproval],
-      notificationRepository: notifications,
-      now: new Date("2026-05-29T00:00:00+07:00"),
-      repository: new InMemoryProposalRepository([]),
-    });
-    const item = data.tabs[0].items[0];
-
-    expect(item).toMatchObject({
-      policyLabel: "Final approval",
-      sourceId: "leadership-overdue",
-      sourceType: "leadership_approval",
-    });
-    expect(item.overdue).toMatchObject({
-      daysOverdue: 4,
-      severity: "critical",
-    });
-    expect(item.escalation).toMatchObject({
-      required: true,
-      status: "none",
-      trigger: "critical_overdue",
-    });
-    expect(item.escalation?.targets).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ kind: "current_approver", roleKey: "tong_giam_doc" }),
-        expect.objectContaining({ kind: "proposer", userId: "requester-01" }),
-        expect.objectContaining({ kind: "delegate", userId: "assistant-01" }),
-      ]),
-    );
-    expect(await notifications.list()).toHaveLength(0);
-    expect(audits).toHaveLength(0);
-  });
-
-  it("does not borrow an unrelated first policy for leadership escalation", async () => {
-    const leadershipApproval: LeadershipApproval = {
-      amount: 75_000_000,
-      amountLabel: "75,000,000 VND",
-      approvalLevel: "CHAIRMAN",
-      attachments: [],
-      dueDate: "2026-05-25",
-      id: "leadership-unmatched-policy",
-      projectId: "project-a",
-      proposalCode: "LD-NO-POLICY",
-      reason: "Leadership risk approval",
-      requestedBy: "requester-01",
-      requester: "Requester One",
-      riskLevel: "high",
-      status: "pending",
-      title: "Leadership unmatched policy",
-      type: "finance",
-      version: "v1",
-    };
+  it("keeps legacy leadership approvals outside the Approval Center service contract", async () => {
     const notifications = new InMemoryNotificationRepository();
     const audits: Array<Omit<AuditLog, "id" | "createdAt">> = [];
 
@@ -709,19 +670,13 @@ describe("approval center service", () => {
           id: `audit-unmatched-${audits.length}`,
         };
       },
-      leadershipApprovals: [leadershipApproval],
       notificationRepository: notifications,
       now: new Date("2026-05-29T00:00:00+07:00"),
       repository: new InMemoryProposalRepository([]),
     });
-    const item = data.tabs[0].items[0];
 
-    expect(item.policyLabel).toBe("CHAIRMAN");
-    expect(item.escalation?.policyId).toBeUndefined();
-    expect(item.escalation).toMatchObject({
-      required: false,
-      trigger: "none",
-    });
+    expect(data.tabs[0].items).toEqual([]);
+    expect(JSON.stringify(data)).not.toContain("leadership_approval");
     expect(await notifications.list()).toHaveLength(0);
     expect(audits).toHaveLength(0);
   });

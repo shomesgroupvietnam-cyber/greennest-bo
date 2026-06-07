@@ -8,27 +8,30 @@
 
 ## Stories
 
-### Epic 1 - RBAC, Scope, Policy, Delegation
+### Epic 1 - RBAC, Scope, Policy, Ủy Quyền
 
-- **[1-1-role-template-va-permission-catalog-cho-module-1.md](./1-1-role-template-va-permission-catalog-cho-module-1.md)** - Role template permission catalog
-- **[1-2-scope-assignment-theo-organization-project-axis-va-workstream.md](./1-2-scope-assignment-theo-organization-project-axis-va-workstream.md)** - Scope assignment across dimensions
-- **[1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md](./1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md)** - Approval thresholds risk policy
-- **[1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md](./1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md)** - Leadership assistant delegation
-- **[1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md](./1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md)** - Module 1 acceptance seed data
-- **[1-6-separate-chairman-role-from-super-admin.md](./1-6-separate-chairman-role-from-super-admin.md)** - Separate Chairman role from Super Admin
+- **[1-1-role-template-va-permission-catalog-cho-module-1.md](./1-1-role-template-va-permission-catalog-cho-module-1.md)** - Mẫu vai trò và danh mục quyền
+- **[1-2-scope-assignment-theo-organization-project-axis-va-workstream.md](./1-2-scope-assignment-theo-organization-project-axis-va-workstream.md)** - Gán scope theo tổ chức, dự án, trục và workstream
+- **[1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md](./1-3-policy-co-ban-cho-nguong-duyet-tien-va-nhom-risk.md)** - Policy ngưỡng duyệt tiền và nhóm rủi ro
+- **[1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md](./1-4-delegation-cho-thu-ky-tro-ly-theo-lanh-dao.md)** - Ủy quyền thư ký/trợ lý theo lãnh đạo
+- **[1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md](./1-5-seed-data-dieu-hanh-cho-nghiem-thu-module-1.md)** - Seed data điều hành cho nghiệm thu Module 1
+- **[1-6-separate-chairman-role-from-super-admin.md](./1-6-separate-chairman-role-from-super-admin.md)** - Tách vai trò Chủ tịch khỏi Super Admin
 
-### Epic 2 - Workspace And Dashboard
+### Epic 2 - Không Gian Làm Việc Và Dashboard
 
-- **[2-1-permission-aware-shell-va-workspace-entry.md](./2-1-permission-aware-shell-va-workspace-entry.md)** - Permission-aware shell entry
-- **[2-2-executive-dashboard-service-dto-theo-scope.md](./2-2-executive-dashboard-service-dto-theo-scope.md)** - Executive dashboard scoped DTO
-- **[2-3-dashboard-ui-voi-kpi-strip-priority-queue-va-risk-summary.md](./2-3-dashboard-ui-voi-kpi-strip-priority-queue-va-risk-summary.md)** - Dashboard KPI queue UI
-- **[2-4-morning-briefing-theo-scope.md](./2-4-morning-briefing-theo-scope.md)** - Scoped morning briefing
-- **[2-5-executive-common-center.md](./2-5-executive-common-center.md)** - Executive common center
-- **[2-6-private-workspace-theo-vai-tro.md](./2-6-private-workspace-theo-vai-tro.md)** - Role-based private workspace
-- **[2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md](./2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md)** - Workspace drilldown QA
-- **[2-8-external-role-workspace-isolation-va-command-center-guard.md](./2-8-external-role-workspace-isolation-va-command-center-guard.md)** - External role workspace isolation
-- **[2-9-role-navigation-policy-matrix-va-command-center-eligibility.md](./2-9-role-navigation-policy-matrix-va-command-center-eligibility.md)** - Role navigation policy matrix
-- **[2-10-chairman-admin-navigation-policy-settings.md](./2-10-chairman-admin-navigation-policy-settings.md)** - Chairman/admin navigation policy settings
+- **[2-1-permission-aware-shell-va-workspace-entry.md](./2-1-permission-aware-shell-va-workspace-entry.md)** - Khung điều hướng theo quyền và điểm vào không gian làm việc
+- **[2-2-executive-dashboard-service-dto-theo-scope.md](./2-2-executive-dashboard-service-dto-theo-scope.md)** - DTO dashboard điều hành theo scope
+- **[2-3-dashboard-ui-voi-kpi-strip-priority-queue-va-risk-summary.md](./2-3-dashboard-ui-voi-kpi-strip-priority-queue-va-risk-summary.md)** - Giao diện Dashboard Tổng Quan với KPI, ưu tiên và rủi ro
+- **[2-4-morning-briefing-theo-scope.md](./2-4-morning-briefing-theo-scope.md)** - Bản tóm tắt đầu ngày theo scope
+- **[2-5-executive-common-center.md](./2-5-executive-common-center.md)** - Trung tâm điều hành chung
+- **[2-6-private-workspace-theo-vai-tro.md](./2-6-private-workspace-theo-vai-tro.md)** - Không gian làm việc cá nhân theo vai trò
+- **[2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md](./2-7-drill-down-unauthorized-va-responsive-qa-cho-workspace.md)** - Drill-down, 403 và QA responsive cho không gian làm việc
+- **[2-8-external-role-workspace-isolation-va-command-center-guard.md](./2-8-external-role-workspace-isolation-va-command-center-guard.md)** - Cô lập không gian làm việc role bên ngoài
+- **[2-9-role-navigation-policy-matrix-va-command-center-eligibility.md](./2-9-role-navigation-policy-matrix-va-command-center-eligibility.md)** - Ma trận chính sách điều hướng theo vai trò
+- **[2-10-chairman-admin-navigation-policy-settings.md](./2-10-chairman-admin-navigation-policy-settings.md)** - Chính sách điều hướng Chủ tịch/Super Admin
+- **[2-11-dashboard-tong-quan-alignment-theo-yeu-cau-1-1.md](./2-11-dashboard-tong-quan-alignment-theo-yeu-cau-1-1.md)** - Căn chỉnh Dashboard Tổng Quan theo yêu cầu 1.1
+- **[2-12-private-workspace-verification-fixes.md](./2-12-private-workspace-verification-fixes.md)** - Sửa lỗi verification Private Workspace
+- **[2-13-private-workspace-yeu-cau-1-4-alignment.md](./2-13-private-workspace-yeu-cau-1-4-alignment.md)** - Căn chỉnh Private Workspace theo yêu cầu 1.4
 
 ### Epic 3 - Approval Center
 
@@ -37,6 +40,7 @@
 - **[3-3-approval-actions-voi-validation-va-permission.md](./3-3-approval-actions-voi-validation-va-permission.md)** - Approval actions validation permission
 - **[3-4-approval-history-version-va-audit.md](./3-4-approval-history-version-va-audit.md)** - Approval history audit version
 - **[3-5-approval-qua-han-va-escalation-theo-policy.md](./3-5-approval-qua-han-va-escalation-theo-policy.md)** - Overdue approval escalation
+- **[3-6-approval-center-yeu-cau-1-5-closure.md](./3-6-approval-center-yeu-cau-1-5-closure.md)** - Approval Center closure theo yeu cau 1.5
 
 ### Epic 4 - Decision Assignment Center
 
@@ -44,6 +48,7 @@
 - **[4-2-assignment-task-tu-decision-cho-nhieu-nguoi.md](./4-2-assignment-task-tu-decision-cho-nhieu-nguoi.md)** - Multi-assignment decision tasks
 - **[4-3-version-history-khi-sua-decision-quan-trong.md](./4-3-version-history-khi-sua-decision-quan-trong.md)** - Decision version history
 - **[4-4-decision-assignment-center-ui.md](./4-4-decision-assignment-center-ui.md)** - Decision assignment center UI
+- **[4-5-decision-assignment-center-gap-closure.md](./4-5-decision-assignment-center-gap-closure.md)** - Decision center gap closure
 
 ### Epic 5 - Risk Alert Center
 

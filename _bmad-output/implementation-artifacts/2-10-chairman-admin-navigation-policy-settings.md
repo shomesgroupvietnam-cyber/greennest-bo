@@ -1,16 +1,16 @@
-# Story 2.10: Chairman/Admin Navigation Policy Settings
+# Story 2.10: Thiết Lập Chính Sách Điều Hướng Chủ Tịch Và Super Admin
 
 Status: done
 
-Ghi chu tao story: Ultimate context engine analysis completed - comprehensive developer guide created. Story nay la follow-up truc tiep cua Story 1.6 va 2.9 de dong chat ranh gioi `chu_tich` business leadership voi `super_admin`/BO admin surfaces. Trong scope nay khong them role moi; muc tieu la lam ro policy, guard-before-fetch va audit cho cac route `/admin`, `/settings`, `/users`.
+Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này là follow-up trực tiếp của Story 1.6 và 2.9 để đóng chặt ranh giới `chu_tich` business leadership với `super_admin`/BO admin surfaces. Trong scope này không thêm role mới; mục tiêu là làm rõ policy, guard-before-fetch và audit cho các route `/admin`, `/settings`, `/users`.
 
 ## Story
 
-As a system owner quan ly RBAC va navigation Module 1,
-I want Chairman/admin navigation policy settings duoc enforced tap trung cho `chu_tich` va `super_admin`,
-so that Chu tich chi thay leadership surfaces, Super Admin thay leadership + BO/system, va direct BO route access duoc deny/audit dung truoc khi fetch du lieu quan tri.
+As a người quản lý RBAC và navigation Module 1,
+I want chính sách điều hướng Chủ tịch/admin được enforce tập trung cho `chu_tich` và `super_admin`,
+so that Chủ tịch chỉ thấy leadership surfaces, Super Admin thấy leadership + BO/system, và direct BO route access được deny/audit đúng trước khi fetch dữ liệu quản trị.
 
-## Tieu Chi Chap Nhan
+## Tiêu Chí Chấp Nhận
 
 1. **Chu tich chi thay Command Center va leadership surfaces**
    - Given user role = `chu_tich`

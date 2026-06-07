@@ -22,8 +22,13 @@ import { assertDelegatedActionAllowed } from "@/modules/settings/services/leader
 import type { LeadershipDelegationRepository } from "@/modules/settings/services/leadership-delegation-repository";
 import { resolveApprovalPolicyForProposal } from "@/modules/settings/services/policy-settings-service";
 import type { PolicySettingsRepository } from "@/modules/settings/services/policy-settings-repository";
+import {
+  documentRepository,
+  type DocumentRepository,
+} from "@/modules/documents/services/document-repository";
 import type {
   Proposal,
+  ProposalAttachment,
   ProposalApprovalAction,
   ProposalDecision,
   ProposalDetail,
@@ -112,6 +117,7 @@ export type ProposalSubmissionResult = {
 
 type DecisionTransitionMetadata = Pick<
   ProposalDecision,
+  | "attachmentIds"
   | "nextStatus"
   | "nextStepStatus"
   | "previousStatus"
@@ -141,6 +147,114 @@ function redactProposalDetailFinanceForUser(detail: ProposalDetail, user: Permis
     proposal: redactProposalFinanceForUser(detail.proposal, user),
   };
 }
+
+function safeExternalAttachmentUrl(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function redactProposalDetailAttachmentsForUser(
+  detail: ProposalDetail,
+  user: PermissionUser,
+  documents: DocumentRepository,
+): Promise<ProposalDetail> {
+  const canViewDocuments = can(user, "document.view");
+  const attachments = await Promise.all(
+    detail.attachments.map(async (attachment) => {
+      if (!attachment.documentId) {
+        return {
+          ...attachment,
+          externalUrl: safeExternalAttachmentUrl(attachment.externalUrl),
+          url: safeExternalAttachmentUrl(attachment.url),
+        };
+      }
+
+      const document = await documents.getDocument(attachment.documentId);
+      const canSerializeDocument =
+        canViewDocuments &&
+        Boolean(document) &&
+        Boolean(detail.proposal.projectId) &&
+        document?.projectId === detail.proposal.projectId;
+
+      if (canSerializeDocument) {
+        return attachment;
+      }
+
+      return {
+        ...attachment,
+        documentId: undefined,
+        externalUrl: undefined,
+        name: "File bi gioi han quyen",
+        url: undefined,
+      };
+    }),
+  );
+
+  return {
+    ...detail,
+    attachments,
+  };
+}
+
+function hasValidRequiredDeadline(dueDate?: string) {
+  if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return false;
+  }
+
+  const date = new Date(`${dueDate}T00:00:00.000Z`);
+
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === dueDate;
+}
+
+function assertApprovalReadinessMetadata(detail: ProposalDetail) {
+  if (!hasValidRequiredDeadline(detail.proposal.dueDate)) {
+    throw new Error("Deadline / han xu ly la bat buoc truoc khi dua approval vao hang cho.");
+  }
+
+  if (!detail.attachments.length) {
+    throw new Error("File dinh kem / attachment metadata la bat buoc truoc khi dua approval vao hang cho.");
+  }
+}
+
+async function assertAttachmentDocumentsScoped(
+  attachments: ProposalAttachment[],
+  proposal: Pick<Proposal, "id" | "projectId">,
+  documents: DocumentRepository,
+) {
+  const documentIds = [
+    ...new Set(attachments.map((attachment) => attachment.documentId).filter((documentId): documentId is string => Boolean(documentId))),
+  ];
+
+  for (const documentId of documentIds) {
+    const document = await documents.getDocument(documentId);
+
+    if (!document) {
+      throw new Error("Document dinh kem khong ton tai hoac khong nam trong scope.");
+    }
+
+    if (!proposal.projectId || document.projectId !== proposal.projectId) {
+      throw new Error("Document dinh kem khong thuoc cung du an voi approval.");
+    }
+  }
+}
+
+const openStateApprovalActions = new Set<ProposalApprovalAction>([
+  "forward",
+  "request_change",
+  "ask_meeting",
+  "hold",
+]);
 
 function decisionFallbackVersions(decisions: ProposalDecision[]) {
   const chronological = [...decisions].sort((a, b) => {
@@ -179,24 +293,31 @@ export async function listProposals(filters = {}, user: PermissionUser, reposito
   return proposals.map((proposal) => redactProposalFinanceForUser(proposal, user));
 }
 
-export async function getProposalDetail(proposalId: string, user: PermissionUser, repository: ProposalRepository = proposalRepository) {
+export async function getProposalDetail(
+  proposalId: string,
+  user: PermissionUser,
+  repository: ProposalRepository = proposalRepository,
+  documents: DocumentRepository = documentRepository,
+) {
   const detail = await repository.getProposalDetail(proposalId);
 
   if (!detail) {
     return undefined;
   }
 
+  const safeDetail = await redactProposalDetailAttachmentsForUser(detail, user, documents);
+
   if (
     can(user, "proposal.view") ||
-    detail.proposal.submittedBy === user.id ||
-    detail.proposal.requestedBy === user.id
+    safeDetail.proposal.submittedBy === user.id ||
+    safeDetail.proposal.requestedBy === user.id
   ) {
-    return redactProposalDetailFinanceForUser(detail, user);
+    return redactProposalDetailFinanceForUser(safeDetail, user);
   }
 
   assertProposalReadable(user);
 
-  return redactProposalDetailFinanceForUser(detail, user);
+  return redactProposalDetailFinanceForUser(safeDetail, user);
 }
 
 export async function createProposal(
@@ -204,6 +325,7 @@ export async function createProposal(
   user: PermissionUser,
   repository: ProposalRepository = proposalRepository,
   delegationRepository?: LeadershipDelegationRepository,
+  documents: DocumentRepository = documentRepository,
 ) {
   const parsed = proposalInputSchema.parse(input);
   const timestamp = now();
@@ -258,8 +380,22 @@ export async function createProposal(
     relationType: link.relationType,
     createdAt: timestamp,
   }));
+  const attachments: ProposalAttachment[] = parsed.attachments.map((attachment) => ({
+    id: randomUUID(),
+    proposalId: proposal.id,
+    name: attachment.name,
+    source: attachment.documentId ? "document" : "external_url",
+    url: attachment.documentId ? undefined : attachment.url,
+    externalUrl: attachment.documentId ? undefined : attachment.externalUrl,
+    documentId: attachment.documentId,
+    uploadedBy: user.id,
+    uploadedAt: timestamp,
+    createdAt: timestamp,
+  }));
 
-  return repository.createProposal(proposal, links);
+  await assertAttachmentDocumentsScoped(attachments, proposal, documents);
+
+  return repository.createProposal(proposal, links, attachments);
 }
 
 export async function submitProposalWithResult(
@@ -297,6 +433,8 @@ export async function submitProposalWithResult(
   if (!["draft", "change_requested"].includes(detail.proposal.status)) {
     throw new Error("Chi de xuat nhap hoac can chinh sua moi duoc trinh duyet.");
   }
+
+  assertApprovalReadinessMetadata(detail);
 
   const timestamp = now();
   const previousStep = currentStep(detail);
@@ -347,6 +485,7 @@ export async function submitProposalWithResult(
       step.id,
       timestamp,
       {
+        attachmentIds: detail.attachments.map((attachment) => attachment.id),
         nextStatus: "in_review",
         nextStepStatus: step.status,
         previousStatus: detail.proposal.status,
@@ -597,6 +736,10 @@ export async function applyProposalApprovalAction(
   assertStepApproverTarget(detail, parsed.action, step, user, options);
   assertActionAllowed(detail, parsed.action, step, user, options);
 
+  if (openStateApprovalActions.has(parsed.action)) {
+    assertApprovalReadinessMetadata(detail);
+  }
+
   const timestamp = now();
   const previousStatus = detail.proposal.status;
   let proposalPatch: Partial<Proposal> = { updatedAt: timestamp };
@@ -716,6 +859,7 @@ export async function applyProposalApprovalAction(
       step.id,
       timestamp,
       {
+        attachmentIds: detail.attachments.map((attachment) => attachment.id),
         nextStatus,
         nextStepStatus: decisionNextStepStatus,
         previousStatus,

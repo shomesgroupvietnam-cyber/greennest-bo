@@ -15,7 +15,7 @@ describe("AI approval assistant panel", () => {
     const { container } = render(<AiApprovalAssistantPanel assistant={assistant()} />);
 
     const panel = screen.getByRole("region", {
-      name: "AI Approval Assistant",
+      name: "Trợ lý phê duyệt AI",
     });
 
     expect(within(panel).getByText("Draft goi y")).toBeInTheDocument();
@@ -25,8 +25,8 @@ describe("AI approval assistant panel", () => {
     expect(within(panel).getByText("Finance approval")).toBeInTheDocument();
     expect(within(panel).getByText("Project demo-project-riverside")).toBeInTheDocument();
     expect(within(panel).getByText("Quyen can co: proposal.request_change")).toBeInTheDocument();
-    expect(within(panel).getByText("Action: request_change")).toBeInTheDocument();
-    expect(within(panel).getByText("Field: status, currentStep")).toBeInTheDocument();
+    expect(within(panel).getByText("Hành động: request_change")).toBeInTheDocument();
+    expect(within(panel).getByText("Trường thay đổi: status, currentStep")).toBeInTheDocument();
     expect(
       within(panel).getByRole("button", { name: "Xac nhan tra lai approval" }),
     ).toBeInTheDocument();

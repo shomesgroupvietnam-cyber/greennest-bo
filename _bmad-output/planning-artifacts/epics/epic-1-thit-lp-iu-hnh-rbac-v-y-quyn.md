@@ -2,7 +2,7 @@
 
 Chủ tịch/Super Admin và quản trị được ủy quyền có thể cấu hình nền điều hành tối thiểu cho Module 1: role template tiếng Việt, permission/action, policy/scope, nhóm risk, ngưỡng duyệt tiền, phân quyền quản trị tách khỏi duyệt nghiệp vụ và ủy quyền thư ký/trợ lý. Epic này tạo nền an toàn để các workspace và flow sau hoạt động theo role + scope + action thay vì hardcode.
 
-## Story 1.1: Role Template Và Permission Catalog Cho Module 1
+## Story 1.1: Mẫu Vai Trò Và Danh Mục Quyền Cho Module 1
 
 **Requirements Covered:** FR-091, FR-092, FR-093, FR-096, NFR-005, NFR-006, NFR-008.
 
@@ -15,7 +15,7 @@ So that hệ thống có nền phân quyền không hardcode cho các workspace 
 AC1:
 **Given** người dùng có quyền quản lý vai trò
 **When** mở BO Settings cho role/permission
-**Then** hệ thống hiển thị role template mặc định bằng tiếng Việt gồm Chủ tịch/Super Admin, CEO, Giám đốc dự án, Trưởng bộ phận, Thư ký/Trợ lý, Quản trị và Người xem
+**Then** hệ thống hiển thị role template mặc định bằng tiếng Việt gồm Chủ tịch, Super Admin, Tổng Giám đốc, Phó Tổng Giám đốc, Giám đốc dự án, Trưởng bộ phận, Thư ký/Trợ lý, Quản trị hệ thống, Quản trị điều hành và Người xem
 **And** role có thể thêm, đổi tên, vô hiệu hóa mà không sửa code UI.
 
 AC2:
@@ -35,7 +35,7 @@ AC3:
 
 **Dependencies:** None.
 
-## Story 1.2: Scope Assignment Theo Organization, Project, Axis Và Workstream
+## Story 1.2: Gán Phạm Vi Theo Tổ Chức, Dự Án, Trục Và Luồng Công Việc
 
 **Requirements Covered:** FR-092, FR-096, NFR-001, NFR-002, NFR-003, NFR-004, NFR-005, NFR-007, NFR-008.
 
@@ -68,7 +68,7 @@ AC3:
 
 **Dependencies:** Story 1.1.
 
-## Story 1.3: Policy Cơ Bản Cho Ngưỡng Duyệt Tiền Và Nhóm Risk
+## Story 1.3: Chính Sách Cơ Bản Cho Ngưỡng Duyệt Tiền Và Nhóm Rủi Ro
 
 **Requirements Covered:** FR-037, FR-055, FR-092, FR-094, FR-095, NFR-006, NFR-008.
 
@@ -101,7 +101,7 @@ AC3:
 
 **Dependencies:** Story 1.1, Story 1.2.
 
-## Story 1.4: Delegation Cho Thư Ký/Trợ Lý Theo Lãnh Đạo
+## Story 1.4: Ủy Quyền Cho Thư Ký/Trợ Lý Theo Lãnh Đạo
 
 **Requirements Covered:** FR-097, FR-098, FR-099, FR-100, NFR-005, NFR-006, NFR-007.
 
@@ -134,7 +134,7 @@ AC3:
 
 **Dependencies:** Story 1.2.
 
-## Story 1.5: Seed Data Điều Hành Cho Nghiệm Thu Module 1
+## Story 1.5: Dữ Liệu Mẫu Điều Hành Cho Nghiệm Thu Module 1
 
 **Requirements Covered:** FR-091, FR-092, FR-093, FR-097, FR-098, FR-099, FR-100, NFR-007, NFR-008.
 
@@ -158,7 +158,7 @@ AC2:
 AC3:
 **Given** seed data có policy và delegation
 **When** chạy unit tests hoặc demo manual
-**Then** có thể kiểm tra 403, no-permission state, submit thay lãnh đạo và chặn approve thay.
+**Then** có thể kiểm tra 403, trạng thái không có quyền, submit thay lãnh đạo và chặn duyệt thay.
 
 **Files/Modules:** `database/seeds`, `src/modules/*/services/*-repository.ts`, `tests/fixtures`, `tests/unit`.
 
@@ -166,53 +166,55 @@ AC3:
 
 **Dependencies:** Story 1.1, Story 1.2, Story 1.3, Story 1.4.
 
-## Story 1.6: Separate Chairman Role From Super Admin
+## Story 1.6: Tách Vai Trò Chủ Tịch Khỏi Super Admin Kỹ Thuật
 
 **Requirements Covered:** FR-091, FR-092, FR-093, FR-096, NFR-005, NFR-006, NFR-008.
 
-As a system owner quan ly RBAC Module 1,
-I want role Chu tich dieu hanh duoc tach rieng khoi Super Admin ky thuat/BO,
-So that Chu tich co quyen dieu hanh nghiep vu nhung khong mac dinh nam giu quyen quan tri he thong, user, settings va role catalog.
+As a người quản lý RBAC Module 1,
+I want vai trò Chủ tịch điều hành được tách khỏi Super Admin kỹ thuật/BO,
+So that Chủ tịch có quyền điều hành nghiệp vụ nhưng không mặc định nắm quyền quản trị hệ thống, người dùng, thiết lập và danh mục vai trò.
 
 **Acceptance Criteria:**
 
 AC1:
-**Given** static role catalog va role-permission catalog load
-**When** system liet ke roles
-**Then** co role moi `chu_tich` label "Chu tich" va default route `/command-center`
-**And** `super_admin` co meaning technical/business super admin, khong con dong nghia Chu tich/Super Admin.
+**Given** danh mục vai trò tĩnh và danh mục quyền theo vai trò được tải
+**When** hệ thống liệt kê vai trò
+**Then** có role mới `chu_tich` với label "Chủ tịch" và route mặc định `/command-center`
+**And** `super_admin` mang nghĩa Super Admin kỹ thuật/BO, không còn đồng nghĩa với Chủ tịch.
 
 AC2:
 **Given** user role `chu_tich`
-**When** runtime permission check chay
-**Then** role co quyen dieu hanh dashboard, approval, decision, risk, meeting va finance-sensitive visibility/approval neu can
-**And** role khong co BO permissions nhu `settings.manage`, `user.invite`, `user.update_role`, `user.view`, role catalog config hoac BO-level `delegation.manage`.
+**When** runtime permission check chạy
+**Then** role có quyền điều hành dashboard, phê duyệt, quyết định, rủi ro, họp và quyền xem/phê duyệt tài chính nhạy cảm khi phù hợp
+**And** role không có quyền BO như `settings.manage`, `user.invite`, `user.update_role`, `user.view`, cấu hình danh mục vai trò hoặc `delegation.manage` cấp BO.
 
 AC3:
 **Given** user role `super_admin`
-**When** permission/nav/default route duoc resolve
-**Then** role co toan bo quyen cua `chu_tich` cong BO/system permissions
-**And** default route khuyen nghi van la `/command-center`, BO la menu/workspace rieng.
+**When** permission/navigation/default route được resolve
+**Then** role có toàn bộ quyền của `chu_tich` cộng thêm quyền BO/system
+**And** default route khuyến nghị vẫn là `/command-center`, BO là menu/không gian làm việc riêng.
 
 AC4:
-**Given** seed/demo data duoc tao
-**When** mock/file-backed hoac local/staging Supabase seed duoc doc
-**Then** `chairman-01` co role `chu_tich`
-**And** co `super-admin-01` role `super_admin`.
+**Given** seed/demo data được tạo
+**When** mock/file-backed hoặc local/staging Supabase seed được đọc
+**Then** `chairman-01` có role `chu_tich`
+**And** có `super-admin-01` với role `super_admin`.
 
 AC5:
 **Given** role `chu_tich`
 **When** sidebar/default route/direct routes render
-**Then** user thay "Tong quan Truc 1" va "Lanh dao"
-**And** khong thay/khong vao `/admin`, `/settings`, `/users`.
+**Then** user thấy "Tổng quan Trục 1" và "Lãnh đạo"
+**And** không thấy/không vào được `/admin`, `/settings`, `/users`.
 
 AC6:
-**Given** tests chay
-**When** RBAC, seed, navigation va e2e smoke duoc validate
-**Then** tests cover `chu_tich` allow/deny matrix, `super_admin` superset, seed persona mapping va direct BO route denial cho Chu tich.
+**Given** tests chạy
+**When** RBAC, seed, navigation và e2e smoke được validate
+**Then** tests bao phủ ma trận allow/deny của `chu_tich`, `super_admin` superset, seed persona mapping và direct BO route denial cho Chủ tịch.
 
 **Files/Modules:** `src/constants/roles.ts`, `src/lib/permissions`, `src/modules/settings`, `src/modules/workspaces`, `src/modules/executive`, `src/modules/command-center`, `src/lib/auth`, `scripts/seed-demo.mjs`, `database/seeds`, `database/verification`, `tests/unit`, `tests/e2e`.
 
-**Test Expectations:** Unit tests cho role catalog/permissions/navigation/default route/seed fixtures va e2e smoke cho Chu tich/Super Admin split.
+**Test Expectations:** Unit tests cho role catalog/permissions/navigation/default route/seed fixtures và e2e smoke cho tách Chủ tịch/Super Admin.
 
-**Dependencies:** Story 1.1, Story 1.5, Story 2.9.
+**Dependencies:** Story 1.1, Story 1.5.
+
+**Follow-up liên quan:** Story 2.9 tăng cứng chính sách điều hướng và điều kiện vào Trung Tâm Điều Hành sau khi tách vai trò này.

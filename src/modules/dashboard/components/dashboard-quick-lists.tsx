@@ -40,7 +40,7 @@ export function DashboardQuickLists({ data }: { data: DashboardData }) {
                   {task.title}
                 </Link>
                 <p className="mt-1 text-xs text-slate-500">
-                  {projectLabel(data.projects, task.projectId)} · Deadline: {formatDate(task.dueDate)}
+                  {projectLabel(data.projects, task.projectId)} · Hạn xử lý: {formatDate(task.dueDate)}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <TaskStatusBadge status={task.status} />

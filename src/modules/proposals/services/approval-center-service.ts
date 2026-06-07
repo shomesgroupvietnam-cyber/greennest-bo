@@ -8,13 +8,13 @@ import {
 } from "@/lib/permissions/can";
 import {
   canAccessScopedAction,
+  canReadDocumentInScope,
   canReadProposalInScope,
   hasAnyScopedActionGrant,
   resolveAccessScope,
 } from "@/lib/permissions/access-scope";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import {
-  approvals as defaultLeadershipApprovals,
   projects as defaultExecutiveProjects,
 } from "@/modules/executive/mock-data/executive-mock-data";
 import type {
@@ -22,22 +22,29 @@ import type {
   ApprovalCenterCategorySummary,
   ApprovalCenterData,
   ApprovalCenterDetailAction,
+  ApprovalCenterDetailAttachment,
   ApprovalCenterDetailData,
   ApprovalCenterDetailHistoryItem,
   ApprovalCenterDetailPolicy,
   ApprovalCenterDetailSource,
+  ApprovalDecisionEntryPoint,
   ApprovalCenterDueGroup,
   ApprovalCenterPriority,
   ApprovalCenterQueueCategory,
   ApprovalCenterQueueItem,
   ApprovalCenterSourceType,
-  ExecutiveRiskLevel,
-  LeadershipApproval,
+  ApprovalDeadlineCompliance,
 } from "@/modules/executive/types";
 import { businessDaysBetween } from "@/lib/date/business-day";
 import type { NotificationRepository } from "@/lib/notifications/notification-repository";
+import {
+  documentRepository,
+  type DocumentRepository,
+} from "@/modules/documents/services/document-repository";
+import type { Document } from "@/modules/documents/types";
 import type {
   Proposal,
+  ProposalAttachment,
   ProposalApprovalAction,
   ProposalDecision,
   ProposalDetail,
@@ -54,7 +61,6 @@ import type {
   ScopeAssignment,
 } from "@/modules/settings/types";
 import {
-  findMatchingApprovalThresholdPolicy,
   listActiveApprovalThresholds,
 } from "@/modules/settings/services/policy-settings-service";
 import {
@@ -81,12 +87,12 @@ export type ApprovalCenterServiceOptions = {
   auditWriter?: (input: Omit<AuditLog, "id" | "createdAt">) => Promise<AuditLog>;
   delegationRepository?: LeadershipDelegationRepository;
   delegations?: LeadershipDelegation[];
-  leadershipApprovals?: LeadershipApproval[];
   now?: Date;
   notificationRepository?: NotificationRepository;
   policyRepository?: PolicySettingsRepository;
   queueEscalationNotifications?: boolean;
   repository?: ProposalRepository;
+  documentRepository?: DocumentRepository;
   requireScopeAssignments?: boolean;
   rolePermissionCatalog?: RolePermissionCatalog;
   scopeAssignments?: ScopeAssignment[];
@@ -118,13 +124,9 @@ const queueProposalStatuses = new Set<ProposalStatus>([
 const detailProposalStatuses = new Set<ProposalStatus>([
   ...queueProposalStatuses,
   "approved",
+  "archived",
   "cancelled",
   "rejected",
-]);
-
-const queueLeadershipStatuses = new Set<LeadershipApproval["status"]>([
-  "pending",
-  "revision_required",
 ]);
 
 const globalApprovalCenterRoles = new Set(["chu_tich", "super_admin", "tong_giam_doc"]);
@@ -142,34 +144,16 @@ const proposalCategoryByType: Partial<Record<ProposalType, ApprovalCenterQueueCa
   safety: "ky_thuat",
 };
 
-const leadershipCategoryByType: Record<
-  LeadershipApproval["type"],
-  ApprovalCenterQueueCategory
-> = {
-  design: "ky_thuat",
-  finance: "tai_chinh_chi",
-  investment: "chien_luoc",
-  legal: "phap_ly",
-  operation: "hop",
-};
-
 const proposalStatusLabels: Record<ProposalStatus, string> = {
-  approved: "Approved",
-  archived: "Archived",
-  cancelled: "Cancelled",
-  change_requested: "Change requested",
-  draft: "Draft",
-  in_review: "In review",
-  on_hold: "On hold",
-  rejected: "Rejected",
-  submitted: "Submitted",
-};
-
-const leadershipStatusLabels: Record<LeadershipApproval["status"], string> = {
-  approved: "Approved",
-  pending: "Pending",
-  rejected: "Rejected",
-  revision_required: "Revision required",
+  approved: "Đã duyệt",
+  archived: "Đã lưu trữ",
+  cancelled: "Đã hủy",
+  change_requested: "Yêu cầu chỉnh sửa",
+  draft: "Bản nháp",
+  in_review: "Đang xem xét",
+  on_hold: "Tạm dừng",
+  rejected: "Không duyệt",
+  submitted: "Đã trình",
 };
 
 const dueGroupRank: Record<ApprovalCenterDueGroup, number> = {
@@ -308,7 +292,7 @@ function resolveDueGroup(
   const daysOverdue = businessDaysBetween(dueDate, now);
 
   if (daysOverdue === undefined) {
-    return { dueGroup: "none", dueLabel: "No due date" };
+    return { dueGroup: "none", dueLabel: "Thieu deadline" };
   }
 
   const daysUntilDue = -daysOverdue;
@@ -326,6 +310,24 @@ function resolveDueGroup(
   }
 
   return { dueGroup: "later", dueLabel: dueDate ?? "Later" };
+}
+
+function hasValidRequiredDeadline(dueDate?: string) {
+  if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return false;
+  }
+
+  const date = new Date(`${dueDate}T00:00:00.000Z`);
+
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === dueDate;
+}
+
+function deadlineComplianceForProposal(proposal: Proposal): ApprovalDeadlineCompliance {
+  if (!proposal.dueDate) {
+    return "missing_required";
+  }
+
+  return hasValidRequiredDeadline(proposal.dueDate) ? "valid" : "invalid";
 }
 
 function proposalCategory(proposal: Proposal, links: ProposalLink[]) {
@@ -348,25 +350,6 @@ function proposalPriority(
   }
 
   return priority;
-}
-
-function leadershipPriority(
-  riskLevel: ExecutiveRiskLevel,
-  dueGroup: ApprovalCenterDueGroup,
-): ApprovalCenterPriority {
-  if (riskLevel === "critical") {
-    return "critical";
-  }
-
-  if (dueGroup === "overdue") {
-    return "urgent";
-  }
-
-  if (riskLevel === "high") {
-    return "high";
-  }
-
-  return riskLevel === "low" ? "low" : "normal";
 }
 
 function formatAmount(amount: number) {
@@ -595,6 +578,135 @@ function buildLinkedSources(
   });
 }
 
+function safeExternalAttachmentHref(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeAttachmentHref(attachment: ProposalAttachment) {
+  if (attachment.documentId) {
+    return `/documents/${encodeURIComponent(attachment.documentId)}`;
+  }
+
+  return safeExternalAttachmentHref(attachment.externalUrl ?? attachment.url);
+}
+
+function canReadDocumentAttachment(
+  attachment: ProposalAttachment,
+  proposal: Proposal,
+  document: Document | undefined,
+  user: PermissionUser,
+  scope: ReturnType<typeof resolveAccessScope>,
+  options: ApprovalCenterServiceOptions,
+) {
+  if (!attachment.documentId) {
+    return true;
+  }
+
+  if (!document || !proposal.projectId || document.projectId !== proposal.projectId) {
+    return false;
+  }
+
+  if (!canReadDocumentInScope(document, scope)) {
+    return false;
+  }
+
+  if (can(user, "document.view")) {
+    return true;
+  }
+
+  return canAccessScopedAction(
+    user,
+    "document.view",
+    {
+      axisId: "project_management",
+      moduleId: "document",
+      projectId: document.projectId,
+      recordId: document.id,
+      workstreamId: "document",
+    },
+    {
+      rolePermissionCatalog: options.rolePermissionCatalog,
+      scopeAssignments: options.scopeAssignments,
+    },
+  );
+}
+
+function buildAttachments(
+  attachments: ProposalAttachment[],
+  proposal: Proposal,
+  attachmentDocuments: Map<string, Document>,
+  user: PermissionUser,
+  scope: ReturnType<typeof resolveAccessScope>,
+  options: ApprovalCenterServiceOptions,
+): ApprovalCenterDetailAttachment[] {
+  return attachments.map((attachment) => {
+    const document = attachment.documentId
+      ? attachmentDocuments.get(attachment.documentId)
+      : undefined;
+
+    if (!canReadDocumentAttachment(attachment, proposal, document, user, scope, options)) {
+      return {
+        documentId: undefined,
+        href: undefined,
+        helper: "Khong co quyen xem file dinh kem nay trong scope hien tai",
+        id: attachment.id,
+        name: "File bi gioi han quyen",
+        source: attachment.source,
+        state: "no_permission",
+      };
+    }
+
+    const href = safeAttachmentHref(attachment);
+
+    return {
+      documentId: attachment.documentId,
+      createdAt: attachment.createdAt,
+      externalUrl: attachment.externalUrl,
+      helper: attachment.documentId
+        ? "Document attachment"
+        : href
+          ? "External attachment URL"
+          : "Lien ket file khong hop le hoac bi an",
+      href,
+      id: attachment.id,
+      name: attachment.name,
+      source: attachment.source,
+      state: "linked",
+      uploadedAt: attachment.uploadedAt,
+      uploadedBy: attachment.uploadedBy,
+      url: attachment.url,
+    };
+  });
+}
+
+async function resolveAttachmentDocumentMap(
+  attachments: ProposalAttachment[],
+  documents: DocumentRepository,
+) {
+  const documentIds = [
+    ...new Set(attachments.map((attachment) => attachment.documentId).filter((documentId): documentId is string => Boolean(documentId))),
+  ];
+  const entries = await Promise.all(
+    documentIds.map(async (documentId) => [documentId, await documents.getDocument(documentId)] as const),
+  );
+
+  return new Map(
+    entries.filter((entry): entry is readonly [string, Document] => Boolean(entry[1])),
+  );
+}
+
 function buildPolicy(
   proposal: Proposal,
   steps: ProposalStep[],
@@ -809,6 +921,45 @@ function buildAvailableActions(
   });
 }
 
+function canCreateDecisionFromApproval(
+  user: PermissionUser,
+  proposal: Proposal,
+  options: ApprovalCenterServiceOptions,
+) {
+  if (can(user, "decision.create")) {
+    return true;
+  }
+
+  return canAccessScopedAction(
+    user,
+    "decision.create",
+    proposalActionTarget(proposal),
+    {
+      rolePermissionCatalog: options.rolePermissionCatalog,
+      scopeAssignments: options.scopeAssignments,
+    },
+  );
+}
+
+function buildDecisionEntryPoint(
+  detail: ProposalDetail,
+  user: PermissionUser,
+  options: ApprovalCenterServiceOptions,
+): ApprovalDecisionEntryPoint | undefined {
+  if (!canCreateDecisionFromApproval(user, detail.proposal, options)) {
+    return undefined;
+  }
+
+  return {
+    canCreate: true,
+    projectId: detail.proposal.projectId,
+    selectedScopeId: options.selectedScopeId,
+    sourceId: detail.proposal.id,
+    sourceType: "approval",
+    titleSuggestion: `Quyet dinh sau approval: ${detail.proposal.title}`,
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -869,10 +1020,11 @@ function auditHistoryItem(auditLog: AuditLog): ApprovalCenterDetailHistoryItem {
 function sortHistoryItems(items: ApprovalCenterDetailHistoryItem[]) {
   const kindRank: Record<ApprovalCenterDetailHistoryItem["kind"], number> = {
     audit: 0,
-    link: 1,
-    step: 2,
-    decision: 3,
-    version: 4,
+    attachment: 1,
+    link: 2,
+    step: 3,
+    decision: 4,
+    version: 5,
   };
 
   return [...items].sort((a, b) => {
@@ -897,11 +1049,13 @@ function buildHistory(
   steps: ProposalStep[],
   auditLogs: AuditLog[] = [],
   links: ProposalLink[] = [],
+  attachments: ApprovalCenterDetailAttachment[] = [],
 ): ApprovalCenterDetailHistoryItem[] {
   const decisionVersions = fallbackDecisionVersions(decisions);
   const decisionItems = decisions.map(
     (decision): ApprovalCenterDetailHistoryItem => ({
       actorId: decision.decidedBy,
+      attachmentIds: decision.attachmentIds,
       id: decision.id,
       kind: "decision",
       label: decision.decision,
@@ -931,8 +1085,26 @@ function buildHistory(
     );
   const auditItems = auditLogs.map(auditHistoryItem);
   const linkItems = links.map(linkHistoryItem);
+  const attachmentItems = attachments.map(
+    (attachment): ApprovalCenterDetailHistoryItem => ({
+      actorId: attachment.uploadedBy,
+      attachmentIds: [attachment.id],
+      id: `attachment:${attachment.id}`,
+      kind: "attachment",
+      label: attachment.name,
+      notes: attachment.helper,
+      occurredAt: attachment.uploadedAt ?? attachment.createdAt ?? new Date(0).toISOString(),
+      status: attachment.state,
+    }),
+  );
 
-  return sortHistoryItems([...decisionItems, ...stepItems, ...auditItems, ...linkItems]);
+  return sortHistoryItems([
+    ...decisionItems,
+    ...stepItems,
+    ...auditItems,
+    ...linkItems,
+    ...attachmentItems,
+  ]);
 }
 
 function buildProjectNameMap() {
@@ -1005,37 +1177,6 @@ function escalationPolicyForStep(
   };
 }
 
-function escalationPolicyForLeadership(
-  approval: LeadershipApproval,
-  policies: ApprovalThresholdPolicy[],
-) {
-  const scope = {
-    organizationId: approval.organizationId,
-    projectId: approval.projectId,
-    recordId: approval.id,
-  };
-  const levelMatches = policies.filter(
-    (item) =>
-      item.approvalLevel === approval.approvalLevel ||
-      item.labelVi === approval.approvalLevel ||
-      item.approverRoleKey === approval.approvalLevel,
-  );
-  const policy = findMatchingApprovalThresholdPolicy(levelMatches, {
-    amount: approval.amount,
-    riskLevel: approval.riskLevel,
-    scope,
-    targetType: approval.type,
-  });
-
-  return {
-    id: policy?.id,
-    label: policy?.labelVi ?? approval.approvalLevel,
-    roleKey: policy?.approverRoleKey,
-    escalateAfterDays: policy?.escalateAfterDays,
-    escalateOnRiskLevels: policy?.escalateOnRiskLevels,
-  };
-}
-
 function currentApprovalStep(proposal: Proposal, steps: ProposalStep[]) {
   return proposal.currentStepId
     ? steps.find((step) => step.id === proposal.currentStepId)
@@ -1091,10 +1232,12 @@ async function buildProposalItems(
   return Promise.all(proposals.map(async (proposal): Promise<ApprovalCenterQueueItem> => {
     const detail = detailByProposalId.get(proposal.id);
     const links = detail?.links ?? [];
+    const attachmentCount = detail?.attachments.length ?? 0;
     const step = currentApprovalStep(proposal, detail?.steps ?? []);
     const policy = escalationPolicyForStep(step, policiesById);
     const category = proposalCategory(proposal, links);
     const { dueGroup, dueLabel } = resolveDueGroup(proposal.dueDate, now);
+    const deadlineCompliance = deadlineComplianceForProposal(proposal);
     const overdue = resolveApprovalOverdueState({
       dueDate: proposal.dueDate,
       now,
@@ -1162,10 +1305,12 @@ async function buildProposalItems(
         financialAccess === "allowed" && proposal.amount !== undefined
           ? formatAmount(proposal.amount)
           : undefined,
+      attachmentCount,
       axisKey: "axis_1",
       category,
       categoryLabel: categoryLabel(category),
       code: proposal.code,
+      deadlineCompliance,
       dueDate: proposal.dueDate,
       dueGroup,
       dueLabel,
@@ -1191,130 +1336,6 @@ async function buildProposalItems(
       updatedAt: proposal.updatedAt,
     };
   }));
-}
-
-async function buildLeadershipItems(
-  user: PermissionUser,
-  options: ApprovalCenterServiceOptions,
-  now: Date,
-) {
-  const scope = resolveAccessScope(user, {
-    requireScopeAssignments: options.requireScopeAssignments,
-    rolePermissionCatalog: options.rolePermissionCatalog,
-    scopeAssignments: options.scopeAssignments,
-  });
-  const projectNames = buildProjectNameMap();
-  const leadershipApprovals =
-    options.leadershipApprovals ?? defaultLeadershipApprovals;
-  const [policies, delegations] = await Promise.all([
-    resolveApprovalPolicies(options),
-    resolveDelegations(options),
-  ]);
-
-  return Promise.all(leadershipApprovals
-    .filter((approval) => queueLeadershipStatuses.has(approval.status))
-    .filter((approval) =>
-      canReadProposalInScope(
-        {
-          id: approval.id,
-          projectId: approval.projectId,
-          requestedBy: approval.requestedBy,
-          submittedBy: approval.requestedBy,
-        },
-        scope,
-      ),
-    )
-    .map(async (approval): Promise<ApprovalCenterQueueItem> => {
-      const category = leadershipCategoryByType[approval.type];
-      const { dueGroup, dueLabel } = resolveDueGroup(approval.dueDate, now);
-      const policy = escalationPolicyForLeadership(approval, policies);
-      const overdue = resolveApprovalOverdueState({
-        dueDate: approval.dueDate,
-        now,
-        ownerLabel: approval.requester,
-        policyLabel: policy.label,
-        thresholdDays: policy.escalateAfterDays,
-      });
-      const escalationResult = await maybeQueueEscalationNotification(
-        {
-          escalation: resolveApprovalEscalationState({
-            currentApprover: {
-              label: policy.roleKey ?? approval.approvalLevel,
-              roleKey: policy.roleKey ?? approval.approvalLevel,
-              userId: approval.approverId,
-            },
-            delegations,
-            now,
-            overdue,
-            policy,
-            proposerId: approval.requestedBy,
-            riskLevel: approval.riskLevel,
-            scope: {
-              organizationId: approval.organizationId,
-              projectId: approval.projectId,
-              recordId: approval.id,
-            },
-          }),
-          overdue,
-          source: {
-            code: approval.proposalCode,
-            scope: {
-              organizationId: approval.organizationId,
-              projectId: approval.projectId,
-              recordId: approval.id,
-            },
-            sourceId: approval.id,
-            sourceType: "leadership_approval",
-            title: approval.title,
-          },
-          user,
-        },
-        options,
-      );
-      const canViewFinance = canViewFinanceForRecord(
-        user,
-        { projectId: approval.projectId, recordId: approval.id },
-        options,
-      );
-      const projectName = approval.projectId
-        ? projectNames.get(approval.projectId) ?? approval.projectId
-        : undefined;
-      const financialAccess =
-        category === "tai_chinh_chi" || approval.amount !== undefined
-          ? canViewFinance
-            ? "allowed"
-            : "no_permission"
-          : "not_applicable";
-
-      return {
-        amountLabel: financialAccess === "allowed" ? approval.amountLabel : undefined,
-        axisKey: "axis_1",
-        category,
-        categoryLabel: categoryLabel(category),
-        code: approval.proposalCode,
-        dueDate: approval.dueDate,
-        dueGroup,
-        dueLabel,
-        escalation: escalationResult.escalation,
-        financialAccess,
-        id: `leadership-${approval.id}`,
-        overdue,
-        policyLabel: policy.label,
-        priority: leadershipPriority(approval.riskLevel, dueGroup),
-        projectId: approval.projectId,
-        projectName,
-        reason: approval.reason,
-        requester: approval.requester,
-        reviewerLabel: approval.approvalLevel,
-        riskLevel: approval.riskLevel,
-        scopeLabel: projectName ?? approval.projectId ?? "Organization",
-        sourceId: approval.id,
-        sourceType: "leadership_approval",
-        status: approval.status,
-        statusLabel: leadershipStatusLabels[approval.status],
-        title: approval.title,
-      };
-    }));
 }
 
 function sortItems(items: ApprovalCenterQueueItem[]) {
@@ -1366,28 +1387,28 @@ function buildTabs(items: ApprovalCenterQueueItem[]): ApprovalCenterAxisTab[] {
   return [
     {
       categories: axisOneCategories,
-      helper: "Scoped approvals by category.",
+      helper: "Phê duyệt trong phạm vi theo nhóm.",
       items: axisOneItems,
       key: "axis_1",
-      label: "Truc 1",
+      label: "Trục 1",
       state: "available",
       total: axisOneItems.length,
     },
     {
       categories: summarizeCategories([]),
-      helper: "Placeholder MVP. Chua co flow chi tiet cho Truc 2.",
+      helper: "Chưa có luồng chi tiết cho Trục 2.",
       items: [],
       key: "axis_2",
-      label: "Truc 2",
+      label: "Trục 2",
       state: "placeholder",
       total: 0,
     },
     {
       categories: summarizeCategories([]),
-      helper: "Placeholder MVP. Chua co flow chi tiet cho Truc 3.",
+      helper: "Chưa có luồng chi tiết cho Trục 3.",
       items: [],
       key: "axis_3",
-      label: "Truc 3",
+      label: "Trục 3",
       state: "placeholder",
       total: 0,
     },
@@ -1426,10 +1447,7 @@ export async function getApprovalCenterData(
     return emptyApprovalCenterData(user, scopedOptions, now);
   }
 
-  const [proposalItems, leadershipItems] = await Promise.all([
-    buildProposalItems(user, scopedOptions, now),
-    Promise.resolve(buildLeadershipItems(user, scopedOptions, now)),
-  ]);
+  const proposalItems = await buildProposalItems(user, scopedOptions, now);
   const canViewFinance =
     can(user, "finance.view") ||
     hasAnyScopedActionGrant(user, "finance.view", {
@@ -1444,7 +1462,7 @@ export async function getApprovalCenterData(
       canViewFinance,
     },
     scopeLabel: scopedOptions.scopeLabel ?? "Approval scope",
-    tabs: buildTabs([...proposalItems, ...leadershipItems]),
+    tabs: buildTabs(proposalItems),
   };
 }
 
@@ -1573,19 +1591,46 @@ export async function getApprovalCenterDetailData(
     scope,
     scopedOptions,
   );
+  const attachmentDocuments = await resolveAttachmentDocumentMap(
+    detail.attachments,
+    scopedOptions.documentRepository ?? documentRepository,
+  );
+  const attachments = buildAttachments(
+    detail.attachments,
+    detail.proposal,
+    attachmentDocuments,
+    user,
+    scope,
+    scopedOptions,
+  );
+  const deadlineCompliance = deadlineComplianceForProposal(detail.proposal);
   const historyLinks = detail.links.filter((link) =>
     linkedSources.some((source) => source.id === link.id && source.state === "linked"),
   );
+  const decisionEntryPoint = buildDecisionEntryPoint(
+    detail,
+    user,
+    scopedOptions,
+  );
 
   return {
+    attachments,
     backHref: buildBackHref(scopedOptions.selectedScopeId),
+    decisionEntryPoint,
     escalation: escalationResult?.escalation,
     generatedAt: now.toISOString(),
-    history: buildHistory(detail.decisions, detail.steps, visibleAuditLogs, historyLinks),
+    history: buildHistory(
+      detail.decisions,
+      detail.steps,
+      visibleAuditLogs,
+      historyLinks,
+      attachments,
+    ),
     linkedSources,
     overdue,
     permissions: {
       availableActions: buildAvailableActions(detail, user, scopedOptions),
+      canCreateDecisionFromApproval: Boolean(decisionEntryPoint),
       canView: true,
       canViewAudit,
       canViewFinance,
@@ -1597,6 +1642,8 @@ export async function getApprovalCenterDetailData(
           ? formatAmount(detail.proposal.amount)
           : undefined,
       dueDate: detail.proposal.dueDate,
+      attachmentCount: detail.attachments.length,
+      deadlineCompliance,
       financialAccess,
       module: detail.proposal.module,
       ownerName: detail.proposal.ownerId,

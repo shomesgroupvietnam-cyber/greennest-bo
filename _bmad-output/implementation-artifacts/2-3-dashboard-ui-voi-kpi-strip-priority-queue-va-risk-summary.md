@@ -1,51 +1,51 @@
-# Story 2.3: Dashboard UI Voi KPI Strip, Priority Queue Va Risk Summary
+# Story 2.3: Giao Diện Dashboard Với Dải KPI, Hàng Đợi Ưu Tiên Và Tóm Tắt Rủi Ro
 
 Status: done
 
-Ghi chu tao story: Ultimate context engine analysis completed - comprehensive developer guide created. Story nay build UI cho Dashboard Tong Quan Module 1 - Lanh dao tren canonical Command Center view, tieu thu `ExecutiveDashboardData` da co tu Story 2.2. Pham vi la UI/dashboard interaction, responsive, empty/no-permission states va tests; khong tao service aggregation moi, khong tao route dashboard thu hai.
+Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này build UI cho Dashboard Tổng Quan Module 1 - Lãnh đạo trên canonical Command Center view, tiêu thụ `ExecutiveDashboardData` đã có từ Story 2.2. Phạm vi là UI/dashboard interaction, responsive, empty/no-permission states và tests; không tạo service aggregation mới, không tạo route dashboard thứ hai.
 
 ## Story
 
-As a lanh dao,  
-I want dashboard hien thi KPI, viec khan, approval, risk va quyet dinh moi theo layout de quet,  
-so that toi biet nhanh van de quan trong nhat hom nay.
+As a lãnh đạo,  
+I want dashboard hiển thị KPI, việc khẩn, approval, risk và quyết định mới theo layout dễ quét,  
+so that tôi biết nhanh vấn đề quan trọng nhất hôm nay.
 
-## Tieu Chi Chap Nhan
+## Tiêu Chí Chấp Nhận
 
-1. **Dashboard Tong Quan tieu thu DTO chinh thuc** (AC: 1)
-   - Given `CommandCenterData.executiveDashboard` co du lieu hop le tu `getExecutiveDashboardData`
-   - When nguoi dung mo `/command-center?view=executive-dashboard`
-   - Then UI hien thi KPI Strip, Priority Queue, Risk Summary/Map, deadline hom nay va quyet dinh moi tu `ExecutiveDashboardData`
-   - And UI khong dung `operationsDashboard`, `data.metrics` overview chung, hoac inline/mock counters de thay cho DTO nay
-   - And UI khong hien thi task vi mo, ban ve ky thuat chi tiet, hoac du lieu chuyen mon sau mac dinh.
+1. **Dashboard Tổng Quan tiêu thụ DTO chính thức** (AC: 1)
+   - Given `CommandCenterData.executiveDashboard` có dữ liệu hợp lệ từ `getExecutiveDashboardData`
+   - When người dùng mở `/command-center?view=executive-dashboard`
+   - Then UI hiển thị Dải KPI, Hàng đợi ưu tiên, Tóm tắt/Bản đồ rủi ro, deadline hôm nay và quyết định mới từ `ExecutiveDashboardData`
+   - And UI không dùng `operationsDashboard`, `data.metrics` overview chung hoặc inline/mock counters để thay cho DTO này
+   - And UI không hiển thị task vi mô, bản vẽ kỹ thuật chi tiết hoặc dữ liệu chuyên môn sâu mặc định.
 
-2. **Drill-down tu KPI/risk/approval/decision giu ngu canh dashboard** (AC: 2)
-   - Given mot KPI, risk, approval, deadline hoac decision item co `sourceType` va `sourceId`
-   - When nguoi dung chon item
-   - Then UI mo drill-down panel/sheet hoac safe `href` theo quyen
-   - And drill-down hien thi toi thieu title, source type, status, owner, deadline, reason, project/scope neu co va link nguon neu DTO cung cap `href`
-   - And khong tu tao URL tu raw id neu DTO khong cung cap route an toan.
+2. **Drill-down từ KPI/risk/approval/decision giữ ngữ cảnh dashboard** (AC: 2)
+   - Given một KPI, risk, approval, deadline hoặc decision item có `sourceType` và `sourceId`
+   - When người dùng chọn item
+   - Then UI mở drill-down panel/sheet hoặc safe `href` theo quyền
+   - And drill-down hiển thị tối thiểu title, source type, status, owner, deadline, reason, project/scope nếu có và link nguồn nếu DTO cung cấp `href`
+   - And không tự tạo URL từ raw id nếu DTO không cung cấp route an toàn.
 
-3. **No-permission, empty va sensitive finance state ro rang** (AC: 1, 2)
-   - Given `financialSummary.state` la `no_permission`
+3. **No-permission, empty và sensitive finance state rõ ràng** (AC: 1, 2)
+   - Given `financialSummary.state` là `no_permission`
    - When dashboard render
-   - Then UI hien no-permission state cho tai chinh nhay cam va khong render amount/budget/cashflow that
-   - And approval/project item co `financialAccess: "no_permission"` khong hien `amount`, `amountLabel`, `cashFlowLabel`
-   - And empty state phan biet "khong co du lieu trong scope" voi "khong co quyen" thay vi crash hoac show card rong vo nghia.
+   - Then UI hiện no-permission state cho tài chính nhạy cảm và không render amount/budget/cashflow thật
+   - And approval/project item có `financialAccess: "no_permission"` không hiện `amount`, `amountLabel`, `cashFlowLabel`
+   - And empty state phân biệt "không có dữ liệu trong scope" với "không có quyền" thay vì crash hoặc show card rỗng vô nghĩa.
 
-4. **Responsive va accessibility dat muc nghiem thu** (AC: 3)
-   - Given mobile viewport duoi 768px
+4. **Responsive và accessibility đạt mức nghiệm thu** (AC: 3)
+   - Given mobile viewport dưới 768px
    - When dashboard render
-   - Then KPI/risk/approval chuyen sang stacked priority layout hoac compact list
-   - And bang rong neu co phai co mobile alternative; khong ep user thao tac table min-width lon tren mobile
-   - And text tieng Viet trong KPI, badge, button va row khong tran/cat xau
-   - And risk/health state khong chi dua vao mau; moi badge/heatmap cell co label text, accessible name va focus state ro.
+   - Then KPI/risk/approval chuyển sang stacked priority layout hoặc compact list
+   - And bảng rộng nếu có phải có mobile alternative; không ép user thao tác table min-width lớn trên mobile
+   - And text tiếng Việt trong KPI, badge, button và row không tràn/cắt xấu
+   - And risk/health state không chỉ dựa vào màu; mỗi badge/heatmap cell có label text, accessible name và focus state rõ.
 
-5. **Bao ton Command Center canonical route va regression boundaries**
-   - Given `/executive` va cac route executive legacy dang redirect ve Command Center
-   - When story nay hoan thanh
-   - Then `/command-center?view=executive-dashboard` van la surface chinh, `/executive*` khong bi phuc hoi thanh dashboard doc lap
-   - And `operations-dashboard`, Axis 1 view, shell scope selector va direct unauthorized/403 flow tu Story 2.1 van hoat dong.
+5. **Bảo tồn Command Center canonical route và regression boundaries**
+   - Given `/executive` và các route executive legacy đang redirect về Command Center
+   - When story này hoàn thành
+   - Then `/command-center?view=executive-dashboard` vẫn là surface chính, `/executive*` không bị phục hồi thành dashboard độc lập
+   - And `operations-dashboard`, Axis 1 view, shell scope selector và direct unauthorized/403 flow từ Story 2.1 vẫn hoạt động.
 
 ## Tasks / Subtasks
 

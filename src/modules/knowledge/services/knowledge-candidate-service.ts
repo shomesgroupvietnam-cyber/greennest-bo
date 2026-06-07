@@ -150,7 +150,7 @@ export async function approveKnowledgeCandidateIntoKnowledgeItem(
       summary: candidate.extractedText,
       notes: [
         `Promoted from Knowledge Candidate ${candidate.id}.`,
-        candidate.sourceRefId ? `Source ref: ${candidate.sourceRefId}.` : undefined,
+        candidate.sourceRefId ? `Nguồn tham chiếu: ${candidate.sourceRefId}.` : undefined,
         parsedInput.notes ?? candidate.notes
       ]
         .filter(Boolean)

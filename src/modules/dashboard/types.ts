@@ -361,6 +361,11 @@ export type ExecutiveDashboardData = {
   sourceCounts: ExecutiveDashboardSourceCounts;
 };
 
+export type ExecutiveDashboardClientData = Omit<
+  ExecutiveDashboardData,
+  "riskMutationOptions"
+>;
+
 export type ExecutiveMorningBriefingCitation = Omit<
   ExecutiveAiSummaryCitation,
   "sourceType"
@@ -426,7 +431,7 @@ export type ExecutiveCommonCenterDecisionHighlight =
   ExecutiveDashboardSourceItem & {
     decidedAt?: string;
     decidedBy?: string;
-    highlightLabel: "Moi" | "Quyet dinh Chu tich" | "Chi dao";
+    highlightLabel: "Mới" | "Quyết định Chủ tịch" | "Chỉ đạo";
   };
 
 export type ExecutiveCommonCenterCalendarItem = ExecutiveDashboardSourceItem & {

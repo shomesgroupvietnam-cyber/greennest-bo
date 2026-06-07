@@ -81,8 +81,8 @@ export function MeetingListTable({
             title: "Khong co meeting khop bo loc",
           }
         : {
-            description: "Meeting Center chi hien thi cac cuoc hop ban co quyen xem theo role, project, department hoac participant scope.",
-            title: "Chua co meeting trong pham vi cua ban",
+            description: "Trung Tâm Họp chỉ hiển thị các cuộc họp bạn có quyền xem theo vai trò, dự án, phòng ban hoặc phạm vi tham gia.",
+            title: "Chưa có cuộc họp trong phạm vi của bạn",
           };
 
     return (

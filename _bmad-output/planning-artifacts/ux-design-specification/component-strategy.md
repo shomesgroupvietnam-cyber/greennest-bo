@@ -1,182 +1,182 @@
-# Component Strategy
+# Chiến Lược Component
 
-## Design System Components
+## Component Nền Của Design System
 
 Nền hiện tại:
 
 - Tailwind CSS.
-- shadcn/ui configuration.
-- Radix primitive dependency.
-- lucide-react icon library.
-- Component foundation hiện có: Button.
+- cấu hình shadcn/ui.
+- primitive Radix.
+- thư viện icon lucide-react.
+- component nền hiện có: nút bấm.
 
-Foundation components cần bổ sung hoặc chuẩn hóa trước khi làm workspace mới:
+Component nền cần bổ sung hoặc chuẩn hóa trước khi làm không gian làm việc mới:
 
-- Badge.
-- Card/Panel.
-- Table.
-- Tabs.
-- Dialog/Alert Dialog.
-- Sheet/Drawer.
-- Dropdown Menu.
-- Select.
-- Input/Search.
-- Tooltip.
+- Nhãn trạng thái.
+- Thẻ/khung nội dung.
+- Bảng dữ liệu.
+- Thẻ chuyển nội dung.
+- Hộp thoại/hộp thoại cảnh báo.
+- Ngăn trượt/ngăn kéo.
+- Menu thả xuống.
+- Ô chọn.
+- Ô nhập/tìm kiếm.
+- Gợi ý khi rê chuột.
 - Separator.
-- Scroll Area.
-- Skeleton/Loading.
-- Toast/Inline feedback.
+- Vùng cuộn.
+- Khung chờ/tải dữ liệu.
+- Thông báo nhanh/phản hồi tại chỗ.
 
-Các foundation component này phải dùng token đã chốt: màu semantic, radius tối đa 8px, spacing 4/8/12/16/24px, focus state rõ, text tiếng Việt không bị vỡ.
+Các component nền này phải dùng token đã chốt: màu theo ngữ nghĩa, bo góc tối đa 8px, khoảng cách 4/8/12/16/24px, trạng thái focus rõ, chữ tiếng Việt không bị vỡ.
 
-## Custom Components
+## Component Riêng Cho Sản Phẩm
 
-### AppShell / PermissionAwareShell
+### Khung Ứng Dụng Theo Quyền
 
-**Purpose:** Bố cục ứng dụng chính với sidebar, topbar, workspace/scope switcher và vùng nội dung.
+**Mục đích:** Bố cục ứng dụng chính với thanh điều hướng bên, thanh trên, bộ đổi không gian làm việc/phạm vi và vùng nội dung.
 
-**Usage:** Dùng cho toàn bộ app sau đăng nhập.
+**Cách dùng:** Dùng cho toàn bộ ứng dụng sau đăng nhập.
 
-**Anatomy:** Sidebar permission-aware, topbar, breadcrumb/context, workspace selector, scope selector, content container.
+**Cấu trúc:** Thanh điều hướng theo quyền, thanh trên, breadcrumb/ngữ cảnh, bộ chọn không gian làm việc, bộ chọn phạm vi, vùng chứa nội dung.
 
-**Navigation hierarchy:** Sidebar phải phân biệt 3 tầng: `Tổng quan Trục 1` / Command Center entry, `Module 1 - Lãnh đạo` workspace, và `Quản trị Chủ tịch` / BO Settings. Chủ tịch có thể thấy quyền quản trị, nhưng default daily workspace phải là bề mặt điều hành theo scope, không phải admin/settings.
+**Phân cấp điều hướng:** Thanh điều hướng phải phân biệt 3 tầng: `Tổng quan Trục 1`, `Module 1 - Lãnh đạo` và `Quản trị hệ thống`. Chủ tịch dùng mặc định bề mặt điều hành theo phạm vi; Super Admin/Quản trị hệ thống mới thấy các mục quản trị kỹ thuật như cấu hình hệ thống, người dùng và phân quyền.
 
-**States:** desktop, mobile drawer, collapsed, unauthorized, loading session.
+**Trạng thái:** desktop, ngăn kéo mobile, thu gọn, không có quyền, đang tải phiên đăng nhập.
 
-**Accessibility:** keyboard navigation, focus visible, drawer có aria-label và close rõ.
+**Trợ năng:** điều hướng bàn phím, focus dễ thấy, ngăn kéo có tên truy cập và nút đóng rõ.
 
-### WorkspaceHeader
+### Tiêu Đề Không Gian Làm Việc
 
-**Purpose:** Cho người dùng biết đang ở workspace nào, scope nào, vai trò nào.
+**Mục đích:** Cho người dùng biết đang ở không gian làm việc nào, phạm vi nào, vai trò nào.
 
-**Content:** Tên workspace, role, scope, thời gian cập nhật, primary action nếu có quyền.
+**Nội dung:** Tên không gian làm việc, vai trò, phạm vi, thời gian cập nhật, hành động chính nếu có quyền.
 
-**Actions:** đổi workspace, đổi scope, refresh data, mở filter.
+**Hành động:** đổi không gian làm việc, đổi phạm vi, làm mới dữ liệu, mở bộ lọc.
 
-**Variants:** Chairman, CEO, Project Director, Department Head, Secretary / Assistant.
+**Biến thể:** Chủ tịch, Tổng Giám đốc, Giám đốc dự án, Trưởng bộ phận, Thư ký/Trợ lý.
 
-### KPI Strip
+### Dải KPI Tổng Quan
 
-**Purpose:** Hiển thị KPI trọng yếu theo scope.
+**Mục đích:** Hiển thị KPI trọng yếu theo phạm vi.
 
-**Content:** label, value, trend, status, quyền dữ liệu, link drill-down.
+**Nội dung:** nhãn, giá trị, xu hướng, trạng thái, quyền dữ liệu, liên kết xem chi tiết.
 
-**States:** normal, warning, danger, no permission, loading, empty.
+**Trạng thái:** bình thường, cảnh báo, nguy hiểm, không có quyền, đang tải, chưa có dữ liệu.
 
-**Interaction:** click KPI để mở filtered source data.
+**Tương tác:** bấm KPI để mở dữ liệu nguồn đã lọc.
 
-### Priority Queue
+### Hàng Đợi Ưu Tiên
 
-**Purpose:** Danh sách việc cần xử lý theo mức độ ưu tiên.
+**Mục đích:** Danh sách việc cần xử lý theo mức độ ưu tiên.
 
-**Content:** title, type, severity, owner, deadline, reason, next action.
+**Nội dung:** tiêu đề, loại việc, mức độ nghiêm trọng, người phụ trách, hạn xử lý, lý do, hành động tiếp theo.
 
-**Variants:** approval queue, risk queue, escalation queue, task priority queue.
+**Biến thể:** hàng đợi phê duyệt, hàng đợi rủi ro, hàng đợi leo thang, hàng đợi việc ưu tiên.
 
-**Interaction:** mở detail, filter, sort, quick action nếu có quyền.
+**Tương tác:** mở chi tiết, lọc, sắp xếp, thao tác nhanh nếu có quyền.
 
-### Risk Map / Deadline Heatmap
+### Bản Đồ Rủi Ro / Bản Đồ Áp Lực Hạn Xử Lý
 
-**Purpose:** Hiển thị mức độ rủi ro hoặc áp lực deadline.
+**Mục đích:** Hiển thị mức độ rủi ro hoặc áp lực hạn xử lý.
 
-**Content:** category, count, severity, affected projects, drill-down.
+**Nội dung:** nhóm rủi ro, số lượng, mức độ nghiêm trọng, dự án bị ảnh hưởng, xem chi tiết.
 
-**States:** green/yellow/red/critical với label rõ.
+**Trạng thái:** xanh/vàng/đỏ/nghiêm trọng với nhãn rõ.
 
-**Accessibility:** không phụ thuộc màu; mỗi ô có text, tooltip/label.
+**Trợ năng:** không phụ thuộc màu; mỗi ô có chữ và gợi ý/nhãn.
 
-### Approval Action Panel
+### Bảng Xử Lý Phê Duyệt
 
-**Purpose:** Xử lý approval với đủ ngữ cảnh.
+**Mục đích:** Xử lý phê duyệt với đủ ngữ cảnh.
 
-**Content:** request summary, policy, amount, attachments, history, decision actions.
+**Nội dung:** tóm tắt yêu cầu, chính sách áp dụng, số tiền, hồ sơ đính kèm, lịch sử, hành động quyết định.
 
-**Actions:** approve, reject, return/request changes, forward/escalate, ask for meeting, hold.
+**Hành động:** duyệt, từ chối, trả lại/yêu cầu chỉnh sửa, chuyển tiếp/leo thang, yêu cầu họp, tạm giữ.
 
-**Validation:** reject/return bắt buộc lý do; approve comment tùy chọn.
+**Kiểm tra hợp lệ:** từ chối/trả lại bắt buộc lý do; bình luận khi duyệt là tùy chọn.
 
-### Record Drilldown Panel
+### Ngăn Chi Tiết Dữ Liệu Nguồn
 
-**Purpose:** Mở dữ liệu nguồn từ KPI/risk/approval mà không làm mất ngữ cảnh dashboard.
+**Mục đích:** Mở dữ liệu nguồn từ KPI/rủi ro/phê duyệt mà không làm mất ngữ cảnh dashboard.
 
-**Content:** summary, related records, owner, status, deadline, timeline, audit.
+**Nội dung:** tóm tắt, bản ghi liên quan, người phụ trách, trạng thái, hạn xử lý, dòng thời gian, nhật ký kiểm toán.
 
-**Variants:** side panel desktop, full-screen sheet mobile.
+**Biến thể:** ngăn bên trên desktop, ngăn toàn màn hình trên mobile.
 
-### Activity Timeline / Audit Trail
+### Dòng Thời Gian Hoạt Động / Nhật Ký Kiểm Toán
 
-**Purpose:** Cho thấy ai làm gì, lúc nào, thay đổi gì, lý do gì.
+**Mục đích:** Cho thấy ai làm gì, lúc nào, thay đổi gì, lý do gì.
 
-**Content:** actor, action, timestamp, previous/new state, comment, attachment.
+**Nội dung:** người thao tác, hành động, thời điểm, trạng thái cũ/mới, bình luận, tệp đính kèm.
 
-**Usage:** approval, decision, risk, meeting, permission changes.
+**Cách dùng:** phê duyệt, quyết định, rủi ro, cuộc họp, thay đổi phân quyền.
 
-### Contextual AI Panel
+### Bảng AI Theo Ngữ Cảnh
 
-**Purpose:** AI hỗ trợ trong đúng ngữ cảnh, không thay thế workflow.
+**Mục đích:** AI hỗ trợ trong đúng ngữ cảnh, không thay thế quy trình nghiệp vụ.
 
-**Variants:** Executive AI Copilot, Checklist AI, AI Meeting Preparation, AI Agenda Builder, AI Summary Assistant.
+**Biến thể:** AI hỗ trợ lãnh đạo, AI kiểm checklist, AI chuẩn bị họp, AI gợi ý chương trình họp, AI tóm tắt.
 
-**Rules:** luôn là draft/gợi ý, có citation, có trạng thái proposed/accepted/rejected/executed/failed nếu sinh action.
+**Quy tắc:** luôn là bản nháp/gợi ý, có nguồn trích dẫn, có trạng thái đề xuất/đã chấp nhận/đã từ chối/đã thực thi/thất bại nếu sinh hành động.
 
-## Component Implementation Strategy
+## Chiến Lược Triển Khai Component
 
 Ưu tiên xây component theo 3 lớp:
 
-1. Foundation UI: badge, panel, table, tabs, dialog, sheet, dropdown, input, select, tooltip, skeleton.
-2. Enterprise patterns: KPI Strip, Priority Queue, Risk Map, Approval Action Panel, Record Drilldown Panel, Timeline/Audit Trail.
-3. Role workspace compositions: Chairman Workspace, CEO Workspace, Project Director Workspace, Department Head Workspace, Secretary / Assistant Workspace.
+1. UI nền: nhãn trạng thái, khung nội dung, bảng, thẻ chuyển nội dung, hộp thoại, ngăn trượt, menu thả xuống, ô nhập, ô chọn, gợi ý, khung chờ.
+2. Pattern vận hành: Dải KPI Tổng Quan, Hàng Đợi Ưu Tiên, Bản Đồ Rủi Ro, Bảng Xử Lý Phê Duyệt, Ngăn Chi Tiết Dữ Liệu Nguồn, Dòng Thời Gian/Nhật Ký Kiểm Toán.
+3. Tổ hợp không gian làm việc theo vai trò: Không Gian Chủ Tịch, Không Gian Tổng Giám Đốc, Không Gian Giám Đốc Dự Án, Không Gian Trưởng Bộ Phận, Không Gian Thư Ký/Trợ Lý.
 
-Không tạo mỗi workspace như một trang hardcode riêng. Workspace nên là composition từ cùng bộ pattern, thay data source, permission, priority và action theo role/scope.
+Không tạo mỗi không gian làm việc như một trang hardcode riêng. Không gian làm việc nên là tổ hợp từ cùng bộ pattern, thay nguồn dữ liệu, quyền, mức ưu tiên và hành động theo vai trò/phạm vi.
 
 Component phải nhận dữ liệu có cấu trúc từ service/repository, không hardcode số liệu trong UI.
 
-## Implementation Roadmap
+## Lộ Trình Triển Khai
 
-Phase 1 - UI Foundation:
+Giai đoạn 1 - UI nền:
 
-- Badge.
-- Panel/Card.
-- Table.
-- Dialog/Alert Dialog.
-- Sheet/Drawer.
-- Tabs.
-- Input/Search.
-- Select/Dropdown.
-- Tooltip.
-- Skeleton/Empty/Error/Unauthorized states.
+- Nhãn trạng thái.
+- Khung nội dung/thẻ.
+- Bảng dữ liệu.
+- Hộp thoại/hộp thoại cảnh báo.
+- Ngăn trượt/ngăn kéo.
+- Thẻ chuyển nội dung.
+- Ô nhập/tìm kiếm.
+- Ô chọn/menu thả xuống.
+- Gợi ý khi rê chuột.
+- Trạng thái đang tải/chưa có dữ liệu/lỗi/không có quyền.
 
-Phase 2 - Enterprise Dashboard Patterns:
+Giai đoạn 2 - Pattern Dashboard Vận Hành:
 
-- AppShell / PermissionAwareShell.
-- WorkspaceHeader.
-- KPI Strip.
-- Priority Queue.
-- Risk Map / Deadline Heatmap.
-- Activity Timeline / Audit Trail.
-- Record Drilldown Panel.
+- Khung Ứng Dụng Theo Quyền.
+- Tiêu Đề Không Gian Làm Việc.
+- Dải KPI Tổng Quan.
+- Hàng Đợi Ưu Tiên.
+- Bản Đồ Rủi Ro / Bản Đồ Áp Lực Hạn Xử Lý.
+- Dòng Thời Gian Hoạt Động / Nhật Ký Kiểm Toán.
+- Ngăn Chi Tiết Dữ Liệu Nguồn.
 
-Phase 3 - Workflow Action Components:
+Giai đoạn 3 - Component Hành Động Quy Trình:
 
-- Approval Action Panel.
-- Decision/Assignment Panel.
-- Meeting Preparation Panel.
-- Checklist Workflow Panel.
-- Contextual AI Panel.
+- Bảng Xử Lý Phê Duyệt.
+- Bảng Quyết Định/Giao Việc.
+- Bảng Chuẩn Bị Họp.
+- Bảng Quy Trình Checklist.
+- Bảng AI Theo Ngữ Cảnh.
 
-Phase 4 - Role Workspace Assembly:
+Giai đoạn 4 - Lắp Ghép Không Gian Làm Việc Theo Vai Trò:
 
-- Chairman Workspace.
-- CEO Workspace.
-- Project Director Workspace.
-- Department Head Workspace.
-- Secretary / Assistant Workspace.
+- Không Gian Chủ Tịch.
+- Không Gian Tổng Giám Đốc.
+- Không Gian Giám Đốc Dự Án.
+- Không Gian Trưởng Bộ Phận.
+- Không Gian Thư Ký/Trợ Lý.
 
-Phase 5 - Responsive and QA:
+Giai đoạn 5 - Responsive Và QA:
 
-- Mobile drawer and stacked priority layout.
-- Table-to-list responsive behavior.
-- Keyboard/focus checks.
-- Permission/403 states.
-- Loading/empty/error states.
-- Visual regression or screenshot review for key workspaces.
+- Ngăn kéo mobile và bố cục hàng đợi ưu tiên dạng xếp chồng.
+- Bảng dữ liệu chuyển thành danh sách trên màn hình nhỏ.
+- Kiểm tra bàn phím/focus.
+- Trạng thái không có quyền/403.
+- Trạng thái đang tải/chưa có dữ liệu/lỗi.
+- Review ảnh chụp hoặc visual regression cho các không gian làm việc chính.

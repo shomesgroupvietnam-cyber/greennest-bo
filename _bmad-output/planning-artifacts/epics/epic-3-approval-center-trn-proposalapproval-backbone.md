@@ -1,8 +1,8 @@
-# Epic 3: Approval Center Trên Proposal/Approval Backbone
+# Epic 3: Trung Tâm Phê Duyệt Trên Nền Proposal/Approval
 
 Lãnh đạo có thể xem và xử lý approval trong Module 1 qua một Approval Center chung, phân vùng Trục 1/2/3, phân loại request, xử lý approve/reject/return/forward/ask meeting/hold/cancel, áp dụng policy/assignment, lưu history/audit và cảnh báo/escalate quá hạn.
 
-## Story 3.1: Approval Center Scoped Queue Và Axis Tabs
+## Story 3.1: Hàng Đợi Phê Duyệt Theo Phạm Vi Và Tab Theo Trục
 
 **Requirements Covered:** FR-025, FR-026, FR-027, FR-028, NFR-001, NFR-002, UX-DR11, UX-DR24, UX-DR25.
 
@@ -34,7 +34,7 @@ AC3:
 
 **Dependencies:** Story 1.2, Story 1.5.
 
-## Story 3.2: Approval Detail Cho Request Trục 1
+## Story 3.2: Chi Tiết Phê Duyệt Cho Yêu Cầu Trục 1
 
 **Requirements Covered:** FR-029, FR-030, FR-031, FR-032, FR-033, FR-034, NFR-001, NFR-004, UX-DR14, UX-DR20.
 
@@ -66,7 +66,7 @@ AC3:
 
 **Dependencies:** Story 3.1.
 
-## Story 3.3: Approval Actions Với Validation Và Permission
+## Story 3.3: Hành Động Phê Duyệt Với Kiểm Tra Hợp Lệ Và Phân Quyền
 
 **Requirements Covered:** FR-035, FR-036, FR-038, FR-039, FR-040, FR-041, NFR-005, UX-DR13, UX-DR21, UX-DR23.
 
@@ -103,7 +103,7 @@ AC4:
 
 **Dependencies:** Story 3.2, Story 1.3.
 
-## Story 3.4: Approval History, Version Và Audit
+## Story 3.4: Lịch Sử, Phiên Bản Và Nhật Ký Phê Duyệt
 
 **Requirements Covered:** FR-042, NFR-006, UX-DR15, UX-DR30.
 
@@ -134,7 +134,7 @@ AC3:
 
 **Dependencies:** Story 3.3.
 
-## Story 3.5: Approval Quá Hạn Và Escalation Theo Policy
+## Story 3.5: Phê Duyệt Quá Hạn Và Leo Thang Theo Chính Sách
 
 **Requirements Covered:** FR-043, NFR-006, UX-DR11, UX-DR22.
 

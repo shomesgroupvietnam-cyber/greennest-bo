@@ -843,6 +843,7 @@ async function seedDomainData() {
     code: "DX-APPROVAL-001",
     createdAt: now,
     currentStepId: "approval-step-001",
+    dueDate: "2026-06-30",
     id: "approval-001",
     module: "finance",
     priority: "high",
@@ -854,7 +855,18 @@ async function seedDomainData() {
     title: "Approval can AI de xuat",
     type: "finance",
     updatedAt: now,
-  });
+  }, [], [
+    {
+      createdAt: now,
+      id: "approval-attachment-001",
+      name: "Ho so AI approval.pdf",
+      proposalId: "approval-001",
+      source: "external_url",
+      uploadedAt: now,
+      uploadedBy: "requester-01",
+      url: "https://example.com/approval-001.pdf",
+    },
+  ]);
   await proposalRepository.addStep({
     createdAt: now,
     id: "approval-step-001",

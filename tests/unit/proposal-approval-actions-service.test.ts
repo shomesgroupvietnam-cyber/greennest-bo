@@ -45,6 +45,13 @@ afterEach(async () => {
 async function createSubmittedProposal(title: string, projectId = "project-a") {
   const detail = await createProposal(
     {
+      attachments: [
+        {
+          name: `${title} attachment.pdf`,
+          url: "https://example.com/approval-attachment.pdf",
+        },
+      ],
+      dueDate: "2026-05-29",
       module: "proposal",
       priority: "high",
       projectId,
@@ -395,6 +402,28 @@ describe("proposal approval actions", () => {
         },
       ),
     ).rejects.toThrow(/MVP|approve|duyet|thay/i);
+
+    await expectRawStatus(proposalId, "in_review");
+  });
+
+  it("blocks open-state approval mutations when legacy approval metadata is incomplete", async () => {
+    const proposalId = await createSubmittedProposal("Legacy metadata");
+
+    await repository.updateProposal(proposalId, {
+      dueDate: undefined,
+    });
+
+    await expect(
+      applyProposalApprovalAction(
+        proposalId,
+        {
+          action: "forward",
+          targetLabel: "Nguoi duyet tiep theo",
+        },
+        approver,
+        { repository },
+      ),
+    ).rejects.toThrow(/deadline|han xu ly/i);
 
     await expectRawStatus(proposalId, "in_review");
   });

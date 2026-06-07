@@ -1,5 +1,5 @@
 # generated: 2026-05-23T16:00:49+07:00
-# last_updated: 2026-06-04T18:14:31+07:00
+# last_updated: 2026-06-07T11:56:00+07:00
 # project: green_nest_buider_web
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-23T16:00:49+07:00
-last_updated: 2026-06-04T18:14:31+07:00
+last_updated: 2026-06-07T12:22:38+07:00
 project: green_nest_buider_web
 project_key: NOKEY
 tracking_system: file-system
@@ -61,6 +61,9 @@ development_status:
   2-8-external-role-workspace-isolation-va-command-center-guard: done
   2-9-role-navigation-policy-matrix-va-command-center-eligibility: done
   2-10-chairman-admin-navigation-policy-settings: done
+  2-11-dashboard-tong-quan-alignment-theo-yeu-cau-1-1: in-progress
+  2-12-private-workspace-verification-fixes: done
+  2-13-private-workspace-yeu-cau-1-4-alignment: done
   epic-2-retrospective: optional
   epic-3: in-progress
   3-1-approval-center-scoped-queue-va-axis-tabs: done
@@ -68,12 +71,14 @@ development_status:
   3-3-approval-actions-voi-validation-va-permission: done
   3-4-approval-history-version-va-audit: done
   3-5-approval-qua-han-va-escalation-theo-policy: done
+  3-6-approval-center-yeu-cau-1-5-closure: done
   epic-3-retrospective: optional
   epic-4: in-progress
   4-1-decision-record-tu-approval-meeting-hoac-doc-lap: done
   4-2-assignment-task-tu-decision-cho-nhieu-nguoi: done
   4-3-version-history-khi-sua-decision-quan-trong: done
   4-4-decision-assignment-center-ui: done
+  4-5-decision-assignment-center-gap-closure: review
   epic-4-retrospective: optional
   epic-5: in-progress
   5-1-risk-levels-categories-va-status-suggestion: done
@@ -101,4 +106,4 @@ development_status:
   8-2-executive-ai-summary-draft-trong-workspace: done
   8-3-ai-approval-assistant-voi-action-proposal: done
   8-4-ai-meeting-summary-va-future-ai-placeholders: done
-SS  epic-8-retrospective: optional
+  epic-8-retrospective: optional

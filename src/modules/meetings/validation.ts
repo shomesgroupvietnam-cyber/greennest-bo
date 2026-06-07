@@ -538,3 +538,9 @@ export const createDecisionAssignmentsInputSchema = z.object({
 export const decisionAssignmentStatusSchema = z.enum(
   decisionAssignmentStatusKeys,
 );
+
+export const updateDecisionAssignmentLifecycleInputSchema = z.object({
+  assignmentId: z.string().trim().min(1, "Assignment la bat buoc."),
+  status: decisionAssignmentStatusSchema,
+  reason: optionalText,
+});

@@ -103,7 +103,7 @@ export const ROLES = {
   pending: {
     label: "Chờ cấp quyền",
     description:
-      "Đã đăng nhập nhưng chưa được Admin cấp vùng làm việc hoặc quyền truy cập",
+      "Đã đăng nhập nhưng chưa được quản trị hệ thống cấp vùng làm việc hoặc quyền truy cập",
   },
 } as const;
 

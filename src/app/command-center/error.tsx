@@ -17,14 +17,14 @@ export default function CommandCenterError({ reset }: CommandCenterErrorProps) {
         action={
           <>
             <Button onClick={reset} type="button">
-              Thu lai
+              Thử lại
             </Button>
           </>
         }
         backHref="/command-center"
-        backLabel="Ve Command Center"
-        description="Co loi tam thoi khi tai du lieu dieu hanh. Thu lai hoac quay ve Command Center."
-        title="Khong the tai Command Center"
+        backLabel="Về Trung Tâm Điều Hành"
+        description="Có lỗi tạm thời khi tải dữ liệu điều hành. Thử lại hoặc quay về Trung Tâm Điều Hành."
+        title="Không thể tải Trung Tâm Điều Hành"
       />
     </main>
   );

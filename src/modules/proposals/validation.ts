@@ -9,6 +9,55 @@ const optionalText = z
   .transform((value) => (value ? value : undefined));
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
+const dateOnlyText = optionalText.refine(
+  (value) => {
+    if (!value) {
+      return true;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return false;
+    }
+
+    const date = new Date(`${value}T00:00:00.000Z`);
+
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  },
+  "Han xu ly phai dung dinh dang YYYY-MM-DD.",
+);
+const optionalUrl = optionalText.refine(
+  (value) => {
+    if (!value) {
+      return true;
+    }
+
+    try {
+      const url = new URL(value);
+
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  },
+  "Lien ket file phai la URL http hoac https hop le.",
+);
+
+export const proposalAttachmentInputSchema = z
+  .object({
+    documentId: optionalText,
+    name: requiredText("Ten file dinh kem la bat buoc."),
+    externalUrl: optionalUrl,
+    url: optionalUrl,
+  })
+  .superRefine((value, context) => {
+    if (!value.documentId && !value.url && !value.externalUrl) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "File dinh kem can co documentId hoac URL.",
+        path: ["url"],
+      });
+    }
+  });
 
 export const proposalInputSchema = z.object({
   title: z.string().trim().min(2, "Ten de xuat la bat buoc."),
@@ -23,8 +72,9 @@ export const proposalInputSchema = z.object({
     .optional()
     .default("normal"),
   amount: z.coerce.number().nonnegative().optional().or(z.literal("").transform(() => undefined)),
-  dueDate: optionalText,
+  dueDate: dateOnlyText,
   summary: optionalText,
+  attachments: z.array(proposalAttachmentInputSchema).optional().default([]),
 });
 
 export const proposalDecisionSchema = z.object({

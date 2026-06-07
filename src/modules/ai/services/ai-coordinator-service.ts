@@ -505,7 +505,7 @@ export function createActionProposal(job: AiJob, user: PermissionUser, scopeData
           deadline: todayString(),
           ownerId: user.id,
           projectId: safeProjectId,
-          nextAction: "Nguoi co quyen can review citation va xac nhan truoc khi tao official risk.",
+          nextAction: "Người có quyền cần xem lại nguồn trích dẫn và xác nhận trước khi tạo rủi ro chính thức.",
         },
         rationale: "Coordinator chi tao draft risk suggestion, khong ghi vao executive_risk_records.",
         requiredPermission: "risk.create",

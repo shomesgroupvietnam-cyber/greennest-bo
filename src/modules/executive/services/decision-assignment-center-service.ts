@@ -896,7 +896,7 @@ export async function getDecisionAssignmentCenterData(
 
   return {
     generatedAt,
-    scopeLabel: "Decision & Assignment Center",
+    scopeLabel: "Trung Tâm Quyết Định Và Giao Việc",
     summary: {
       dueSoonAssignments: assignments.filter((assignment) =>
         isAssignmentDueSoon(assignment, generatedAt),

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,7 +55,10 @@ function renderDashboard(
   );
 }
 
-function fixtureRiskStatus(status: "green" | "yellow" | "red", labelVi: string) {
+function fixtureRiskStatus(
+  status: "green" | "yellow" | "red",
+  labelVi: string,
+) {
   return {
     confirmationState: "suggested" as const,
     generatedAt: "2026-05-24T00:00:00.000Z",
@@ -58,6 +67,52 @@ function fixtureRiskStatus(status: "green" | "yellow" | "red", labelVi: string) 
     sourceData: [],
     status,
   };
+}
+
+function toSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "d")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function viName(expected: string) {
+  const target = toSearchText(expected);
+  return (name: string) => toSearchText(name).includes(target);
+}
+
+function viNameExact(expected: string) {
+  const target = toSearchText(expected);
+  return (name: string) => toSearchText(name) === target;
+}
+
+function viText(expected: string) {
+  const target = toSearchText(expected);
+  return (_content: string, element: Element | null) => {
+    const text = toSearchText(element?.textContent ?? "");
+
+    if (!text.includes(target)) {
+      return false;
+    }
+
+    return Array.from(element?.children ?? []).every(
+      (child) => !toSearchText(child.textContent ?? "").includes(target),
+    );
+  };
+}
+
+function expectRegionBefore(first: string, second: string) {
+  const firstRegion = screen.getByRole("region", { name: viName(first) });
+  const secondRegion = screen.getByRole("region", { name: viName(second) });
+
+  expect(
+    firstRegion.compareDocumentPosition(secondRegion) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 }
 
 describe("CommandCenterDashboard executive dashboard", () => {
@@ -73,7 +128,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "axis1-search-development", projectDirectorUser);
 
     const returnLink = screen.getByRole("link", {
-      name: /Quay lai Ban du an/i,
+      name: viName("quay lai ban du an"),
     });
 
     expect(returnLink).toHaveAttribute("href", "/project-workbench");
@@ -101,11 +156,17 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(legacyData, "executive-dashboard", adminUser);
 
-    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Return" })).toBeDisabled();
     expect(
-      screen.getByText(/khong co approval authority/i),
+      screen.getByRole("button", { name: viNameExact("duyet") }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: viNameExact("tu choi") }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: viNameExact("tra lai") }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(viText("khong co approval authority")),
     ).toBeInTheDocument();
   });
 
@@ -114,7 +175,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const briefing = data.executiveMorningBriefing;
 
     if (!briefing) {
-      throw new Error("Expected executive morning briefing data for leadership user");
+      throw new Error(
+        "Expected executive morning briefing data for leadership user",
+      );
     }
 
     data.operationsDashboard.tasksDueThisWeek = [
@@ -149,25 +212,37 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-morning-briefing");
 
     expect(
-      screen.getByRole("heading", { name: "Morning Briefing" }),
+      screen.getByRole("heading", { name: /B.n T.m T.t .{1,2}u Ng.y/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "AI Summary draft" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "KPI hom nay" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Risk ưu tiên" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Approval qua han" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Viec can quyet hom nay" }),
+      screen.getByRole("region", { name: viName("ban tom tat ai nhap") }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Du an do vang xanh" }),
+      screen.getByRole("region", { name: viName("kpi hom nay") }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Meeting Snapshot" })).toBeInTheDocument();
-    expect(screen.getByText(/Bản tóm tắt gợi ý/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("rui ro uu tien") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("phe duyet qua han") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("viec can quyet hom nay") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("du an do vang xanh") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("tom tat cuoc hop") }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(viText("ban tom tat goi y"))).toBeInTheDocument();
     expect(screen.getByText("Visible citation metadata")).toBeInTheDocument();
-    expect(screen.getByText("decision: decision-visible-test")).toBeInTheDocument();
-    expect(screen.queryByText("OPERATIONS_BRIEFING_SENTINEL")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(viText("decision visible test")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("OPERATIONS_BRIEFING_SENTINEL"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders morning briefing empty and no-permission states without finance leakage", async () => {
@@ -175,7 +250,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const briefing = data.executiveMorningBriefing;
 
     if (!briefing) {
-      throw new Error("Expected executive morning briefing data for leadership user");
+      throw new Error(
+        "Expected executive morning briefing data for leadership user",
+      );
     }
 
     data.executiveMorningBriefing = {
@@ -211,7 +288,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
         citations: [],
         generatedFrom: [],
         status: "insufficient_context",
-        text: "Khong co du lieu trong scope hoac khong co quyen xem du lieu de tao Morning Briefing.",
+        text: "Khong co du lieu trong scope hoac khong co quyen xem du lieu de tao Ban Tom Tat Dau Ngay.",
         updatedAt: briefing.generatedAt,
       },
       topRisks: [],
@@ -219,10 +296,22 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data, "executive-morning-briefing");
 
-    expect(screen.getByText("Khong co du lieu trong scope")).toBeInTheDocument();
-    expect(screen.getByText("Khong co quyen drill-down trong scope hien tai.")).toBeInTheDocument();
-    expect(screen.getByText("Khong co quyen xem tai chinh trong scope nay.")).toBeInTheDocument();
-    expect(screen.getByText("Khong co risk trong scope hien tai.")).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("khong co du lieu trong scope")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        viText("khong co quyen xem chi tiet trong pham vi hien tai"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        viText("khong co quyen xem tai chinh trong pham vi nay"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("khong co rui ro trong pham vi hien tai")),
+    ).toBeInTheDocument();
     expect(screen.queryByText("9,999,000,000 VND")).not.toBeInTheDocument();
   });
 
@@ -247,24 +336,38 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-common-center");
 
     expect(
-      screen.getByRole("heading", { name: "Executive Common Center" }),
+      screen.getByRole("heading", { name: /Trung T.m .i.u H.nh Chung/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Executive Common Center" }),
+      screen.getByRole("button", { name: /Trung T.m .i.u H.nh Chung/ }),
     ).toBeVisible();
-    expect(screen.getByRole("region", { name: "KPI chung" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Priority area" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Thong bao moi" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Quyet dinh moi" })).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Lich hop va su kien" }),
+      screen.getByRole("region", { name: viName("kpi chung") }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Risk tổng" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Chien luoc" })).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Deadline vuot nguong qua han" }),
+      screen.getByRole("region", { name: viName("khu vuc uu tien") }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("OPERATIONS_COMMON_SENTINEL")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("thong bao moi") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("quyet dinh moi") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("lich hop va su kien") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("rui ro tong") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("chien luoc") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("han xu ly vuot nguong") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("OPERATIONS_COMMON_SENTINEL"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders system deadlines even when there are no threshold breaches", async () => {
@@ -272,7 +375,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const commonCenter = data.executiveCommonCenter;
 
     if (!commonCenter) {
-      throw new Error("Expected executive common center data for leadership user");
+      throw new Error(
+        "Expected executive common center data for leadership user",
+      );
     }
 
     data.executiveCommonCenter = {
@@ -305,7 +410,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-common-center");
 
     expect(
-      screen.getByRole("heading", { name: "Khong co quyen xem Executive Common Center" }),
+      screen.getByRole("heading", {
+        name: /Kh.*ng c.* quy.*n xem Trung T.m .i.u H.nh Chung/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -367,25 +474,34 @@ describe("CommandCenterDashboard executive dashboard", () => {
         },
       },
     } as CommandCenterData & {
-      historyArchiveCenter: NonNullable<CommandCenterData["historyArchiveCenter"]>;
+      historyArchiveCenter: NonNullable<
+        CommandCenterData["historyArchiveCenter"]
+      >;
     };
 
     renderDashboard(historyData, "executive-history");
 
     expect(
-      screen.getByRole("heading", { name: "History & Archive" }),
+      screen.getByRole("heading", { name: /L.ch S. V. L.u Tr./ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("search", { name: "Bo loc lich su" })).toBeInTheDocument();
-    expect(screen.getByText("DX-001")).toBeInTheDocument();
+    expect(
+      screen.getByRole("search", { name: viName("bo loc lich su") }),
+    ).toBeInTheDocument();
 
-    const timeline = screen.getByRole("list", { name: "Lich su dieu hanh" });
+    const timeline = screen.getByRole("list", {
+      name: viName("lich su dieu hanh"),
+    });
     const items = within(timeline).getAllByRole("listitem");
 
     expect(items).toHaveLength(1);
-    expect(within(items[0]).getByText("De xuat DX-001 da duyet an toan.")).toBeInTheDocument();
+    expect(
+      within(items[0]).getByText("De xuat DX-001 da duyet an toan."),
+    ).toBeInTheDocument();
     expect(within(items[0]).getByText("critical")).toBeInTheDocument();
     expect(
-      within(items[0]).getByRole("link", { name: "Mo nguon DX-001 - Budget approval" }),
+      within(items[0]).getByRole("link", {
+        name: viName("mo nguon DX-001 - Budget approval"),
+      }),
     ).toHaveAttribute("href", "/approvals/proposal/proposal-01");
     expect(screen.queryByText("RAW_AUDIT_SENTINEL")).not.toBeInTheDocument();
   });
@@ -395,7 +511,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const privateWorkspace = data.executivePrivateWorkspace;
 
     if (!privateWorkspace) {
-      throw new Error("Expected executive private workspace data for leadership user");
+      throw new Error(
+        "Expected executive private workspace data for leadership user",
+      );
     }
 
     data.operationsDashboard.tasksDueThisWeek = [
@@ -444,23 +562,191 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-private-workspace");
 
     expect(
-      screen.getByRole("heading", { name: "Private Workspace" }),
+      screen.getByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Private Workspace" }),
+      screen.getByRole("button", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ }),
     ).toBeVisible();
-    expect(screen.getByRole("region", { name: "KPI theo role" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Priority area" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Assigned portfolio" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Approval queue" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Escalation risk" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Assistant support" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Workspace AI Summary draft" })).toBeInTheDocument();
-    expect(screen.getByText("Workspace AI draft suggestion")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("kpi theo role") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("khu vuc uu tien") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("danh muc duoc giao") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("hang cho phe duyet") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("rui ro can leo thang") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("ho tro tro ly") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: viName("ban tom tat ai nhap cua khong gian lam viec"),
+      }),
+    ).toBeInTheDocument();
+    expectRegionBefore("tien do va resource van hanh", "hang cho phe duyet");
+    expectRegionBefore("hang cho phe duyet", "rui ro can leo thang");
+    expectRegionBefore("rui ro can leo thang", "han xu ly lien du an");
+    expect(
+      screen.getByText("Workspace AI draft suggestion"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Workspace AI citation")).toBeInTheDocument();
     expect(screen.getByText("Review AI proposal")).toBeInTheDocument();
     expect(screen.getByText(/proposed/)).toBeInTheDocument();
-    expect(screen.queryByText("OPERATIONS_PRIVATE_WORKSPACE_SENTINEL")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("OPERATIONS_PRIVATE_WORKSPACE_SENTINEL"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the 1.4 role-specific private workspace panels", async () => {
+    const data = await buildCommandCenterData();
+    const privateWorkspace = data.executivePrivateWorkspace;
+
+    if (!privateWorkspace) {
+      throw new Error(
+        "Expected executive private workspace data for leadership user",
+      );
+    }
+    if (!data.executiveDashboard) {
+      throw new Error("Expected executive dashboard data for leadership user");
+    }
+
+    const financialSummary = data.executiveDashboard.financialSummary;
+    const projectCostState =
+      financialSummary.state === "no_permission"
+        ? "no_permission"
+        : privateWorkspace.assignedProjects.length > 0
+          ? "available"
+          : "empty";
+
+    data.executivePrivateWorkspace = {
+      ...privateWorkspace,
+      financialSummary,
+      permissionOverview: {
+        items: [
+          {
+            actionKey: "project.view",
+            enabled: true,
+            id: "project-view",
+            label: "Dữ liệu dự án",
+            reason: "Được xem dự án trong dynamic scope hiện tại.",
+            tone: "emerald",
+          },
+          {
+            actionKey: "risk.override",
+            enabled: true,
+            id: "risk-governance",
+            label: "Quản trị rủi ro",
+            reason:
+              "Có quyền override/quản trị rủi ro trong dynamic scope hiện tại.",
+            tone: "emerald",
+          },
+        ],
+        state: "available",
+      },
+      riskMap: data.executiveDashboard.riskSummary.riskMap,
+      variant: "chairman",
+    };
+    const chairmanView = renderDashboard(data, "executive-private-workspace");
+
+    expect(
+      screen.getByRole("region", { name: viName("dong tien") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("ban do rui ro chu tich") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: viName("tong quan phan quyen cap cao"),
+      }),
+    ).toBeInTheDocument();
+    expectRegionBefore("dong tien", "ban do rui ro chu tich");
+    expectRegionBefore("phe duyet qua han", "tong quan phan quyen cap cao");
+    expectRegionBefore("tong quan phan quyen cap cao", "quyet dinh chien luoc");
+    chairmanView.unmount();
+
+    data.executivePrivateWorkspace = {
+      ...privateWorkspace,
+      projectCost: {
+        financialSummary,
+        items: privateWorkspace.assignedProjects,
+        state: projectCostState,
+      },
+      variant: "project_director",
+    };
+    const directorView = renderDashboard(data, "executive-private-workspace");
+
+    expect(
+      screen.getByRole("region", { name: viName("phe duyet du an") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("cost du an") }),
+    ).toBeInTheDocument();
+    expectRegionBefore("du an duoc giao", "phe duyet du an");
+    expectRegionBefore("phe duyet du an", "cost du an");
+    expectRegionBefore("cost du an", "rui ro va vuong mac du an");
+    directorView.unmount();
+
+    data.executivePrivateWorkspace = {
+      ...privateWorkspace,
+      professionalApprovals: {
+        items: privateWorkspace.approvalItems.slice(0, 1),
+        state: "available",
+      },
+      workflowChecklist: {
+        items: privateWorkspace.deadlineItems.slice(0, 1),
+        state: "available",
+      },
+      variant: "department_head",
+    };
+    renderDashboard(data, "executive-private-workspace");
+
+    expect(
+      screen.getByRole("region", {
+        name: viName("workflow va checklist chuyen mon"),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("phe duyet chuyen mon") }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps rendering a legacy private workspace DTO without optional 1.4 panels", async () => {
+    const data = await buildCommandCenterData();
+    const privateWorkspace = data.executivePrivateWorkspace;
+
+    if (!privateWorkspace) {
+      throw new Error(
+        "Expected executive private workspace data for leadership user",
+      );
+    }
+
+    data.executivePrivateWorkspace = {
+      ...privateWorkspace,
+      financialSummary: undefined,
+      permissionOverview: undefined,
+      professionalApprovals: undefined,
+      projectCost: undefined,
+      resourceProgress: undefined,
+      riskMap: undefined,
+      workflowChecklist: undefined,
+    };
+
+    renderDashboard(data, "executive-private-workspace");
+
+    expect(
+      screen.getByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("hang cho phe duyet") }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Application error")).not.toBeInTheDocument();
   });
 
   it("renders private workspace read-only and no-permission states without finance leakage", async () => {
@@ -468,7 +754,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const privateWorkspace = data.executivePrivateWorkspace;
 
     if (!privateWorkspace) {
-      throw new Error("Expected executive private workspace data for leadership user");
+      throw new Error(
+        "Expected executive private workspace data for leadership user",
+      );
     }
 
     data.executivePrivateWorkspace = {
@@ -498,12 +786,28 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data, "executive-private-workspace");
 
-    expect(screen.getByText("Khong co quyen xem tai chinh trong scope nay.")).toBeInTheDocument();
-    expect(screen.getByText("Read-only: khong co mutation action trong workspace nay.")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Read-only summary" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Assistant support" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        viText("khong co quyen xem tai chinh trong pham vi nay"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        viText("chi xem khong co thao tac chinh sua trong khong gian nay"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("tom tat chi xem") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: viName("ho tro tro ly") }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("9,999,000,000 VND")).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Chi tiet nguon dieu hanh" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", {
+        name: viName("chi tiet nguon dieu hanh"),
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders secretary briefing desk groups separately", async () => {
@@ -511,7 +815,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const privateWorkspace = data.executivePrivateWorkspace;
 
     if (!privateWorkspace) {
-      throw new Error("Expected executive private workspace data for leadership user");
+      throw new Error(
+        "Expected executive private workspace data for leadership user",
+      );
     }
 
     data.executivePrivateWorkspace = {
@@ -555,14 +861,28 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data, "executive-private-workspace");
 
-    expect(screen.getByRole("region", { name: "Lich lanh dao" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Ho so trinh" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Tai lieu hop" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Reminder" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Approval uy quyen" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Support tasks" })).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Secretary delegation support" }),
+      screen.getByRole("region", { name: viName("lich lanh dao") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("ho so trinh") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("tai lieu hop") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("nhac viec") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("phe duyet duoc uy quyen") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("viec ho tro") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: viName("ho tro uy quyen cho thu ky tro ly"),
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("Tao de xuat thay lanh dao")).toBeInTheDocument();
   });
@@ -575,7 +895,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-private-workspace");
 
     expect(
-      screen.getByRole("heading", { name: "Khong co quyen xem Private Workspace" }),
+      screen.getByRole("heading", {
+        name: /Kh.*ng c.* quy.*n xem Kh.ng Gian L.m Vi.c C. Nh.n/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -592,7 +914,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-common-center");
 
     expect(
-      screen.getByRole("heading", { name: "Khong co quyen xem Executive Common Center" }),
+      screen.getByRole("heading", {
+        name: /Kh.*ng c.* quy.*n xem Trung T.m .i.u H.nh Chung/,
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Xin chao/)).not.toBeInTheDocument();
   });
@@ -604,12 +928,17 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     expect(screen.getByText(/Xin ch/)).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Private Workspace" }),
+      screen.queryByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ }),
     ).not.toBeInTheDocument();
   });
 
   it("renders the executive dashboard from ExecutiveDashboardData instead of operations data", async () => {
     const data = await buildCommandCenterData();
+    const executiveDashboard = data.executiveDashboard;
+
+    if (!executiveDashboard) {
+      throw new Error("Expected executive dashboard data for leadership user");
+    }
 
     data.operationsDashboard.tasksDueThisWeek = [
       {
@@ -625,31 +954,67 @@ describe("CommandCenterDashboard executive dashboard", () => {
         updatedAt: "2026-05-20T00:00:00.000Z",
       },
     ];
+    data.executiveDashboard = {
+      ...executiveDashboard,
+      permissions: {
+        ...executiveDashboard.permissions,
+        canCloseHighRisk: true,
+        canCloseRisk: true,
+        canCreateRisk: true,
+        canOverrideRisk: true,
+        canUpdateRisk: true,
+      },
+    };
 
     renderDashboard(data);
 
     expect(
-      screen.getByRole("heading", { name: "Dashboard Tong Quan" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "KPI Strip" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Priority Queue" }),
+      screen.getByRole("heading", { name: /Dashboard T.ng Quan/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Tổng hợp risk" }),
+      screen.getByRole("region", { name: viName("dai kpi") }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Deadline hom nay" }),
+      screen.getByRole("region", { name: viName("viec uu tien") }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Quyet dinh moi" }),
+      screen.getByRole("region", { name: viName("tong hop rui ro") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("han xu ly hom nay") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("quyet dinh moi") }),
     ).toBeInTheDocument();
 
-    const kpiRegion = screen.getByRole("region", { name: "KPI Strip" });
+    const kpiRegion = screen.getByRole("region", { name: viName("dai kpi") });
+    const projectOpportunityTotal =
+      executiveDashboard.sourceCounts.projects +
+      executiveDashboard.sourceCounts.proposals;
 
     for (const kpi of data.executiveDashboard?.kpis ?? []) {
-      expect(within(kpiRegion).getAllByText(kpi.label).length).toBeGreaterThan(0);
+      expect(within(kpiRegion).getAllByText(kpi.label).length).toBeGreaterThan(
+        0,
+      );
     }
+
+    expect(
+      within(kpiRegion).getByText(viText("du an co hoi")),
+    ).toBeInTheDocument();
+    expect(
+      within(kpiRegion).getByText(String(projectOpportunityTotal)),
+    ).toBeInTheDocument();
+    expect(
+      within(kpiRegion).getByText(
+        viText(
+          `du an ${executiveDashboard.sourceCounts.projects} co hoi ${executiveDashboard.sourceCounts.proposals}`,
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(kpiRegion).getAllByText(viText("dong tien chi phi tong quan"))
+        .length,
+    ).toBeGreaterThan(0);
 
     const approval = data.executiveDashboard?.approvalSummary.items[0];
     const risk = data.executiveDashboard?.riskSummary.items[0];
@@ -664,13 +1029,40 @@ describe("CommandCenterDashboard executive dashboard", () => {
       expect(screen.getAllByText(risk.title).length).toBeGreaterThan(0);
     }
 
-    const riskRegion = screen.getByRole("region", { name: "Tổng hợp risk" });
-    expect(within(riskRegion).getByText("Risk map")).toBeInTheDocument();
-    expect(within(riskRegion).getByText("Ma tran risk")).toBeInTheDocument();
-    expect(within(riskRegion).getAllByText(/Khả năng/).length).toBeGreaterThan(0);
+    const riskRegion = screen.getByRole("region", {
+      name: viName("tong hop rui ro"),
+    });
     expect(
-      within(riskRegion).getAllByLabelText(/Risk map category/i).length,
+      within(riskRegion).getAllByText(viText("ban do rui ro")).length,
     ).toBeGreaterThan(0);
+    expect(
+      within(riskRegion).getAllByText(viText("ma tran rui ro")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(riskRegion).getAllByText(viText("kha nang")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(riskRegion).getAllByLabelText(viName("nhom rui ro")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(viText("tao rui ro vuong mac")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(viText("cap nhat rui ro vuong mac dang mo")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(viText("xac nhan dieu chinh trang thai")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(viText("dong rui ro vuong mac")),
+    ).not.toBeInTheDocument();
+
+    const financeRegion = screen.getByRole("region", {
+      name: viName("dong tien chi phi tong quan"),
+    });
+    expect(
+      within(financeRegion).getByText(viText("tong gia tri duoc phep xem")),
+    ).toBeInTheDocument();
 
     if (deadline) {
       expect(screen.getAllByText(deadline.title).length).toBeGreaterThan(0);
@@ -680,7 +1072,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
       expect(screen.getAllByText(decision.title).length).toBeGreaterThan(0);
     }
 
-    expect(screen.queryByText("OPERATIONS_MICRO_TASK_SENTINEL")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("OPERATIONS_MICRO_TASK_SENTINEL"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not expose finance amounts when the DTO says no_permission", async () => {
@@ -714,11 +1108,19 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data);
 
-    const financeRegion = screen.getByRole("region", { name: "Tai chinh" });
+    const financeRegion = screen.getByRole("region", {
+      name: viName("dong tien chi phi tong quan"),
+    });
 
-    expect(within(financeRegion).getByText("Tai chinh han che quyen")).toBeInTheDocument();
     expect(
-      within(financeRegion).getByText("Test user cannot view finance in this scope."),
+      within(financeRegion).getByText(
+        viText("dong tien chi phi bi gioi han quyen"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(financeRegion).getByText(
+        "Test user cannot view finance in this scope.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("9,999,000,000 VND")).not.toBeInTheDocument();
   });
@@ -734,22 +1136,26 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data);
 
     const openButton = screen.getAllByRole("button", {
-      name: `Xem chi tiet ${selectedItem.title}`,
+      name: viName(`xem chi tiet ${selectedItem.title}`),
     })[0];
 
     fireEvent.click(openButton);
 
     const panel = screen.getByRole("dialog", {
-      name: "Chi tiet nguon dieu hanh",
+      name: viName("chi tiet nguon dieu hanh"),
     });
 
-    expect(within(panel).getByRole("heading", { name: selectedItem.title })).toBeInTheDocument();
-    expect(within(panel).getByText(selectedItem.sourceType)).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("heading", { name: selectedItem.title }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getAllByText(viText("de xuat")).length,
+    ).toBeGreaterThan(0);
     expect(within(panel).getByText(selectedItem.sourceId)).toBeInTheDocument();
     expect(within(panel).getByText(selectedItem.status)).toBeInTheDocument();
 
     const closeButton = within(panel).getByRole("button", {
-      name: "Dong panel chi tiet",
+      name: viName("dong panel chi tiet"),
     });
     await waitFor(() => expect(closeButton).toHaveFocus());
   });
@@ -766,20 +1172,32 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     fireEvent.click(
       screen.getAllByRole("button", {
-        name: `Xem chi tiet ${selectedRisk.title}`,
+        name: viName(`xem chi tiet ${selectedRisk.title}`),
       })[0],
     );
 
     const panel = screen.getByRole("dialog", {
-      name: "Chi tiet nguon dieu hanh",
+      name: viName("chi tiet nguon dieu hanh"),
     });
 
-    expect(within(panel).getByRole("heading", { name: selectedRisk.title })).toBeInTheDocument();
-    expect(within(panel).getByText("Ma tran risk")).toBeInTheDocument();
-    expect(within(panel).getByText(selectedRisk.likelihoodLabel)).toBeInTheDocument();
-    expect(within(panel).getAllByText(selectedRisk.impactLabel).length).toBeGreaterThan(0);
-    expect(within(panel).getByText(selectedRisk.nextAction)).toBeInTheDocument();
-    expect(within(panel).getByText(selectedRisk.categoryLabel)).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("heading", { name: selectedRisk.title }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(viText("ma tran rui ro")),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(selectedRisk.likelihoodLabel),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getAllByText(selectedRisk.impactLabel).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(panel).getByText(selectedRisk.nextAction),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(selectedRisk.categoryLabel),
+    ).toBeInTheDocument();
   });
 
   it("renders enriched drill-down metadata, linked records, actions and timeline", async () => {
@@ -858,31 +1276,38 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     fireEvent.click(
       screen.getAllByRole("button", {
-        name: `Xem chi tiet ${selectedItem.title}`,
+        name: viName(`xem chi tiet ${selectedItem.title}`),
       })[0],
     );
 
     const panel = screen.getByRole("dialog", {
-      name: "Chi tiet nguon dieu hanh",
+      name: viName("chi tiet nguon dieu hanh"),
     });
 
-    expect(within(panel).getByText("SCOPE_DETAIL_SENTINEL")).toBeInTheDocument();
-    expect(within(panel).getByText("LINKED_RECORD_SENTINEL")).toBeInTheDocument();
-    expect(within(panel).getByText("ACTION_DENIED_SENTINEL")).toBeInTheDocument();
+    expect(
+      within(panel).getByText("SCOPE_DETAIL_SENTINEL"),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText("LINKED_RECORD_SENTINEL"),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText("ACTION_DENIED_SENTINEL"),
+    ).toBeInTheDocument();
     expect(within(panel).getByText("TIMELINE_SENTINEL")).toBeInTheDocument();
     expect(within(panel).getByText("AUDIT_SENTINEL")).toBeInTheDocument();
-    expect(within(panel).getByRole("link", { name: "Mo nguon" })).toHaveAttribute(
-      "href",
-      "/proposals/drilldown-source",
-    );
-    expect(within(panel).getByRole("link", { name: "Mo record LINKED_RECORD_SENTINEL" })).toHaveAttribute(
-      "href",
-      "/projects/demo-project-riverside",
-    );
-    expect(within(panel).getByRole("link", { name: "Thuc hien ACTION_LINK_SENTINEL" })).toHaveAttribute(
-      "href",
-      "/meetings/action-target",
-    );
+    expect(
+      within(panel).getByRole("link", { name: viName("mo nguon") }),
+    ).toHaveAttribute("href", "/proposals/drilldown-source");
+    expect(
+      within(panel).getByRole("link", {
+        name: viName("mo ban ghi LINKED_RECORD_SENTINEL"),
+      }),
+    ).toHaveAttribute("href", "/projects/demo-project-riverside");
+    expect(
+      within(panel).getByRole("link", {
+        name: viName("thuc hien ACTION_LINK_SENTINEL"),
+      }),
+    ).toHaveAttribute("href", "/meetings/action-target");
   });
 
   it("does not open drill-down when the DTO denies drill-down permission", async () => {
@@ -905,13 +1330,21 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data);
 
     expect(
-      screen.getByText("Khong co quyen drill-down nguon dieu hanh trong scope hien tai."),
+      screen.getByText(
+        viText(
+          "khong co quyen xem chi tiet nguon dieu hanh trong pham vi hien tai",
+        ),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: `Xem chi tiet ${selectedItem.title}` }),
+      screen.queryByRole("button", {
+        name: viName(`xem chi tiet ${selectedItem.title}`),
+      }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("dialog", { name: "Chi tiet nguon dieu hanh" }),
+      screen.queryByRole("dialog", {
+        name: viName("chi tiet nguon dieu hanh"),
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -960,18 +1393,30 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data);
 
     expect(
-      screen.getByText("Khong co quyen xem item uu tien trong scope hien tai."),
+      screen.getByText(
+        viText("khong co quyen xem viec uu tien trong pham vi hien tai"),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Khong co quyen xem deadline trong scope hien tai."),
+      screen.getByText(
+        viText("khong co quyen xem han xu ly trong pham vi hien tai"),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Khong co quyen xem quyet dinh trong scope hien tai."),
+      screen.getByText(
+        viText("khong co quyen xem quyet dinh trong pham vi hien tai"),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Khong co quyen xem lich hop trong scope hien tai."),
+      screen.getByText(
+        viText("khong co quyen xem lich hop trong pham vi hien tai"),
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Không có quyền xem risk trong scope hiện tại.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        viText("khong co quyen xem rui ro trong pham vi hien tai"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("keeps priority queue unique and labels risk/deadline priority accurately", async () => {
@@ -1014,7 +1459,7 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const overdueDeadline = {
       ...approval,
       id: "overdue-deadline",
-      reason: "Overdue deadline sentinel",
+      reason: "Quá hạn deadline sentinel",
       sourceId: "overdue-deadline-source",
       sourceType: "executive_action" as const,
       title: "OVERDUE_DEADLINE_SENTINEL",
@@ -1064,13 +1509,19 @@ describe("CommandCenterDashboard executive dashboard", () => {
 
     renderDashboard(data);
 
-    const priorityQueue = screen.getByRole("region", { name: "Priority Queue" });
+    const priorityQueue = screen.getByRole("region", {
+      name: viName("viec uu tien"),
+    });
 
     expect(
       within(priorityQueue).getAllByText("DUPLICATE_SOURCE_SENTINEL"),
     ).toHaveLength(1);
-    expect(within(priorityQueue).getAllByText("Trung bình").length).toBeGreaterThan(0);
-    expect(within(priorityQueue).getByText("Qua han")).toBeInTheDocument();
+    expect(
+      within(priorityQueue).getAllByText("Trung bình").length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(priorityQueue).getAllByText(viText("qua han")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps unsafe drill-down hrefs read-only and closes with Escape", async () => {
@@ -1099,26 +1550,30 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data);
 
     const openButton = screen.getAllByRole("button", {
-      name: `Xem chi tiet ${selectedItem.title}`,
+      name: viName(`xem chi tiet ${selectedItem.title}`),
     })[0];
 
     openButton.focus();
     fireEvent.click(openButton);
 
     const panel = screen.getByRole("dialog", {
-      name: "Chi tiet nguon dieu hanh",
+      name: viName("chi tiet nguon dieu hanh"),
     });
     const closeButton = within(panel).getByRole("button", {
-      name: "Dong panel chi tiet",
+      name: viName("dong panel chi tiet"),
     });
 
     await waitFor(() => expect(closeButton).toHaveFocus());
-    expect(within(panel).queryByRole("link", { name: "Mo nguon" })).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("link", { name: "Mo nguon" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.keyDown(panel, { key: "Escape" });
 
     expect(
-      screen.queryByRole("dialog", { name: "Chi tiet nguon dieu hanh" }),
+      screen.queryByRole("dialog", {
+        name: viName("chi tiet nguon dieu hanh"),
+      }),
     ).not.toBeInTheDocument();
     await waitFor(() => expect(openButton).toHaveFocus());
   });
@@ -1133,7 +1588,9 @@ describe("CommandCenterDashboard executive dashboard", () => {
     const firstItem = data.approvalCenter.tabs[0]?.items[0];
 
     if (!firstItem) {
-      throw new Error("Expected approval center queue item for leadership user");
+      throw new Error(
+        "Expected approval center queue item for leadership user",
+      );
     }
 
     data.approvalCenter = {
@@ -1168,7 +1625,8 @@ describe("CommandCenterDashboard executive dashboard", () => {
                   overdue: {
                     daysOverdue: 4,
                     isOverdue: true,
-                    nextAction: "Kiem tra escalation queue va nang cap theo policy.",
+                    nextAction:
+                      "Kiem tra escalation queue va nang cap theo policy.",
                     ownerLabel: "owner-queue",
                     reason: "Qua han 4 ngay theo Policy queue sentinel.",
                     severity: "critical",
@@ -1187,41 +1645,64 @@ describe("CommandCenterDashboard executive dashboard", () => {
     renderDashboard(data, "executive-approvals");
 
     expect(screen.getByRole("main")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Approval Center" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Truc 1/ })).toHaveAttribute(
+    expect(
+      screen.getByRole("heading", { name: /Trung T.m Ph. Duy.t/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: viName("truc 1") })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("region", { name: "Approval queue Truc 1" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: viName("hang cho phe duyet truc 1") }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Ho so / Van ban").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Tai chinh / Chi").length).toBeGreaterThan(0);
     expect(screen.getAllByText("critical").length).toBeGreaterThan(0);
-    expect(screen.getByText("Owner: record-owner-queue")).toBeInTheDocument();
-    expect(screen.getByText("Approver: reviewer-queue")).toBeInTheDocument();
-    expect(screen.getByText("Risk: critical")).toBeInTheDocument();
-    expect(screen.getByText("Policy: Policy queue sentinel")).toBeInTheDocument();
-    expect(screen.getByText("Tai chinh han che quyen")).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("nguoi phu trach record owner queue")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("nguoi duyet reviewer queue")),
+    ).toBeInTheDocument();
+    expect(screen.getByText(viText("rui ro critical"))).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("chinh sach policy queue sentinel")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("tai chinh bi gioi han quyen")),
+    ).toBeInTheDocument();
     expect(screen.queryByText("9,999,000,000 VND")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: `Mo chi tiet ${firstItem.title}` }),
+      screen.getByRole("link", {
+        name: viName(`mo chi tiet ${firstItem.title}`),
+      }),
     ).toHaveAttribute("href", "/proposals/approval-center-test");
     expect(
-      screen.getAllByText(/Kiem tra escalation queue va nang cap theo policy\./).length,
+      screen.getAllByText(/Kiem tra escalation queue va nang cap theo policy\./)
+        .length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText("Escalation: long_overdue - queued").length).toBeGreaterThan(0);
-    expect(screen.getByText("Targets: assistant-queue")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /approve|reject|duyet|tu choi/i })).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText(viText("leo thang long overdue")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(viText("nguoi nhan assistant queue")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /approve|reject|duyet|tu choi/i }),
+    ).not.toBeInTheDocument();
 
-    fireEvent.keyDown(screen.getByRole("tab", { name: /Truc 1/ }), {
+    fireEvent.keyDown(screen.getByRole("tab", { name: viName("truc 1") }), {
       key: "ArrowRight",
     });
 
-    expect(screen.getByRole("tab", { name: /Truc 2/ })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: viName("truc 2") })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: /Truc 2/ })).toHaveFocus();
-    expect(screen.getByText("Placeholder MVP")).toBeInTheDocument();
-    expect(screen.getByText(/Chua co flow chi tiet cho Truc 2/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: viName("truc 2") })).toHaveFocus();
+    expect(screen.getByText(viText("man giu cho mvp"))).toBeInTheDocument();
+    expect(
+      screen.getByText(viText("chua co luong chi tiet cho truc 2")),
+    ).toBeInTheDocument();
   });
 });

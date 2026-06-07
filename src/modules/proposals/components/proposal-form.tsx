@@ -83,6 +83,28 @@ export function ProposalForm({
           Han xu ly
           <input className={fieldClass} name="dueDate" type="date" />
         </label>
+        <fieldset className="space-y-3 rounded-md border border-slate-200 p-3 md:col-span-2">
+          <legend className="px-1 text-sm font-semibold text-slate-700">
+            File dinh kem
+          </legend>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              Ten file
+              <input className={fieldClass} name="attachmentName" placeholder="VD: Ho so trinh ky.pdf" />
+            </label>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              URL file
+              <input className={fieldClass} name="attachmentUrl" placeholder="https://..." type="url" />
+            </label>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              Document ID
+              <input className={fieldClass} name="attachmentDocumentId" placeholder="document-id neu da co" />
+            </label>
+          </div>
+          <p className="text-xs text-slate-500">
+            MVP chi luu metadata file; upload binary that se duoc bo sung sau.
+          </p>
+        </fieldset>
         {canCreateOnBehalf ? (
           <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
             Tao thay lanh dao

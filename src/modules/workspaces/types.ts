@@ -6,13 +6,20 @@ import type {
   ExecutiveDashboardScope,
   ExecutiveDashboardSourceCounts,
   ExecutiveDashboardSourceItem,
+  ExecutiveDashboardTone,
+  ExecutiveFinancialSummary,
+  ExecutiveRiskMap,
 } from "@/modules/dashboard/types";
 import type { Document } from "@/modules/documents/types";
 import type { LegalStep } from "@/modules/legal/types";
 import type { Decision, Meeting } from "@/modules/meetings/types";
 import type { Project } from "@/modules/projects/types";
 import type { PermissionAction } from "@/lib/permissions/can";
-import type { LeadershipDelegation, RolePermissionCatalog, ScopeAssignment } from "@/modules/settings/types";
+import type {
+  LeadershipDelegation,
+  RolePermissionCatalog,
+  ScopeAssignment,
+} from "@/modules/settings/types";
 import type { Task } from "@/modules/tasks/types";
 import type { AuditLog, ProjectMembership, User } from "@/modules/users/types";
 
@@ -94,6 +101,59 @@ export type PrivateWorkspaceSectionItem = ExecutiveDashboardSourceItem & {
   readOnlyReason?: string;
 };
 
+export type PrivateWorkspacePanelState =
+  | "available"
+  | "empty"
+  | "no_permission";
+
+export type PrivateWorkspaceMetric = {
+  id: string;
+  label: string;
+  value: number | string;
+  tone: ExecutiveDashboardTone;
+  helper?: string;
+};
+
+export type PrivateWorkspacePermissionOverviewItem = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  reason: string;
+  tone: ExecutiveDashboardTone;
+  actionKey?: PermissionAction;
+};
+
+export type PrivateWorkspacePermissionOverview = {
+  state: PrivateWorkspacePanelState;
+  items: PrivateWorkspacePermissionOverviewItem[];
+  reason?: string;
+};
+
+export type PrivateWorkspaceResourceProgress = {
+  state: PrivateWorkspacePanelState;
+  items: PrivateWorkspaceMetric[];
+  reason?: string;
+};
+
+export type PrivateWorkspaceProjectCost = {
+  state: PrivateWorkspacePanelState;
+  financialSummary: ExecutiveFinancialSummary;
+  items: PrivateWorkspaceSectionItem[];
+  reason?: string;
+};
+
+export type PrivateWorkspaceWorkflowChecklist = {
+  state: PrivateWorkspacePanelState;
+  items: PrivateWorkspaceSectionItem[];
+  reason?: string;
+};
+
+export type PrivateWorkspaceProfessionalApprovals = {
+  state: PrivateWorkspacePanelState;
+  items: PrivateWorkspaceSectionItem[];
+  reason?: string;
+};
+
 export type PrivateWorkspaceAction = {
   id: string;
   label: string;
@@ -159,6 +219,13 @@ export type ExecutivePrivateWorkspaceData = {
   variant: ExecutivePrivateWorkspaceVariant;
   permissions: PrivateWorkspacePermissions;
   kpis: ExecutiveDashboardKpi[];
+  financialSummary?: ExecutiveFinancialSummary;
+  riskMap?: ExecutiveRiskMap;
+  permissionOverview?: PrivateWorkspacePermissionOverview;
+  resourceProgress?: PrivateWorkspaceResourceProgress;
+  projectCost?: PrivateWorkspaceProjectCost;
+  workflowChecklist?: PrivateWorkspaceWorkflowChecklist;
+  professionalApprovals?: PrivateWorkspaceProfessionalApprovals;
   priorityItems: PrivateWorkspaceSectionItem[];
   assignedProjects: PrivateWorkspaceSectionItem[];
   approvalItems: PrivateWorkspaceSectionItem[];

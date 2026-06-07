@@ -8,6 +8,25 @@ import type { ApprovalCenterDetailData } from "@/modules/executive/types";
 const detail: ApprovalCenterDetailData = {
   backHref: "/command-center?view=executive-approvals&scopeId=scope-a",
   generatedAt: "2026-05-29T00:00:00.000Z",
+  attachments: [
+    {
+      helper: "Document attachment",
+      href: "/documents/document-visible",
+      id: "attachment-document",
+      name: "Tai lieu trong scope.pdf",
+      source: "document",
+      state: "linked",
+      uploadedAt: "2026-05-20T00:00:00.000Z",
+      uploadedBy: "submitter-01",
+    },
+    {
+      helper: "Khong co quyen xem file dinh kem nay trong scope hien tai",
+      id: "attachment-hidden",
+      name: "File bi gioi han quyen",
+      source: "document",
+      state: "no_permission",
+    },
+  ],
   history: [
     {
       actorId: "submitter-01",
@@ -100,9 +119,18 @@ const detail: ApprovalCenterDetailData = {
   },
   permissions: {
     availableActions: [],
+    canCreateDecisionFromApproval: true,
     canView: true,
     canViewAudit: true,
     canViewFinance: false,
+  },
+  decisionEntryPoint: {
+    canCreate: true,
+    projectId: "demo-project-riverside",
+    selectedScopeId: "scope-a",
+    sourceId: "finance-secret",
+    sourceType: "approval",
+    titleSuggestion: "Decision after approval: Approval detail title",
   },
   policy: {
     approvalLevel: "CEO",
@@ -116,6 +144,8 @@ const detail: ApprovalCenterDetailData = {
   },
   requestSummary: {
     dueDate: "2026-05-30",
+    attachmentCount: 2,
+    deadlineCompliance: "valid",
     financialAccess: "no_permission",
     module: "finance",
     ownerName: "owner-01",
@@ -147,14 +177,15 @@ describe("ApprovalRequestDetail", () => {
     expect(
       screen.getByRole("heading", { name: "Approval detail title" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Request summary" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Policy" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Overdue and escalation" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Linked sources" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "History and audit" })).toBeInTheDocument();
-    expect(screen.getAllByText("Tai chinh han che quyen").length).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: /T.m t.t y.u c.u/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Ch.nh s.ch/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Qu.* h.n v. leo thang/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /File .{0,3}nh k.m/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Ngu.n li.n quan/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /L.ch s. v. ki.m to.n/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/T.i ch.nh b. gi.i h.n quy.n/).length).toBeGreaterThan(0);
     expect(screen.queryByText("9,999,000,000")).not.toBeInTheDocument();
-    expect(screen.getByText("Version 1")).toBeInTheDocument();
+    expect(screen.getByText(/Phi.n b.n 1/)).toBeInTheDocument();
     expect(screen.getByText("draft -> in_review")).toBeInTheDocument();
     expect(screen.getByText("proposal.approved")).toBeInTheDocument();
     expect(screen.getByText("Linked source: Project demo-project-riverside")).toBeInTheDocument();
@@ -165,12 +196,18 @@ describe("ApprovalRequestDetail", () => {
     expect(screen.getByText("Kiem tra escalation queue va nang cap theo policy.")).toBeInTheDocument();
     expect(screen.getByText("mock-notification-01")).toBeInTheDocument();
     expect(screen.getByText("assistant-01")).toBeInTheDocument();
+    expect(screen.getByText("Tai lieu trong scope.pdf")).toBeInTheDocument();
+    expect(screen.getByText("File bi gioi han quyen")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /M. file Tai lieu trong scope.pdf/ })).toHaveAttribute(
+      "href",
+      "/documents/document-visible",
+    );
 
-    const sources = screen.getByRole("region", { name: "Linked sources" });
+    const sources = screen.getByRole("region", { name: /Ngu.n li.n quan/i });
 
     expect(
       within(sources).getByRole("link", {
-        name: "Mo source Project demo-project-riverside",
+        name: /M. ngu.n Project demo-project-riverside/,
       }),
     ).toHaveAttribute("href", "/projects/demo-project-riverside");
     expect(within(sources).getByText("Placeholder read-only")).toBeInTheDocument();
@@ -201,7 +238,7 @@ describe("ApprovalRequestDetail", () => {
       />,
     );
 
-    expect(screen.getByText("Generated -")).toBeInTheDocument();
+    expect(screen.getByText(/T.o l.c -/)).toBeInTheDocument();
     expect(screen.getByText("submitter-01 - -")).toBeInTheDocument();
   });
 
@@ -219,7 +256,7 @@ describe("ApprovalRequestDetail", () => {
       />,
     );
 
-    expect(screen.getByText("Audit events bi an theo quyen.")).toBeInTheDocument();
+    expect(screen.getByText(/S. ki.n ki.m to.n b. .n theo quy.n/)).toBeInTheDocument();
     expect(screen.queryByText("proposal.approved")).not.toBeInTheDocument();
     expect(screen.queryByText("oldValue")).not.toBeInTheDocument();
     expect(screen.queryByText("newValue")).not.toBeInTheDocument();
@@ -253,7 +290,7 @@ describe("ApprovalRequestDetail", () => {
     );
 
     expect(
-      screen.getByRole("region", { name: "AI Approval Assistant" }),
+      screen.getByRole("region", { name: /Tr. l. ph. duy.t AI|AI Approval Assistant/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("AI draft approval summary")).toBeInTheDocument();
   });
@@ -314,7 +351,7 @@ describe("ApprovalRequestDetail", () => {
       />,
     );
 
-    const panel = screen.getByRole("region", { name: "Approval actions" });
+    const panel = screen.getByRole("region", { name: /H.nh .{1,2}ng ph. duy.t/ });
 
     expect(within(panel).getByRole("button", { name: "Duyet approval" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Tu choi" })).toBeInTheDocument();
@@ -323,9 +360,53 @@ describe("ApprovalRequestDetail", () => {
     expect(within(panel).getByRole("button", { name: "Yeu cau hop" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Tam giu" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Huy approval" })).toBeInTheDocument();
-    expect(within(panel).getByLabelText("Ly do tu choi")).toBeRequired();
-    expect(within(panel).getByLabelText("Ly do tra lai")).toBeRequired();
-    expect(within(panel).getByLabelText("Xac nhan tu choi")).toBeRequired();
-    expect(within(panel).getByLabelText("Xac nhan huy approval")).toBeRequired();
+    expect(within(panel).getByLabelText(/L. do t. ch.i/)).toBeRequired();
+    expect(within(panel).getByLabelText(/L. do tr. l.i/)).toBeRequired();
+    expect(within(panel).getByLabelText(/X.c nh.n t. ch.i/)).toBeRequired();
+    expect(within(panel).getByLabelText(/X.c nh.n h.y/)).toBeRequired();
+  });
+
+  it("renders a separate create-decision entry point from approval without leaking finance payload", () => {
+    render(<ApprovalRequestDetail detail={detail} />);
+
+    const panel = screen.getByRole("region", {
+      name: /Tao quyet dinh chinh thuc/i,
+    });
+
+    expect(panel).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: /Tao quyet dinh/i }),
+    ).toBeInTheDocument();
+    expect(panel.querySelector('input[name="sourceType"]')).toHaveValue(
+      "approval",
+    );
+    expect(panel.querySelector('input[name="sourceId"]')).toHaveValue(
+      "finance-secret",
+    );
+    expect(panel.querySelector('input[name="projectId"]')).toHaveValue(
+      "demo-project-riverside",
+    );
+    expect(panel.querySelector('input[name="scopeId"]')).toHaveValue("scope-a");
+    expect(panel.textContent).not.toContain("9,999,000,000");
+    expect(panel.textContent).not.toContain("9999000000");
+  });
+
+  it("does not render the create-decision entry point when the DTO denies permission", () => {
+    render(
+      <ApprovalRequestDetail
+        detail={{
+          ...detail,
+          decisionEntryPoint: undefined,
+          permissions: {
+            ...detail.permissions,
+            canCreateDecisionFromApproval: false,
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("region", { name: /Tao quyet dinh chinh thuc/i }),
+    ).not.toBeInTheDocument();
   });
 });

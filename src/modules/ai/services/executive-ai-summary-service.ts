@@ -173,7 +173,7 @@ function buildPrompt(
     "Chi dung context va citation duoi day; neu thieu context hay noi ro thieu du lieu.",
     "Khong dua vao ban tom tat bat ky ban ghi nao ngoai danh sach citation duoc phep.",
     "",
-    "Context da loc quyen:",
+    "Ngữ cảnh đã lọc quyền:",
     source.sourceText,
     "",
     "Citation duoc phep:",

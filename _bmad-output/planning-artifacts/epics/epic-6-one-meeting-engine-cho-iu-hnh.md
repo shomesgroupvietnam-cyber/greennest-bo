@@ -1,8 +1,8 @@
-# Epic 6: One Meeting Engine Cho Điều Hành
+# Epic 6: Bộ Máy Cuộc Họp Thống Nhất Cho Điều Hành
 
 Người có quyền có thể tạo, xem, lọc và theo dõi cuộc họp qua một Meeting System chung với nhiều meeting type, visibility/scope động, external participants, attachments, agenda, minutes, AI summary draft, follow-up actions, related tasks, related approvals, decision tracking và audit.
 
-## Story 6.1: Meeting Engine Types, Scope Và Repository Contract
+## Story 6.1: Loại Cuộc Họp, Phạm Vi Và Hợp Đồng Repository
 
 **Requirements Covered:** FR-070, FR-071, FR-072, FR-074, FR-102, FR-103, FR-104, FR-105, FR-106, FR-107, FR-108, FR-109, FR-118, FR-119, NFR-008, NFR-013.
 
@@ -33,7 +33,7 @@ AC3:
 
 **Dependencies:** Story 1.2.
 
-## Story 6.2: Meeting List, Filters Và Executive Visibility
+## Story 6.2: Danh Sách Cuộc Họp, Bộ Lọc Và Hiển Thị Cho Lãnh Đạo
 
 **Requirements Covered:** FR-110, FR-111, FR-112, FR-113, NFR-001, NFR-013, UX-DR24, UX-DR25, UX-DR29.
 
@@ -64,7 +64,7 @@ AC3:
 
 **Dependencies:** Story 6.1.
 
-## Story 6.3: Tạo Và Sửa Meeting Với Related Records
+## Story 6.3: Tạo Và Sửa Cuộc Họp Với Bản Ghi Liên Quan
 
 **Requirements Covered:** FR-073, FR-075, FR-114, NFR-005, NFR-006, UX-DR23.
 
@@ -95,7 +95,7 @@ AC3:
 
 **Dependencies:** Story 6.1, Story 6.2.
 
-## Story 6.4: Minutes, Attachments Và AI Summary Draft
+## Story 6.4: Biên Bản, Tệp Đính Kèm Và Bản Nháp Tóm Tắt AI
 
 **Requirements Covered:** FR-076, FR-077, FR-108, FR-117, NFR-006, NFR-009, NFR-010, UX-DR16, UX-DR34.
 
@@ -126,7 +126,7 @@ AC3:
 
 **Dependencies:** Story 6.3.
 
-## Story 6.5: Follow-Up Actions Liên Kết Related Tasks
+## Story 6.5: Hành Động Theo Dõi Liên Kết Việc Liên Quan
 
 **Requirements Covered:** FR-078, FR-115, NFR-005, NFR-006.
 
@@ -157,7 +157,7 @@ AC3:
 
 **Dependencies:** Story 6.3.
 
-## Story 6.6: Decision Tracking Sau Họp
+## Story 6.6: Theo Dõi Quyết Định Sau Họp
 
 **Requirements Covered:** FR-079, FR-116, FR-117, NFR-006, UX-DR15.
 

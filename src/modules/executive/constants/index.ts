@@ -175,35 +175,35 @@ export const EXECUTIVE_PAGE_NAV_ITEMS: Array<{
   label: string;
   href: string;
 }> = [
-  { key: "dashboard", label: "Dashboard lanh dao", href: "/executive" },
+  { key: "dashboard", label: "Dashboard Lãnh Đạo", href: "/executive" },
   {
     key: "investment-plans",
-    label: "Ke hoach dau tu",
+    label: "Kế hoạch đầu tư",
     href: "/executive/investment-plans",
   },
   {
     key: "leadership-team",
-    label: "Danh sach lanh dao",
+    label: "Danh sách lãnh đạo",
     href: "/executive/leadership-team",
   },
   {
     key: "directives",
-    label: "Chi dao dieu hanh",
+    label: "Chỉ đạo điều hành",
     href: "/executive/directives",
   },
   {
     key: "meetings",
-    label: "Hop lanh dao",
+    label: "Họp lãnh đạo",
     href: "/executive/meetings",
   },
   {
     key: "approvals",
-    label: "Phe duyet",
+    label: "Phê duyệt",
     href: "/executive/approvals",
   },
   {
     key: "decision-log",
-    label: "Decision & Assignment Center",
+    label: "Trung Tâm Quyết Định Và Giao Việc",
     href: "/executive/decisions",
   },
 ];

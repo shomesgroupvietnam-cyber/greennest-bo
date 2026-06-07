@@ -117,9 +117,16 @@ export type MeetingRepository = {
   listDecisionAssignments(
     filters?: DecisionAssignmentListFilters,
   ): Promise<DecisionAssignment[]>;
+  getDecisionAssignment?(
+    assignmentId: string,
+  ): Promise<DecisionAssignment | undefined>;
   createDecisionAssignments(
     assignments: DecisionAssignment[],
   ): Promise<DecisionAssignment[]>;
+  updateDecisionAssignment?(
+    assignmentId: string,
+    patch: Partial<DecisionAssignment>,
+  ): Promise<DecisionAssignment>;
   deleteDecisionAssignments(assignmentIds: string[]): Promise<void>;
 };
 
@@ -364,6 +371,51 @@ export class JsonMeetingRepository implements MeetingRepository {
     });
 
     return normalizedAssignments;
+  }
+
+  async getDecisionAssignment(assignmentId: string) {
+    const store = await this.readStore();
+    const assignment = store.decisionAssignments.find(
+      (item) => item.id === assignmentId,
+    );
+
+    return assignment ? normalizeDecisionAssignment(assignment) : undefined;
+  }
+
+  async updateDecisionAssignment(
+    assignmentId: string,
+    patch: Partial<DecisionAssignment>,
+  ) {
+    const store = await this.readStore();
+    const existingAssignment = store.decisionAssignments.find(
+      (assignment) => assignment.id === assignmentId,
+    );
+
+    if (!existingAssignment) {
+      throw new Error("Khong tim thay assignment cua decision.");
+    }
+
+    const normalizedAssignment = normalizeDecisionAssignment(existingAssignment);
+    const updatedAssignment = normalizeDecisionAssignment({
+      ...normalizedAssignment,
+      ...patch,
+      id: normalizedAssignment.id,
+      decisionId: normalizedAssignment.decisionId,
+      taskId: normalizedAssignment.taskId,
+      organizationId: normalizedAssignment.organizationId,
+      projectId: normalizedAssignment.projectId,
+      createdBy: normalizedAssignment.createdBy,
+      createdAt: normalizedAssignment.createdAt,
+    });
+
+    await this.writeStore({
+      ...store,
+      decisionAssignments: store.decisionAssignments.map((assignment) =>
+        assignment.id === assignmentId ? updatedAssignment : assignment,
+      ),
+    });
+
+    return updatedAssignment;
   }
 
   async deleteDecisionAssignments(assignmentIds: string[]) {
@@ -890,6 +942,39 @@ function decisionPatchToRow(patch: Partial<Decision>) {
   };
 }
 
+function decisionAssignmentPatchToRow(patch: Partial<DecisionAssignment>) {
+  return {
+    ...(patch.decisionId !== undefined
+      ? { decision_id: patch.decisionId }
+      : {}),
+    ...(patch.taskId !== undefined ? { task_id: patch.taskId ?? null } : {}),
+    ...(patch.organizationId !== undefined
+      ? { organization_id: patch.organizationId ?? null }
+      : {}),
+    ...(patch.projectId !== undefined ? { project_id: patch.projectId } : {}),
+    ...(patch.assigneeType !== undefined
+      ? { assignee_type: patch.assigneeType }
+      : {}),
+    ...(patch.assigneeId !== undefined
+      ? { assignee_id: patch.assigneeId ?? null }
+      : {}),
+    ...(patch.departmentId !== undefined
+      ? { department_id: patch.departmentId ?? null }
+      : {}),
+    ...(patch.title !== undefined ? { title: patch.title } : {}),
+    ...(patch.description !== undefined
+      ? { description: patch.description ?? null }
+      : {}),
+    ...(patch.kpi !== undefined ? { kpi: patch.kpi ?? null } : {}),
+    ...(patch.dueDate !== undefined ? { due_date: patch.dueDate ?? null } : {}),
+    ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
+    ...(patch.status !== undefined ? { status: patch.status } : {}),
+    ...(patch.createdBy !== undefined ? { created_by: patch.createdBy } : {}),
+    ...(patch.createdAt !== undefined ? { created_at: patch.createdAt } : {}),
+    ...(patch.updatedAt !== undefined ? { updated_at: patch.updatedAt } : {}),
+  };
+}
+
 export class SupabaseMeetingRepository implements MeetingRepository {
   async listMeetings(filters: MeetingListFilters = {}) {
     const supabase = await createSupabaseServerClient();
@@ -1211,6 +1296,40 @@ export class SupabaseMeetingRepository implements MeetingRepository {
     }
 
     return ((data ?? []) as DecisionAssignmentRow[]).map(toDecisionAssignment);
+  }
+
+  async getDecisionAssignment(assignmentId: string) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("decision_assignments")
+      .select("*")
+      .eq("id", assignmentId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data ? toDecisionAssignment(data as DecisionAssignmentRow) : undefined;
+  }
+
+  async updateDecisionAssignment(
+    assignmentId: string,
+    patch: Partial<DecisionAssignment>,
+  ) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("decision_assignments")
+      .update(decisionAssignmentPatchToRow(patch))
+      .eq("id", assignmentId)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return toDecisionAssignment(data as DecisionAssignmentRow);
   }
 
   async deleteDecisionAssignments(assignmentIds: string[]) {

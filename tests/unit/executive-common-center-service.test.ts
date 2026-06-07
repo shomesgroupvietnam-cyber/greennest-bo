@@ -161,7 +161,7 @@ describe("executive common center service", () => {
         daysOverdue: 4,
         isOverdue: true,
       }),
-      priorityLabel: "Escalation",
+      priorityLabel: "Leo thang",
       sourceId: "overdue-common-approval",
     });
   });

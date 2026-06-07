@@ -8,10 +8,12 @@ import {
   ExternalLink,
   FileText,
   Lock,
+  Paperclip,
 } from "lucide-react";
 import Link from "next/link";
 
 import type {
+  ApprovalDeadlineCompliance,
   ApprovalCenterAxisKey,
   ApprovalCenterAxisTab,
   ApprovalCenterData,
@@ -38,9 +40,16 @@ const priorityToneClasses: Record<ApprovalCenterPriority, string> = {
 };
 
 const financeLabels: Record<ApprovalCenterFinancialAccess, string> = {
-  allowed: "Tai chinh duoc xem",
-  no_permission: "Tai chinh han che quyen",
-  not_applicable: "Khong co du lieu tai chinh",
+  allowed: "Tài chính được xem",
+  no_permission: "Tài chính bị giới hạn quyền",
+  not_applicable: "Không có dữ liệu tài chính",
+};
+
+const deadlineComplianceLabels: Record<ApprovalDeadlineCompliance, string> = {
+  invalid: "Deadline khong hop le",
+  missing_required: "Thieu deadline",
+  not_applicable: "Khong can deadline",
+  valid: "Deadline hop le",
 };
 
 function escalationTargetSummary(item: ApprovalCenterQueueItem) {
@@ -66,13 +75,13 @@ export function ApprovalCenterNoAccessState() {
     <section className="space-y-5">
       <div className="rounded-lg border bg-white p-5 shadow-sm">
         <p className="text-sm font-semibold uppercase text-emerald-700">
-          Ban lanh dao
+          Ban lãnh đạo
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-950">
-          Approval Center
+          Trung Tâm Phê Duyệt
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Khong co quyen Approval Center trong scope hien tai.
+          Không có quyền xem Trung Tâm Phê Duyệt trong phạm vi hiện tại.
         </p>
       </div>
     </section>
@@ -102,10 +111,10 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
     item.financialAccess === "allowed" ? item.amountLabel : undefined;
   const policyLabel = item.policyLabel ?? item.escalation?.policyLabel;
   const metadata = [
-    item.ownerName ? `Owner: ${item.ownerName}` : undefined,
-    item.reviewerLabel ? `Approver: ${item.reviewerLabel}` : undefined,
-    item.riskLevel ? `Risk: ${item.riskLevel}` : undefined,
-    policyLabel ? `Policy: ${policyLabel}` : undefined,
+    item.ownerName ? `Người phụ trách: ${item.ownerName}` : undefined,
+    item.reviewerLabel ? `Người duyệt: ${item.reviewerLabel}` : undefined,
+    item.riskLevel ? `Rủi ro: ${item.riskLevel}` : undefined,
+    policyLabel ? `Chính sách: ${policyLabel}` : undefined,
   ].filter((detail): detail is string => Boolean(detail));
 
   return (
@@ -127,7 +136,7 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
             {item.title}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {item.projectName ?? item.scopeLabel} - Requester: {item.requester}
+            {item.projectName ?? item.scopeLabel} - Người yêu cầu: {item.requester}
           </p>
           {metadata.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
@@ -150,6 +159,9 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
           <span className="rounded-md bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700">
             {item.statusLabel}
           </span>
+          <span className="rounded-md bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+            {deadlineComplianceLabels[item.deadlineCompliance]}
+          </span>
         </div>
       </div>
 
@@ -167,27 +179,27 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
                   {item.overdue.severity}
                 </span>
                 <span className="text-xs font-semibold text-slate-600">
-                  Owner: {item.overdue.ownerLabel}
+                  Người phụ trách: {item.overdue.ownerLabel}
                 </span>
               </div>
               <p className="break-words text-slate-600">{item.overdue.reason}</p>
               <p className="break-words text-slate-700">
-                Next action: {item.overdue.nextAction}
+                Hành động tiếp theo: {item.overdue.nextAction}
               </p>
             </div>
           ) : null}
           {item.escalation?.required ? (
             <div className="space-y-1 text-xs text-slate-600">
               <p className="font-semibold text-red-700">
-                Escalation: {item.escalation.trigger}
+                Leo thang: {item.escalation.trigger}
                 {item.escalation.status ? ` - ${item.escalation.status}` : ""}
               </p>
               {targetSummary ? (
-                <p className="break-words">Targets: {targetSummary}</p>
+                <p className="break-words">Người nhận: {targetSummary}</p>
               ) : null}
               {item.escalation.notificationId ? (
                 <p className="break-words">
-                  Mock alert: {item.escalation.notificationId}
+                  Cảnh báo mẫu: {item.escalation.notificationId}
                 </p>
               ) : null}
             </div>
@@ -198,7 +210,11 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2.5 py-1">
           <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-          {item.sourceType === "proposal" ? "Proposal" : "Leadership queue"}
+          {item.sourceType === "proposal" ? "Đề xuất" : "Hàng chờ lãnh đạo"}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2.5 py-1">
+          <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+          {item.attachmentCount} file
         </span>
         <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2.5 py-1">
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -211,11 +227,11 @@ function QueueItem({ item }: { item: ApprovalCenterQueueItem }) {
         ) : null}
         {item.href ? (
           <Link
-            aria-label={`Mo chi tiet ${item.title}`}
+            aria-label={`Mở chi tiết ${item.title}`}
             className="ml-auto inline-flex items-center gap-1 rounded-md border px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-50"
             href={item.href}
           >
-            Mo chi tiet
+            Mở chi tiết
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
@@ -232,7 +248,7 @@ function PlaceholderPanel({ tab }: { tab: ApprovalCenterAxisTab }) {
           <ClipboardList className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
-          <p className="text-sm font-semibold text-slate-950">Placeholder MVP</p>
+          <p className="text-sm font-semibold text-slate-950">Màn giữ chỗ MVP</p>
           <p className="mt-1 text-sm text-slate-500">{tab.helper}</p>
         </div>
       </div>
@@ -302,22 +318,22 @@ export function ApprovalCenter({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase text-emerald-700">
-              Ban lanh dao
+              Ban lãnh đạo
             </p>
             <h1 className="mt-2 text-2xl font-semibold text-slate-950">
-              Approval Center
+              Trung Tâm Phê Duyệt
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              {data.scopeLabel || legacyScopeLabel || "Approval scope"} - {activeTab.total} items
+              {data.scopeLabel || legacyScopeLabel || "Phạm vi phê duyệt"} - {activeTab.total} mục
             </p>
           </div>
           <div className="rounded-lg border bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Generated {new Date(data.generatedAt).toLocaleString("vi-VN")}
+            Tạo lúc {new Date(data.generatedAt).toLocaleString("vi-VN")}
           </div>
         </div>
 
         <div
-          aria-label="Approval axes"
+          aria-label="Trục phê duyệt"
           className="mt-5 flex flex-wrap gap-2"
           role="tablist"
         >
@@ -358,7 +374,7 @@ export function ApprovalCenter({
           <div className="space-y-4">
             <CategorySummary tab={activeTab} />
             <div
-              aria-label={`Approval queue ${activeTab.label}`}
+              aria-label={`Hàng chờ phê duyệt ${activeTab.label}`}
               className="space-y-3"
               role="region"
             >
@@ -366,7 +382,7 @@ export function ApprovalCenter({
                 activeTab.items.map((item) => <QueueItem item={item} key={item.id} />)
               ) : (
                 <div className="rounded-lg border bg-white p-5 text-sm text-slate-500 shadow-sm">
-                  Khong co approval nao trong scope hien tai.
+                  Không có phê duyệt nào trong phạm vi hiện tại.
                 </div>
               )}
             </div>

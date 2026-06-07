@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import {
   AlertTriangle,
+  Banknote,
   Bot,
   BriefcaseBusiness,
   CalendarClock,
@@ -10,11 +11,14 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  Gauge,
+  KeyRound,
   Lock,
   ShieldCheck,
 } from "lucide-react";
 
 import { ExecutiveDrilldownPanel } from "@/modules/dashboard/components/executive-drilldown-panel";
+import { executiveSourceTypeLabel } from "@/modules/dashboard/source-labels";
 import type {
   ExecutiveDashboardSourceItem,
   ExecutiveDashboardTone,
@@ -95,6 +99,318 @@ function formatGeneratedAt(value: string) {
   }).format(parsed);
 }
 
+function formatVnd(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    currency: "VND",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
+}
+
+function PanelStateMessage({
+  icon,
+  reason,
+}: {
+  icon?: React.ReactNode;
+  reason?: string;
+}) {
+  return (
+    <p className="mt-3 flex items-start gap-2 rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+      {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
+      <span>{reason ?? "Chưa có dữ liệu trong phạm vi hiện tại."}</span>
+    </p>
+  );
+}
+
+function MetricTiles({
+  items,
+}: {
+  items: NonNullable<
+    ExecutivePrivateWorkspaceData["resourceProgress"]
+  >["items"];
+}) {
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => (
+        <div
+          className={`rounded-md border p-3 ${toneClasses[item.tone].bg} ${toneClasses[item.tone].border}`}
+          key={item.id}
+        >
+          <p className="text-xs font-semibold text-slate-600">{item.label}</p>
+          <p className="mt-2 break-words text-xl font-semibold text-slate-950">
+            {item.value}
+          </p>
+          {item.helper ? (
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              {item.helper}
+            </p>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FinancialSummaryPanel({
+  summary,
+}: {
+  summary: NonNullable<ExecutivePrivateWorkspaceData["financialSummary"]>;
+}) {
+  return (
+    <section
+      aria-label="Dòng tiền / Chi phí tổng quan"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Banknote className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">
+            Dòng tiền / Chi phí tổng quan
+          </h2>
+        </div>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+          {summary.state}
+        </span>
+      </div>
+
+      {summary.state === "no_permission" ? (
+        <PanelStateMessage
+          icon={<Lock className="h-4 w-4" aria-hidden="true" />}
+          reason={summary.reason}
+        />
+      ) : (
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-xs font-semibold text-emerald-800">
+              Tổng giá trị thấy được
+            </p>
+            <p className="mt-2 break-words text-xl font-semibold text-emerald-950">
+              {formatVnd(summary.visibleAmountTotal)}
+            </p>
+          </div>
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <p className="text-xs font-semibold text-blue-800">
+              Bản ghi có quyền
+            </p>
+            <p className="mt-2 text-xl font-semibold text-blue-950">
+              {summary.visibleRecordCount}
+            </p>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-600">Mức truy cập</p>
+            <p className="mt-2 text-xl font-semibold text-slate-950">
+              {summary.access}
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ResourceProgressPanel({
+  resourceProgress,
+}: {
+  resourceProgress: NonNullable<
+    ExecutivePrivateWorkspaceData["resourceProgress"]
+  >;
+}) {
+  return (
+    <section
+      aria-label="Tiến độ và resource vận hành"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Gauge className="h-4 w-4 text-blue-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">
+            Tiến độ và resource vận hành
+          </h2>
+        </div>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+          {resourceProgress.state}
+        </span>
+      </div>
+      {resourceProgress.items.length ? (
+        <MetricTiles items={resourceProgress.items} />
+      ) : (
+        <PanelStateMessage reason={resourceProgress.reason} />
+      )}
+    </section>
+  );
+}
+
+function RiskMapPanel({
+  riskMap,
+}: {
+  riskMap: NonNullable<ExecutivePrivateWorkspaceData["riskMap"]>;
+}) {
+  return (
+    <section
+      aria-label="Bản đồ rủi ro Chủ tịch"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">
+            Bản đồ rủi ro Chủ tịch
+          </h2>
+        </div>
+        <span className="rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-800">
+          {riskMap.total}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-md border border-red-200 bg-red-50 p-3">
+          <p className="text-xs font-semibold text-red-800">Risk trong scope</p>
+          <p className="mt-2 text-xl font-semibold text-red-950">
+            {riskMap.total}
+          </p>
+        </div>
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-semibold text-amber-800">
+            Dự án bị ảnh hưởng
+          </p>
+          <p className="mt-2 text-xl font-semibold text-amber-950">
+            {riskMap.affectedProjectCount}
+          </p>
+        </div>
+      </div>
+      {riskMap.categories.length ? (
+        <div className="mt-3 space-y-2">
+          {riskMap.categories.slice(0, 4).map((category) => (
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm"
+              key={category.categoryKey}
+            >
+              <span className="font-semibold text-slate-800">
+                {category.categoryLabel}
+              </span>
+              <span className="text-xs text-slate-600">
+                {category.count} risk - {category.affectedProjectCount} dự án
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <PanelStateMessage reason="Chưa có risk map trong phạm vi hiện tại." />
+      )}
+    </section>
+  );
+}
+
+function PermissionOverviewPanel({
+  permissionOverview,
+}: {
+  permissionOverview: NonNullable<
+    ExecutivePrivateWorkspaceData["permissionOverview"]
+  >;
+}) {
+  return (
+    <section
+      aria-label="Tổng quan phân quyền cấp cao"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-purple-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">
+            Tổng quan phân quyền cấp cao
+          </h2>
+        </div>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+          {permissionOverview.state}
+        </span>
+      </div>
+      <div className="mt-3 space-y-2">
+        {permissionOverview.items.map((item) => (
+          <div
+            className={`rounded-md border p-3 ${toneClasses[item.tone].bg} ${toneClasses[item.tone].border}`}
+            key={item.id}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-slate-900">{item.label}</p>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                {item.enabled ? "Được phép" : "Không có quyền"}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              {item.reason}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProjectCostPanel({
+  projectCost,
+}: {
+  projectCost: NonNullable<ExecutivePrivateWorkspaceData["projectCost"]>;
+}) {
+  const summary = projectCost.financialSummary;
+  const noPermissionReason =
+    summary.state === "no_permission" ? summary.reason : projectCost.reason;
+
+  return (
+    <section
+      aria-label="Cost dự án"
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Banknote className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-slate-950">Cost dự án</h2>
+        </div>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+          {projectCost.state}
+        </span>
+      </div>
+      {projectCost.state === "no_permission" ||
+      summary.state === "no_permission" ? (
+        <PanelStateMessage
+          icon={<Lock className="h-4 w-4" aria-hidden="true" />}
+          reason={noPermissionReason}
+        />
+      ) : (
+        <>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-xs font-semibold text-emerald-800">
+                Tổng cost thấy được
+              </p>
+              <p className="mt-2 break-words text-xl font-semibold text-emerald-950">
+                {formatVnd(summary.visibleAmountTotal)}
+              </p>
+            </div>
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+              <p className="text-xs font-semibold text-blue-800">
+                Bản ghi cost
+              </p>
+              <p className="mt-2 text-xl font-semibold text-blue-950">
+                {summary.visibleRecordCount}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold text-slate-600">
+                Dự án có quyền
+              </p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">
+                {projectCost.items.length}
+              </p>
+            </div>
+          </div>
+          {projectCost.reason ? (
+            <PanelStateMessage reason={projectCost.reason} />
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
 function WorkspaceItem({
   canDrillDown,
   item,
@@ -134,10 +450,10 @@ function WorkspaceItem({
           {item.title}
         </span>
         <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-          {item.owner ? <span>Owner: {item.owner}</span> : null}
-          {item.deadline ? <span>Deadline: {item.deadline}</span> : null}
-          {item.projectId ? <span>Project: {item.projectId}</span> : null}
-          {item.reason ? <span>Reason: {item.reason}</span> : null}
+          {item.owner ? <span>Người phụ trách: {item.owner}</span> : null}
+          {item.deadline ? <span>Hạn xử lý: {item.deadline}</span> : null}
+          {item.projectId ? <span>Dự án: {item.projectId}</span> : null}
+          {item.reason ? <span>Lý do: {item.reason}</span> : null}
         </span>
         {item.readOnlyReason ? (
           <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-600">
@@ -167,7 +483,7 @@ function WorkspaceItem({
 
   return (
     <button
-      aria-label={`Xem chi tiet ${item.title}`}
+      aria-label={`Xem chi tiết ${item.title}`}
       className={`flex min-h-24 w-full gap-3 rounded-md border p-3 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${toneClasses[item.tone].border}`}
       onClick={() => onSelect(item)}
       type="button"
@@ -193,7 +509,10 @@ function WorkspaceSection({
   canDrillDown: boolean;
 }) {
   return (
-    <section aria-label={ariaLabel} className="rounded-md border bg-white p-4 shadow-sm">
+    <section
+      aria-label={ariaLabel}
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-950">{title}</h2>
         <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
@@ -221,17 +540,13 @@ function WorkspaceSection({
 }
 
 const aiSummaryStatusLabels: Record<ExecutiveAiSummary["status"], string> = {
-  draft: "draft/goi y",
-  insufficient_context: "insufficient_context",
-  placeholder: "placeholder",
-  unavailable: "unavailable",
+  draft: "Nháp/gợi ý",
+  insufficient_context: "Thiếu dữ liệu",
+  placeholder: "Chờ dữ liệu",
+  unavailable: "Chưa khả dụng",
 };
 
-function WorkspaceAiSummaryPanel({
-  summary,
-}: {
-  summary: ExecutiveAiSummary;
-}) {
+function WorkspaceAiSummaryPanel({ summary }: { summary: ExecutiveAiSummary }) {
   const isInsufficient = summary.status === "insufficient_context";
   const proposals = (summary.actionProposals ?? []).filter(
     (proposal) =>
@@ -241,14 +556,14 @@ function WorkspaceAiSummaryPanel({
 
   return (
     <section
-      aria-label="Workspace AI Summary draft"
+      aria-label="Bản tóm tắt AI nháp của không gian làm việc"
       className="rounded-md border bg-white p-4 shadow-sm"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-slate-600" aria-hidden="true" />
           <h2 className="text-base font-semibold text-slate-950">
-            Workspace AI Summary draft
+            Bản tóm tắt AI nháp
           </h2>
         </div>
         <span className="inline-flex w-fit rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800">
@@ -258,18 +573,19 @@ function WorkspaceAiSummaryPanel({
 
       {isInsufficient ? (
         <p className="mt-3 text-sm font-semibold text-slate-800">
-          Khong co du lieu trong scope
+          Không có dữ liệu trong phạm vi hiện tại
         </p>
       ) : null}
       <p className="mt-2 text-sm leading-6 text-slate-700">{summary.text}</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">
-        Cap nhat {formatGeneratedAt(summary.updatedAt)}. Ban tom tat nay la goi y noi bo, can kiem tra citation truoc khi quyet dinh.
+        Cập nhật {formatGeneratedAt(summary.updatedAt)}. Bản tóm tắt này là gợi
+        ý nội bộ, cần kiểm tra nguồn trích dẫn trước khi ra quyết định.
       </p>
 
       {summary.citations.length ? (
         <div className="mt-4 border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold uppercase text-slate-500">
-            Citation noi bo
+            Nguồn trích dẫn nội bộ
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {summary.citations.map((citation) => (
@@ -281,7 +597,8 @@ function WorkspaceAiSummaryPanel({
                 <span className="min-w-0">
                   <span className="block truncate">{citation.title}</span>
                   <span className="block text-[11px] font-normal text-slate-500">
-                    {citation.sourceType}: {citation.sourceId}
+                    {executiveSourceTypeLabel(citation.sourceType)}:{" "}
+                    {citation.sourceId}
                   </span>
                 </span>
               </span>
@@ -293,7 +610,7 @@ function WorkspaceAiSummaryPanel({
       {proposals.length ? (
         <div className="mt-4 border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold uppercase text-slate-500">
-            De xuat hanh dong advisory
+            Đề xuất hành động tham khảo
           </p>
           <div className="mt-2 space-y-2">
             {proposals.map((proposal) => (
@@ -308,7 +625,8 @@ function WorkspaceAiSummaryPanel({
                   </span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-amber-900">
-                  {proposal.actionKey} - {proposal.requiredPermission}. Chua thay doi du lieu nghiep vu.
+                  {proposal.actionKey} - {proposal.requiredPermission}. Chưa
+                  thay đổi dữ liệu nghiệp vụ.
                 </p>
               </article>
             ))}
@@ -329,49 +647,62 @@ type WorkspaceSectionConfig = {
 function buildWorkspaceSections(
   data: ExecutivePrivateWorkspaceData,
 ): WorkspaceSectionConfig[] {
+  const workflowChecklistItems = data.workflowChecklist?.items ?? [];
+  const professionalApprovalItems = data.professionalApprovals?.items ?? [];
+  const professionalApprovalKeys = new Set(
+    professionalApprovalItems.map(
+      (item) => `${item.sourceType}:${item.sourceId}`,
+    ),
+  );
+  const departmentDossierItems = data.approvalItems.filter(
+    (item) =>
+      !professionalApprovalKeys.has(`${item.sourceType}:${item.sourceId}`),
+  );
+
   if (data.variant === "secretary_assistant") {
     return [
       {
-        ariaLabel: "Lich lanh dao",
-        emptyLabel: "Khong co lich lanh dao trong delegation/scope hien tai.",
+        ariaLabel: "Lịch lãnh đạo",
+        emptyLabel: "Không có lịch lãnh đạo trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.scheduleItems,
-        title: "Lich lanh dao",
+        title: "Lịch lãnh đạo",
       },
       {
-        ariaLabel: "Ho so trinh",
-        emptyLabel: "Khong co ho so trinh trong delegation/scope hien tai.",
+        ariaLabel: "Hồ sơ trình",
+        emptyLabel: "Không có hồ sơ trình trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.submissionDossiers,
-        title: "Ho so trinh",
+        title: "Hồ sơ trình",
       },
       {
-        ariaLabel: "Tai lieu hop",
-        emptyLabel: "Khong co tai lieu hop trong delegation/scope hien tai.",
+        ariaLabel: "Tài liệu họp",
+        emptyLabel: "Không có tài liệu họp trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.meetingDocuments,
-        title: "Tai lieu hop",
+        title: "Tài liệu họp",
       },
       {
-        ariaLabel: "Reminder",
-        emptyLabel: "Khong co reminder trong delegation/scope hien tai.",
+        ariaLabel: "Nhắc việc",
+        emptyLabel: "Không có nhắc việc trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.reminders,
-        title: "Reminder",
+        title: "Nhắc việc",
       },
       {
-        ariaLabel: "Approval uy quyen",
-        emptyLabel: "Khong co approval pending trong delegation/scope hien tai.",
+        ariaLabel: "Phê duyệt được ủy quyền",
+        emptyLabel:
+          "Không có phê duyệt đang chờ trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.pendingApprovals,
-        title: "Approval uy quyen",
+        title: "Phê duyệt được ủy quyền",
       },
       {
-        ariaLabel: "Support tasks",
-        emptyLabel: "Khong co support task trong delegation/scope hien tai.",
+        ariaLabel: "Việc hỗ trợ",
+        emptyLabel: "Không có việc hỗ trợ trong phạm vi ủy quyền hiện tại.",
         items: data.assistantSupport.supportTasks,
-        title: "Support tasks",
+        title: "Việc hỗ trợ",
       },
       {
-        ariaLabel: "Du an duoc giao",
-        emptyLabel: "Khong co du an duoc giao trong scope hien tai.",
+        ariaLabel: "Dự án được giao",
+        emptyLabel: "Không có dự án được giao trong phạm vi hiện tại.",
         items: data.assignedProjects,
-        title: "Du an duoc giao",
+        title: "Dự án được giao",
       },
     ];
   }
@@ -379,28 +710,29 @@ function buildWorkspaceSections(
   if (data.variant === "viewer") {
     return [
       {
-        ariaLabel: "Read-only priority",
-        emptyLabel: "Khong co item read-only trong scope hien tai.",
+        ariaLabel: "Ưu tiên chỉ xem",
+        emptyLabel:
+          "Không có việc ưu tiên ở chế độ chỉ xem trong phạm vi hiện tại.",
         items: data.priorityItems,
-        title: "Read-only priority",
+        title: "Ưu tiên chỉ xem",
       },
       {
-        ariaLabel: "Du an duoc xem",
-        emptyLabel: "Khong co du an duoc xem trong scope hien tai.",
+        ariaLabel: "Dự án được xem",
+        emptyLabel: "Không có dự án được xem trong phạm vi hiện tại.",
         items: data.assignedProjects,
-        title: "Du an duoc xem",
+        title: "Dự án được xem",
       },
       {
-        ariaLabel: "Quyet dinh duoc xem",
-        emptyLabel: "Khong co quyet dinh duoc xem trong scope hien tai.",
+        ariaLabel: "Quyết định được xem",
+        emptyLabel: "Không có quyết định được xem trong phạm vi hiện tại.",
         items: data.decisionItems,
-        title: "Quyet dinh duoc xem",
+        title: "Quyết định được xem",
       },
       {
-        ariaLabel: "Cuoc hop duoc xem",
-        emptyLabel: "Khong co cuoc hop duoc xem trong scope hien tai.",
+        ariaLabel: "Cuộc họp được xem",
+        emptyLabel: "Không có cuộc họp được xem trong phạm vi hiện tại.",
         items: data.meetingItems,
-        title: "Cuoc hop duoc xem",
+        title: "Cuộc họp được xem",
       },
     ];
   }
@@ -408,40 +740,47 @@ function buildWorkspaceSections(
   if (data.variant === "project_director") {
     return [
       {
-        ariaLabel: "Du an duoc giao",
-        emptyLabel: "Khong co du an duoc giao trong scope hien tai.",
+        ariaLabel: "Dự án được giao",
+        emptyLabel: "Không có dự án được giao trong phạm vi hiện tại.",
         items: data.assignedProjects,
-        title: "Du an duoc giao",
+        title: "Dự án được giao",
       },
       {
-        ariaLabel: "Project war room priority",
-        emptyLabel: "Khong co item uu tien trong project scope hien tai.",
-        items: data.priorityItems,
-        title: "Project war room priority",
+        ariaLabel: "Phê duyệt dự án",
+        emptyLabel: "Không có phê duyệt trong phạm vi dự án hiện tại.",
+        items: data.approvalItems,
+        title: "Phê duyệt dự án",
       },
       {
-        ariaLabel: "Risk va blocker du an",
-        emptyLabel: "Khong co risk/blocker trong project scope hien tai.",
+        ariaLabel: "Rủi ro và vướng mắc dự án",
+        emptyLabel: "Không có rủi ro/vướng mắc trong phạm vi dự án hiện tại.",
         items: data.riskItems,
-        title: "Risk va blocker du an",
+        title: "Rủi ro và vướng mắc dự án",
       },
       {
-        ariaLabel: "Deadline du an",
-        emptyLabel: "Khong co deadline trong project scope hien tai.",
+        ariaLabel: "Việc ưu tiên của dự án",
+        emptyLabel: "Không có việc ưu tiên trong phạm vi dự án hiện tại.",
+        items: data.priorityItems,
+        title: "Việc ưu tiên của dự án",
+      },
+      {
+        ariaLabel: "Hạn xử lý của dự án",
+        emptyLabel: "Không có hạn xử lý trong phạm vi dự án hiện tại.",
         items: data.deadlineItems,
-        title: "Deadline du an",
+        title: "Hạn xử lý của dự án",
       },
       {
-        ariaLabel: "Cuoc hop du an",
-        emptyLabel: "Khong co cuoc hop trong project scope hien tai.",
+        ariaLabel: "Cuộc họp dự án",
+        emptyLabel: "Không có cuộc họp trong phạm vi dự án hiện tại.",
         items: data.meetingItems,
-        title: "Cuoc hop du an",
+        title: "Cuộc họp dự án",
       },
       {
-        ariaLabel: "Quyet dinh lien quan du an",
-        emptyLabel: "Khong co quyet dinh lien quan project scope hien tai.",
+        ariaLabel: "Quyết định liên quan dự án",
+        emptyLabel:
+          "Không có quyết định liên quan trong phạm vi dự án hiện tại.",
         items: data.decisionItems,
-        title: "Quyet dinh lien quan du an",
+        title: "Quyết định liên quan dự án",
       },
     ];
   }
@@ -449,34 +788,47 @@ function buildWorkspaceSections(
   if (data.variant === "department_head") {
     return [
       {
-        ariaLabel: "Department workflow priority",
-        emptyLabel: "Khong co item uu tien trong workstream/module scope hien tai.",
+        ariaLabel: "Việc ưu tiên của bộ phận",
+        emptyLabel: "Không có việc ưu tiên trong phạm vi chuyên môn hiện tại.",
         items: data.priorityItems,
-        title: "Department workflow priority",
+        title: "Việc ưu tiên của bộ phận",
       },
       {
-        ariaLabel: "Ho so chuyen mon",
-        emptyLabel: "Khong co ho so chuyen mon can xu ly.",
-        items: data.approvalItems,
-        title: "Ho so chuyen mon",
+        ariaLabel: "Hồ sơ chuyên môn",
+        emptyLabel: "Không có hồ sơ chuyên môn cần xử lý.",
+        items: departmentDossierItems,
+        title: "Hồ sơ chuyên môn",
       },
       {
-        ariaLabel: "Risk chuyen mon",
-        emptyLabel: "Khong co risk chuyen mon trong scope hien tai.",
+        ariaLabel: "Workflow và checklist chuyên môn",
+        emptyLabel:
+          "Không có workflow/checklist chuyên môn trong phạm vi hiện tại.",
+        items: workflowChecklistItems,
+        title: "Workflow và checklist chuyên môn",
+      },
+      {
+        ariaLabel: "Phê duyệt chuyên môn",
+        emptyLabel: "Không có phê duyệt chuyên môn trong phạm vi hiện tại.",
+        items: professionalApprovalItems,
+        title: "Phê duyệt chuyên môn",
+      },
+      {
+        ariaLabel: "Rủi ro chuyên môn",
+        emptyLabel: "Không có rủi ro chuyên môn trong phạm vi hiện tại.",
         items: data.riskItems,
-        title: "Risk chuyen mon",
+        title: "Rủi ro chuyên môn",
       },
       {
-        ariaLabel: "Deadline chuyen mon",
-        emptyLabel: "Khong co deadline chuyen mon trong scope hien tai.",
+        ariaLabel: "Hạn xử lý chuyên môn",
+        emptyLabel: "Không có hạn xử lý chuyên môn trong phạm vi hiện tại.",
         items: data.deadlineItems,
-        title: "Deadline chuyen mon",
+        title: "Hạn xử lý chuyên môn",
       },
       {
-        ariaLabel: "Cuoc hop phong ban",
-        emptyLabel: "Khong co cuoc hop phong ban trong scope hien tai.",
+        ariaLabel: "Cuộc họp phòng ban",
+        emptyLabel: "Không có cuộc họp phòng ban trong phạm vi hiện tại.",
         items: data.meetingItems,
-        title: "Cuoc hop phong ban",
+        title: "Cuộc họp phòng ban",
       },
     ];
   }
@@ -484,94 +836,142 @@ function buildWorkspaceSections(
   if (data.variant === "chairman") {
     return [
       {
-        ariaLabel: "Portfolio priority",
-        emptyLabel: "Khong co item portfolio uu tien trong scope hien tai.",
+        ariaLabel: "Ưu tiên danh mục dự án",
+        emptyLabel: "Không có việc ưu tiên trong danh mục dự án hiện tại.",
         items: data.priorityItems,
-        title: "Portfolio priority",
+        title: "Ưu tiên danh mục dự án",
       },
       {
-        ariaLabel: "Portfolio du an",
-        emptyLabel: "Khong co du an portfolio trong scope hien tai.",
+        ariaLabel: "Danh mục dự án",
+        emptyLabel: "Không có dự án trong danh mục hiện tại.",
         items: data.assignedProjects,
-        title: "Portfolio du an",
+        title: "Danh mục dự án",
       },
       {
-        ariaLabel: "Critical risk",
-        emptyLabel: "Khong co critical/high risk trong scope hien tai.",
+        ariaLabel: "Rủi ro nghiêm trọng",
+        emptyLabel: "Không có rủi ro nghiêm trọng/cao trong phạm vi hiện tại.",
         items: data.riskItems,
-        title: "Critical risk",
+        title: "Rủi ro nghiêm trọng",
       },
       {
-        ariaLabel: "Overdue approval",
-        emptyLabel: "Khong co approval qua han/can xu ly.",
+        ariaLabel: "Phê duyệt quá hạn",
+        emptyLabel: "Không có phê duyệt quá hạn hoặc cần xử lý.",
         items: data.approvalItems,
-        title: "Overdue approval",
+        title: "Phê duyệt quá hạn",
       },
       {
-        ariaLabel: "Strategic decisions",
-        emptyLabel: "Khong co strategic decision gan day.",
+        ariaLabel: "Quyết định chiến lược",
+        emptyLabel: "Không có quyết định chiến lược gần đây.",
         items: data.decisionItems,
-        title: "Strategic decisions",
+        title: "Quyết định chiến lược",
+      },
+    ];
+  }
+
+  if (data.variant === "ceo") {
+    return [
+      {
+        ariaLabel: "Hàng chờ phê duyệt",
+        emptyLabel: "Không có phê duyệt cần xử lý.",
+        items: data.approvalItems,
+        title: "Hàng chờ phê duyệt",
+      },
+      {
+        ariaLabel: "Rủi ro cần leo thang",
+        emptyLabel: "Không có rủi ro/vướng mắc trong phạm vi hiện tại.",
+        items: data.riskItems,
+        title: "Rủi ro cần leo thang",
+      },
+      {
+        ariaLabel: "Hạn xử lý liên dự án",
+        emptyLabel: "Không có hạn xử lý trong phạm vi hiện tại.",
+        items: data.deadlineItems,
+        title: "Hạn xử lý liên dự án",
+      },
+      {
+        ariaLabel: "Theo dõi sau họp",
+        emptyLabel: "Không có cuộc họp trong phạm vi hiện tại.",
+        items: data.meetingItems,
+        title: "Theo dõi sau họp",
+      },
+      {
+        ariaLabel: "Danh mục được giao",
+        emptyLabel: "Không có dự án được giao trong phạm vi hiện tại.",
+        items: data.assignedProjects,
+        title: "Danh mục được giao",
+      },
+      {
+        ariaLabel: "Khu vực ưu tiên",
+        emptyLabel: "Không có việc ưu tiên trong phạm vi hiện tại.",
+        items: data.priorityItems,
+        title: "Khu vực ưu tiên",
       },
     ];
   }
 
   return [
     {
-      ariaLabel: "Priority area",
-      emptyLabel: "Khong co item uu tien trong scope hien tai.",
+      ariaLabel: "Khu vực ưu tiên",
+      emptyLabel: "Không có việc ưu tiên trong phạm vi hiện tại.",
       items: data.priorityItems,
-      title: "Priority area",
+      title: "Khu vực ưu tiên",
     },
     {
-      ariaLabel: "Approval queue",
-      emptyLabel: "Khong co approval can xu ly.",
+      ariaLabel: "Hàng chờ phê duyệt",
+      emptyLabel: "Không có phê duyệt cần xử lý.",
       items: data.approvalItems,
-      title: "Approval queue",
+      title: "Hàng chờ phê duyệt",
     },
     {
-      ariaLabel: "Cross-project deadlines",
-      emptyLabel: "Khong co deadline trong scope hien tai.",
+      ariaLabel: "Hạn xử lý liên dự án",
+      emptyLabel: "Không có hạn xử lý trong phạm vi hiện tại.",
       items: data.deadlineItems,
-      title: "Cross-project deadlines",
+      title: "Hạn xử lý liên dự án",
     },
     {
-      ariaLabel: "Escalation risk",
-      emptyLabel: "Khong co risk/blocker trong scope hien tai.",
+      ariaLabel: "Rủi ro cần leo thang",
+      emptyLabel: "Không có rủi ro/vướng mắc trong phạm vi hiện tại.",
       items: data.riskItems,
-      title: "Escalation risk",
+      title: "Rủi ro cần leo thang",
     },
     {
-      ariaLabel: "Meeting follow-up",
-      emptyLabel: "Khong co cuoc hop trong scope hien tai.",
+      ariaLabel: "Theo dõi sau họp",
+      emptyLabel: "Không có cuộc họp trong phạm vi hiện tại.",
       items: data.meetingItems,
-      title: "Meeting follow-up",
+      title: "Theo dõi sau họp",
     },
     {
-      ariaLabel: "Assigned portfolio",
-      emptyLabel: "Khong co du an duoc giao trong scope hien tai.",
+      ariaLabel: "Danh mục được giao",
+      emptyLabel: "Không có dự án được giao trong phạm vi hiện tại.",
       items: data.assignedProjects,
-      title: "Assigned portfolio",
+      title: "Danh mục được giao",
     },
   ];
 }
 
-function AssistantSupportPanel({ data }: { data: ExecutivePrivateWorkspaceData }) {
+function AssistantSupportPanel({
+  data,
+}: {
+  data: ExecutivePrivateWorkspaceData;
+}) {
   const isViewer = data.variant === "viewer";
   const isAssistant = data.variant === "secretary_assistant";
   const ariaLabel = isViewer
-    ? "Read-only summary"
+    ? "Tóm tắt chỉ xem"
     : isAssistant
-      ? "Secretary delegation support"
-      : "Assistant support";
+      ? "Hỗ trợ ủy quyền cho thư ký/trợ lý"
+      : "Hỗ trợ trợ lý";
   const title = isViewer
-    ? "Read-only summary"
+    ? "Tóm tắt chỉ xem"
     : isAssistant
-      ? "Delegation support"
-      : "Assistant support";
+      ? "Hỗ trợ ủy quyền"
+      : "Hỗ trợ trợ lý";
 
   return (
-    <section aria-label={ariaLabel} className="rounded-md border bg-white p-4 shadow-sm">
+    <section
+      aria-label={ariaLabel}
+      className="rounded-md border bg-white p-4 shadow-sm"
+    >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-950">{title}</h2>
         <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
@@ -589,13 +989,15 @@ function AssistantSupportPanel({ data }: { data: ExecutivePrivateWorkspaceData }
                 key={delegation.delegationId}
               >
                 <p className="font-semibold">
-                  {delegation.canActOnBehalf ? "Delegation active" : "Delegation disabled"}
+                  {delegation.canActOnBehalf
+                    ? "Ủy quyền đang hiệu lực"
+                    : "Ủy quyền chưa khả dụng"}
                 </p>
                 <p className="mt-1 break-words text-xs">
                   {delegation.principalUserId} -{" "}
                   {delegation.actionKeys.length
                     ? delegation.actionKeys.join(", ")
-                    : "khong co action delegatable"}
+                    : "không có thao tác được ủy quyền"}
                 </p>
                 {delegation.reason ? (
                   <p className="mt-1 text-xs">{delegation.reason}</p>
@@ -623,10 +1025,10 @@ function AssistantSupportPanel({ data }: { data: ExecutivePrivateWorkspaceData }
         ) : (
           <p className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
             {isViewer
-              ? "Read-only: khong co mutation action trong workspace nay."
+              ? "Chỉ xem: không có thao tác chỉnh sửa trong không gian này."
               : isAssistant
-                ? "Khong co delegated action active trong scope hien tai."
-                : "Khong co delegated action active trong scope hien tai."}
+                ? "Không có thao tác ủy quyền đang hiệu lực trong phạm vi hiện tại."
+                : "Không có thao tác ủy quyền đang hiệu lực trong phạm vi hiện tại."}
           </p>
         )}
       </div>
@@ -643,14 +1045,138 @@ export function ExecutivePrivateWorkspaceNoAccessState() {
         </span>
         <div>
           <h1 className="text-xl font-semibold text-slate-950">
-            Khong co quyen xem Private Workspace
+            Không có quyền xem Không Gian Làm Việc Cá Nhân
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            DTO Private Workspace khong duoc load cho scope hien tai.
+            Dữ liệu Không Gian Làm Việc Cá Nhân không được tải cho phạm vi hiện
+            tại.
           </p>
         </div>
       </div>
     </section>
+  );
+}
+
+function WorkspaceSectionsGrid({
+  afterSection,
+  canDrillDown,
+  data,
+  onSelect,
+  sections,
+}: {
+  afterSection?: (section: WorkspaceSectionConfig) => React.ReactNode;
+  canDrillDown: boolean;
+  data: ExecutivePrivateWorkspaceData;
+  onSelect: (item: PrivateWorkspaceSectionItem) => void;
+  sections: WorkspaceSectionConfig[];
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-2">
+      {sections.map((section) => (
+        <React.Fragment key={section.ariaLabel}>
+          <WorkspaceSection
+            ariaLabel={section.ariaLabel}
+            canDrillDown={canDrillDown}
+            emptyLabel={section.emptyLabel}
+            items={section.items}
+            onSelect={onSelect}
+            title={section.title}
+          />
+          {afterSection?.(section)}
+        </React.Fragment>
+      ))}
+      <AssistantSupportPanel data={data} />
+    </div>
+  );
+}
+
+function OrderedWorkspaceBody({
+  canDrillDown,
+  data,
+  onSelect,
+  sections,
+}: {
+  canDrillDown: boolean;
+  data: ExecutivePrivateWorkspaceData;
+  onSelect: (item: PrivateWorkspaceSectionItem) => void;
+  sections: WorkspaceSectionConfig[];
+}) {
+  if (data.variant === "chairman") {
+    return (
+      <>
+        {data.financialSummary || data.riskMap ? (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {data.financialSummary ? (
+              <FinancialSummaryPanel summary={data.financialSummary} />
+            ) : null}
+            {data.riskMap ? <RiskMapPanel riskMap={data.riskMap} /> : null}
+          </div>
+        ) : null}
+        <WorkspaceSectionsGrid
+          afterSection={(section) =>
+            section.ariaLabel === "Phê duyệt quá hạn" &&
+            data.permissionOverview ? (
+              <PermissionOverviewPanel
+                permissionOverview={data.permissionOverview}
+              />
+            ) : null
+          }
+          canDrillDown={canDrillDown}
+          data={data}
+          onSelect={onSelect}
+          sections={sections}
+        />
+        <WorkspaceAiSummaryPanel summary={data.aiSummary} />
+      </>
+    );
+  }
+
+  if (data.variant === "ceo") {
+    return (
+      <>
+        {data.resourceProgress ? (
+          <ResourceProgressPanel resourceProgress={data.resourceProgress} />
+        ) : null}
+        <WorkspaceSectionsGrid
+          canDrillDown={canDrillDown}
+          data={data}
+          onSelect={onSelect}
+          sections={sections}
+        />
+        <WorkspaceAiSummaryPanel summary={data.aiSummary} />
+      </>
+    );
+  }
+
+  if (data.variant === "project_director") {
+    return (
+      <>
+        <WorkspaceSectionsGrid
+          afterSection={(section) =>
+            section.ariaLabel === "Phê duyệt dự án" && data.projectCost ? (
+              <ProjectCostPanel projectCost={data.projectCost} />
+            ) : null
+          }
+          canDrillDown={canDrillDown}
+          data={data}
+          onSelect={onSelect}
+          sections={sections}
+        />
+        <WorkspaceAiSummaryPanel summary={data.aiSummary} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <WorkspaceSectionsGrid
+        canDrillDown={canDrillDown}
+        data={data}
+        onSelect={onSelect}
+        sections={sections}
+      />
+      <WorkspaceAiSummaryPanel summary={data.aiSummary} />
+    </>
   );
 }
 
@@ -681,10 +1207,10 @@ export function ExecutivePrivateWorkspace({
               {variantConfig.label}
             </p>
             <h1 className="mt-1 break-words text-2xl font-semibold text-slate-950">
-              Private Workspace
+              Không Gian Làm Việc Cá Nhân
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {data.scope.scopeLabel || legacyScopeLabel || "Scope hien tai"}
+              {data.scope.scopeLabel || legacyScopeLabel || "Phạm vi hiện tại"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
@@ -700,22 +1226,30 @@ export function ExecutivePrivateWorkspace({
 
       {data.emptyState ? (
         <section
-          aria-label="Private Workspace state"
+          aria-label="Trạng thái Không Gian Làm Việc Cá Nhân"
           className="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-900"
         >
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5" aria-hidden="true" />
             <div>
               <h2 className="font-semibold">{data.emptyState.title}</h2>
-              <p className="mt-1 text-sm leading-6">{data.emptyState.description}</p>
+              <p className="mt-1 text-sm leading-6">
+                {data.emptyState.description}
+              </p>
             </div>
           </div>
         </section>
       ) : null}
 
-      <section aria-label="KPI theo role" className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <section
+        aria-label="KPI theo role"
+        className="grid gap-3 md:grid-cols-3 xl:grid-cols-5"
+      >
         {data.kpis.map((kpi) => (
-          <div className="rounded-md border bg-white p-4 shadow-sm" key={kpi.id}>
+          <div
+            className="rounded-md border bg-white p-4 shadow-sm"
+            key={kpi.id}
+          >
             <p className="text-sm text-slate-600">{kpi.label}</p>
             <p className="mt-2 break-words text-2xl font-semibold text-slate-950">
               {kpi.value}
@@ -726,29 +1260,19 @@ export function ExecutivePrivateWorkspace({
 
       {!data.permissions.canViewFinance ? (
         <section
-          aria-label="Tai chinh"
+          aria-label="Tài chính"
           className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm"
         >
-          Khong co quyen xem tai chinh trong scope nay.
+          Không có quyền xem tài chính trong phạm vi này.
         </section>
       ) : null}
 
-      <WorkspaceAiSummaryPanel summary={data.aiSummary} />
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        {sections.map((section) => (
-          <WorkspaceSection
-            ariaLabel={section.ariaLabel}
-            canDrillDown={canDrillDown}
-            emptyLabel={section.emptyLabel}
-            items={section.items}
-            key={section.ariaLabel}
-            onSelect={setSelectedItem}
-            title={section.title}
-          />
-        ))}
-        <AssistantSupportPanel data={data} />
-      </div>
+      <OrderedWorkspaceBody
+        canDrillDown={canDrillDown}
+        data={data}
+        onSelect={setSelectedItem}
+        sections={sections}
+      />
 
       <ExecutiveDrilldownPanel
         item={selectedItem}

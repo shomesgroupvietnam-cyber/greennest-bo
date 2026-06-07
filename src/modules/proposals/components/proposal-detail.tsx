@@ -9,6 +9,40 @@ import { PROPOSAL_PRIORITIES, PROPOSAL_TYPES, type ProposalDetail as ProposalDet
 
 import { ProposalStatusBadge } from "./proposal-status-badge";
 
+function safeExternalAttachmentUrl(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function proposalAttachmentHref(attachment: ProposalDetailType["attachments"][number]) {
+  if (attachment.documentId) {
+    return `/documents/${encodeURIComponent(attachment.documentId)}`;
+  }
+
+  return safeExternalAttachmentUrl(attachment.externalUrl ?? attachment.url);
+}
+
+function proposalAttachmentHelper(attachment: ProposalDetailType["attachments"][number]) {
+  if (attachment.documentId) {
+    return "Document attachment";
+  }
+
+  return proposalAttachmentHref(attachment)
+    ? "External attachment URL"
+    : "Lien ket file khong hop le hoac bi an.";
+}
+
 export function ProposalDetail({
   detail,
   canSubmit,
@@ -20,7 +54,8 @@ export function ProposalDetail({
   canRequestChange: boolean;
   canApprove: boolean;
 }) {
-  const { proposal, steps, decisions } = detail;
+  const { proposal, steps, decisions, attachments } = detail;
+  const hasRequiredApprovalMetadata = Boolean(proposal.dueDate) && attachments.length > 0;
 
   return (
     <div className="space-y-5">
@@ -63,6 +98,36 @@ export function ProposalDetail({
           ) : null}
         </dl>
         {proposal.summary ? <p className="mt-5 whitespace-pre-wrap rounded-md bg-slate-50 p-4 text-sm text-slate-700">{proposal.summary}</p> : null}
+        <div className="mt-5 rounded-md border bg-slate-50 p-4 text-sm">
+          <p className="font-semibold text-slate-950">File dinh kem</p>
+          {attachments.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {attachments.map((attachment) => (
+                <div className="rounded-md border bg-white p-3" key={attachment.id}>
+                  <p className="font-medium text-slate-950">{attachment.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {proposalAttachmentHelper(attachment)}
+                  </p>
+                  {proposalAttachmentHref(attachment) ? (
+                    <a
+                      className="mt-2 inline-flex text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                      href={proposalAttachmentHref(attachment)}
+                    >
+                      Mo file dinh kem
+                    </a>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-slate-500">Chua co file dinh kem.</p>
+          )}
+          {!hasRequiredApprovalMetadata ? (
+            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
+              Can co han xu ly va it nhat mot file dinh kem truoc khi trinh duyet.
+            </p>
+          ) : null}
+        </div>
         <div className="mt-5 flex flex-wrap gap-3">
           {canSubmit && ["draft", "change_requested"].includes(proposal.status) ? (
             <form action={submitProposalAction}>

@@ -38,7 +38,7 @@ export function AppHeader({
   const resolvedNavItems = navItems ?? getPermittedNavItems(resolvedSession.user);
   const workspaceLabel =
     shellContext?.currentWorkspaceLabel ?? resolvedSession.defaultScreen.label;
-  const scopeLabel = shellContext?.currentScopeLabel ?? "Tat ca pham vi duoc cap";
+  const scopeLabel = shellContext?.currentScopeLabel ?? "Tất cả phạm vi được cấp";
   const workspaceOptions = shellContext?.workspaceOptions ?? [];
   const scopeOptions = shellContext?.scopeOptions ?? [];
   const selectedWorkspaceHref =
@@ -63,9 +63,9 @@ export function AppHeader({
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 text-right text-sm text-slate-600">
           {workspaceOptions.length > 1 ? (
             <label className="flex min-w-[150px] max-w-[220px] flex-col gap-1 text-left text-[11px] font-semibold uppercase text-slate-400">
-              Workspace
+              Không gian làm việc
               <select
-                aria-label="Workspace"
+                aria-label="Không gian làm việc"
                 className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm font-medium normal-case text-slate-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                 onChange={(event) => navigateTo(event.target.value)}
                 value={selectedWorkspaceHref}
@@ -80,9 +80,9 @@ export function AppHeader({
           ) : null}
           {scopeOptions.length > 1 ? (
             <label className="flex min-w-[170px] max-w-[260px] flex-col gap-1 text-left text-[11px] font-semibold uppercase text-slate-400">
-              Scope
+              Phạm vi
               <select
-                aria-label="Scope"
+                aria-label="Phạm vi"
                 className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm font-medium normal-case text-slate-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                 onChange={(event) => navigateTo(event.target.value)}
                 value={selectedScopeHref}

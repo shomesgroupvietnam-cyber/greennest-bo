@@ -7,6 +7,7 @@ import type {
   ExecutiveRiskMutationOptions,
   ExecutiveRiskSummary as ExecutiveRiskSummaryData,
 } from "@/modules/dashboard/types";
+import { RiskRecordForm } from "@/modules/executive/components/risk-record-form";
 
 vi.mock("@/modules/executive/actions", () => ({
   closeExecutiveRiskRecordStateAction: vi.fn(),
@@ -130,15 +131,36 @@ const overdueRiskSummary: ExecutiveRiskSummaryData = {
   ],
 };
 
+function toSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "d")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function viText(expected: string) {
+  const target = toSearchText(expected);
+  return (_content: string, element: Element | null) => {
+    const text = toSearchText(element?.textContent ?? "");
+
+    if (!text.includes(target)) {
+      return false;
+    }
+
+    return Array.from(element?.children ?? []).every(
+      (child) => !toSearchText(child.textContent ?? "").includes(target),
+    );
+  };
+}
+
 function renderSummary(props: Partial<React.ComponentProps<typeof ExecutiveRiskSummary>> = {}) {
   return render(
     <ExecutiveRiskSummary
-      canCreateRisk
-      canCloseHighRisk
-      canCloseRisk
       canDrillDown
-      canOverrideRisk
-      canUpdateRisk={false}
       categoryEmptyLabel="Khong co category"
       emptyLabel="Khong co risk"
       onSelectSource={vi.fn()}
@@ -150,7 +172,6 @@ function renderSummary(props: Partial<React.ComponentProps<typeof ExecutiveRiskS
         total: 0,
         yellow: 0,
       }}
-      riskMutationOptions={mutationOptions}
       riskSummary={emptyRiskSummary}
       {...props}
     />,
@@ -159,82 +180,65 @@ function renderSummary(props: Partial<React.ComponentProps<typeof ExecutiveRiskS
 
 describe("RiskRecordForm", () => {
   it("renders Vietnamese required labels and delegated on-behalf option", () => {
-    renderSummary();
+    render(<RiskRecordForm mode="create" options={mutationOptions} />);
 
-    const formPanel = screen
-      .getAllByText("Tao risk/blocker")
-      .find((element) => element.tagName.toLowerCase() === "summary")
-      ?.closest("details");
-
-    if (!formPanel) {
-      throw new Error("Expected create risk form panel");
-    }
-
-    expect(within(formPanel).getByText("Loai ban ghi")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Tieu de")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Nhom risk")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Muc do")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Ly do / mo ta")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Du an / module lien quan")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Nguoi phu trach")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Deadline xu ly")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Hanh dong tiep theo")).toBeInTheDocument();
-    expect(within(formPanel).getByText("Trang thai")).toBeInTheDocument();
-    expect(within(formPanel).getByText("ceo-01 (risk.create, risk.update, risk.override)")).toBeInTheDocument();
+    expect(screen.getAllByText(viText("tao rui ro vuong mac")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Loai ban ghi")).toBeInTheDocument();
+    expect(screen.getByText(viText("tieu de"))).toBeInTheDocument();
+    expect(screen.getByText(viText("nhom rui ro"))).toBeInTheDocument();
+    expect(screen.getByText("Muc do")).toBeInTheDocument();
+    expect(screen.getByText(viText("ly do mo ta"))).toBeInTheDocument();
+    expect(screen.getByText(viText("du an module lien quan"))).toBeInTheDocument();
+    expect(screen.getByText(viText("nguoi phu trach"))).toBeInTheDocument();
+    expect(screen.getByText(viText("han xu ly"))).toBeInTheDocument();
+    expect(screen.getByText("Hanh dong tiep theo")).toBeInTheDocument();
+    expect(screen.getByText(viText("trang thai"))).toBeInTheDocument();
+    expect(screen.getByText("ceo-01 (risk.create, risk.update, risk.override)")).toBeInTheDocument();
   });
 
-  it("renders permission-aware override and close panels for active official risks", () => {
-    renderSummary({
-      canCreateRisk: false,
-      canUpdateRisk: false,
-      riskSummary: officialRiskSummary,
-    });
+  it("renders override and close forms when used by the dedicated risk mutation surface", () => {
+    const record = officialRiskSummary.items[0];
 
-    const overridePanel = screen
-      .getAllByText("Xac nhan/override trang thai")[0]
-      .closest("details");
-    const closePanel = screen
-      .getAllByText("Dong risk/blocker")[0]
-      .closest("details");
+    render(
+      <>
+        <section aria-label="override-form">
+          <RiskRecordForm mode="override" options={mutationOptions} record={record} />
+        </section>
+        <section aria-label="close-form">
+          <RiskRecordForm mode="close" options={mutationOptions} record={record} />
+        </section>
+      </>,
+    );
 
-    if (!overridePanel || !closePanel) {
-      throw new Error("Expected override and close panels");
-    }
+    const overrideForm = screen.getByRole("region", { name: "override-form" });
+    const closeForm = screen.getByRole("region", { name: "close-form" });
 
-    expect(within(overridePanel).getByText("Trang thai xac nhan")).toBeInTheDocument();
-    expect(within(overridePanel).getByText("Ly do override")).toBeInTheDocument();
-    expect(within(overridePanel).getByText("ceo-01 (risk.create, risk.update, risk.override)")).toBeInTheDocument();
-    expect(within(closePanel).getByText("Trang thai dong")).toBeInTheDocument();
-    expect(within(closePanel).getByText("Ly do dong")).toBeInTheDocument();
+    expect(within(overrideForm).getByText(viText("xac nhan dieu chinh trang thai"))).toBeInTheDocument();
+    expect(within(overrideForm).getByText(viText("trang thai xac nhan"))).toBeInTheDocument();
+    expect(within(overrideForm).getByText(viText("ly do dieu chinh"))).toBeInTheDocument();
+    expect(within(overrideForm).getByText("ceo-01 (risk.create, risk.update, risk.override)")).toBeInTheDocument();
+    expect(within(closeForm).getAllByText(viText("dong rui ro vuong mac")).length).toBeGreaterThan(0);
+    expect(within(closeForm).getByText(viText("trang thai dong"))).toBeInTheDocument();
+    expect(within(closeForm).getByText(viText("ly do dong"))).toBeInTheDocument();
   });
 
   it("renders overdue and escalation metadata with text labels on risk cards", () => {
-    renderSummary({
-      canCreateRisk: false,
-      canUpdateRisk: false,
-      riskSummary: overdueRiskSummary,
-    });
+    renderSummary({ riskSummary: overdueRiskSummary });
 
-    expect(screen.getByText("Qua han: critical - Risk qua han 4 ngay.")).toBeInTheDocument();
-    expect(screen.getByText("Next action: Kiem tra escalation risk.")).toBeInTheDocument();
-    expect(screen.getByText("Escalation: critical_overdue - queued")).toBeInTheDocument();
-    expect(screen.getByText("Policy: Risk dashboard policy")).toBeInTheDocument();
-    expect(screen.getByText("Targets: Owner One, CEO")).toBeInTheDocument();
+    expect(screen.getByText(viText("qua han critical risk qua han 4 ngay"))).toBeInTheDocument();
+    expect(screen.getByText(viText("hanh dong tiep theo kiem tra escalation risk"))).toBeInTheDocument();
+    expect(screen.getByText(viText("leo thang critical overdue queued"))).toBeInTheDocument();
+    expect(screen.getByText(viText("chinh sach risk dashboard policy"))).toBeInTheDocument();
+    expect(screen.getByText(viText("nguoi nhan owner one ceo"))).toBeInTheDocument();
   });
 
-  it("hides mutation panels when dashboard permissions deny create and update", () => {
-    renderSummary({
-      canCreateRisk: false,
-      canCloseHighRisk: false,
-      canCloseRisk: false,
-      canOverrideRisk: false,
-      canUpdateRisk: false,
-      riskSummary: officialRiskSummary,
-    });
+  it("keeps the dashboard risk summary read-only even when official risks are present", () => {
+    renderSummary({ riskSummary: officialRiskSummary });
 
-    expect(screen.queryByText("Tao risk/blocker")).not.toBeInTheDocument();
-    expect(screen.queryByText("Cap nhat risk/blocker dang mo")).not.toBeInTheDocument();
-    expect(screen.queryByText("Xac nhan/override trang thai")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dong risk/blocker")).not.toBeInTheDocument();
+    expect(screen.getByText("Official risk")).toBeInTheDocument();
+    expect(screen.queryByText(viText("tao rui ro vuong mac"))).not.toBeInTheDocument();
+    expect(screen.queryByText(viText("cap nhat rui ro vuong mac"))).not.toBeInTheDocument();
+    expect(screen.queryByText(viText("xac nhan dieu chinh trang thai"))).not.toBeInTheDocument();
+    expect(screen.queryByText(viText("dong rui ro vuong mac"))).not.toBeInTheDocument();
   });
 });

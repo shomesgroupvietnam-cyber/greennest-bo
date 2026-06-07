@@ -63,8 +63,8 @@ describe("PermissionAwareShell header", () => {
 
     expect(screen.getAllByText("Lanh dao").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Scope project-a").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Workspace")).toBeInTheDocument();
-    expect(screen.getByLabelText("Scope")).toBeInTheDocument();
+    expect(screen.getByLabelText("Không gian làm việc")).toBeInTheDocument();
+    expect(screen.getByLabelText("Phạm vi")).toBeInTheDocument();
     expect(screen.getByText("Tran Quan Tri He Thong")).toBeInTheDocument();
   });
 });

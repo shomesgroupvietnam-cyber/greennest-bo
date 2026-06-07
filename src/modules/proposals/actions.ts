@@ -26,7 +26,62 @@ function readOptionalString(formData: FormData, key: string) {
   return value || undefined;
 }
 
+function isNonEmptyFileLike(value: FormDataEntryValue) {
+  return (
+    typeof value !== "string" &&
+    typeof value === "object" &&
+    "size" in value &&
+    typeof value.size === "number" &&
+    value.size > 0
+  );
+}
+
+function assertNoBinaryAttachmentUpload(formData: FormData) {
+  for (const [key, value] of formData.entries()) {
+    if (key.toLowerCase().includes("file") && isNonEmptyFileLike(value)) {
+      throw new Error("Upload file that chua duoc ho tro trong MVP. Hay nhap metadata documentId hoac URL file.");
+    }
+  }
+}
+
+function readOptionalStringAt(values: FormDataEntryValue[], index: number) {
+  const value = values[index];
+
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readAttachmentInputs(formData: FormData): ProposalInput["attachments"] {
+  const names = formData.getAll("attachmentName");
+  const urls = formData.getAll("attachmentUrl");
+  const externalUrls = formData.getAll("attachmentExternalUrl");
+  const documentIds = formData.getAll("attachmentDocumentId");
+  const rowCount = Math.max(names.length, urls.length, externalUrls.length, documentIds.length);
+  const attachments: NonNullable<ProposalInput["attachments"]> = [];
+
+  for (let index = 0; index < rowCount; index += 1) {
+    const name = readOptionalStringAt(names, index);
+    const url = readOptionalStringAt(urls, index);
+    const externalUrl = readOptionalStringAt(externalUrls, index) ?? url;
+    const documentId = readOptionalStringAt(documentIds, index);
+
+    if (!name && !url && !externalUrl && !documentId) {
+      continue;
+    }
+
+    attachments.push({
+      documentId,
+      externalUrl,
+      name: name ?? "",
+      url,
+    });
+  }
+
+  return attachments;
+}
+
 function formDataToProposalInput(formData: FormData): ProposalInput {
+  assertNoBinaryAttachmentUpload(formData);
+
   return {
     title: String(formData.get("title") ?? ""),
     type: String(formData.get("type") ?? "general") as ProposalInput["type"],
@@ -38,7 +93,8 @@ function formDataToProposalInput(formData: FormData): ProposalInput {
     priority: String(formData.get("priority") ?? "normal") as ProposalInput["priority"],
     amount: formData.get("amount") ? Number(formData.get("amount")) : undefined,
     dueDate: readOptionalString(formData, "dueDate"),
-    summary: readOptionalString(formData, "summary")
+    summary: readOptionalString(formData, "summary"),
+    attachments: readAttachmentInputs(formData),
   };
 }
 
@@ -131,6 +187,7 @@ export async function createProposalAction(formData: FormData) {
       submittedBy: detail.proposal.submittedBy,
       onBehalfOf: detail.proposal.onBehalfOf,
       delegationId: detail.proposal.delegationId,
+      attachmentCount: detail.attachments.length,
     }
   });
 

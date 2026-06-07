@@ -172,7 +172,7 @@ const executivePageIcons: Record<ExecutivePageKey, typeof BarChart3> = {
 };
 
 const executivePageShortLabels: Record<ExecutivePageKey, string> = {
-  dashboard: "Dashboard",
+  dashboard: "Tổng quan",
   "investment-plans": "Kế hoạch đầu tư",
   "leadership-team": "Danh sách lãnh đạo",
   directives: "Chỉ đạo điều hành",
@@ -1574,7 +1574,7 @@ export function ExecutiveLeadershipDashboard({
                           {plan.budgetLabel}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          Owner: {plan.ownerName} · Cập nhật{" "}
+                          Người phụ trách: {plan.ownerName} · Cập nhật{" "}
                           {formatDate(plan.updatedAt)}
                         </p>
                       </div>

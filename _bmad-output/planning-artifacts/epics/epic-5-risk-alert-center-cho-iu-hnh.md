@@ -1,8 +1,8 @@
-# Epic 5: Risk & Alert Center Cho Điều Hành
+# Epic 5: Trung Tâm Rủi Ro Và Cảnh Báo Điều Hành
 
 Lãnh đạo có thể xem risk/blocker theo nhóm, mức độ, màu đỏ/vàng/xanh, lý do, deadline và owner; tạo/cập nhật/đóng risk theo quyền; nhận cảnh báo risk quá hạn/escalation; hệ thống chỉ đưa gợi ý/draft cho risk do AI hoặc rule phát hiện cho tới khi người có quyền xác nhận.
 
-## Story 5.1: Risk Levels, Categories Và Status Suggestion
+## Story 5.1: Mức Rủi Ro, Nhóm Rủi Ro Và Gợi Ý Trạng Thái
 
 **Requirements Covered:** FR-052, FR-053, FR-054, FR-055, FR-056, FR-058, FR-059, FR-060, NFR-008.
 
@@ -34,7 +34,7 @@ AC3:
 
 **Dependencies:** Story 1.3, Story 2.2.
 
-## Story 5.2: Risk Map Và Drill-Down Matrix
+## Story 5.2: Bản Đồ Rủi Ro Và Ma Trận Xem Chi Tiết
 
 **Requirements Covered:** FR-061, FR-062, FR-067, NFR-001, UX-DR4, UX-DR12, UX-DR14, UX-DR20, UX-DR30.
 
@@ -65,7 +65,7 @@ AC3:
 
 **Dependencies:** Story 5.1.
 
-## Story 5.3: Tạo Và Cập Nhật Risk/Blocker Theo Quyền
+## Story 5.3: Tạo Và Cập Nhật Rủi Ro/Điểm Chặn Theo Quyền
 
 **Requirements Covered:** FR-063, FR-069, NFR-005, NFR-006, UX-DR23.
 
@@ -96,7 +96,7 @@ AC3:
 
 **Dependencies:** Story 5.1, Story 1.4.
 
-## Story 5.4: Override Và Đóng Risk/Blocker Có Audit
+## Story 5.4: Override Và Đóng Rủi Ro/Điểm Chặn Có Nhật Ký
 
 **Requirements Covered:** FR-057, FR-065, FR-066, NFR-005, NFR-006, UX-DR21.
 
@@ -128,7 +128,7 @@ AC3:
 
 **Dependencies:** Story 5.3.
 
-## Story 5.5: Risk Alert, Overdue Escalation Và Draft Suggestions
+## Story 5.5: Cảnh Báo Rủi Ro, Leo Thang Quá Hạn Và Gợi Ý Bản Nháp
 
 **Requirements Covered:** FR-064, FR-067, FR-068, FR-085, FR-087, FR-088, FR-089, FR-090, NFR-009, NFR-010, UX-DR16, UX-DR34.
 

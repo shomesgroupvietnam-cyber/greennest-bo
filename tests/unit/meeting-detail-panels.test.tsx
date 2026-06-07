@@ -393,8 +393,8 @@ describe("Meeting detail panels", () => {
       "href",
       "/command-center?decisionId=decision-01&view=executive-decision-log",
     );
-    expect(screen.getByText("2 assignment")).toBeInTheDocument();
-    expect(screen.getByText("1 sap den han")).toBeInTheDocument();
+    expect(screen.getByText("2 giao việc")).toBeInTheDocument();
+    expect(screen.getByText("1 sắp đến hạn")).toBeInTheDocument();
     expect(screen.getByText("2 quá hạn")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Visible execution task" }),

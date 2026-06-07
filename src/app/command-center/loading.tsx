@@ -8,8 +8,8 @@ export default function CommandCenterLoading() {
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="space-y-5">
         <LoadingState
-          description="Dang tai dashboard va history trong scope hien tai."
-          title="Dang tai Command Center"
+          description="Đang tải dashboard và lịch sử trong phạm vi hiện tại."
+          title="Đang tải Trung Tâm Điều Hành"
         />
         <HistoryArchiveCenterSkeleton />
       </div>

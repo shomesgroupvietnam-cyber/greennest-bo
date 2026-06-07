@@ -155,7 +155,7 @@ describe("navigation policy matrix", () => {
   it("routes Axis 1 overview roles to the Axis 1 command-center view", () => {
     const projectDirectorNav = getPermittedNavItems(user("giam_doc_du_an"));
     const axisOneOverview = projectDirectorNav.find(
-      (item) => item.label === "Tong quan Truc 1",
+      (item) => item.label === "Tổng quan Trục 1",
     );
 
     expect(axisOneOverview?.href).toBe(

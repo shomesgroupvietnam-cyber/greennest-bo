@@ -26,7 +26,7 @@ export default async function PendingAccessPage() {
               Chờ cấp quyền
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-              Tài khoản đã đăng nhập nhưng chưa được Admin cấp quyền truy cập.
+              Tài khoản đã đăng nhập nhưng chưa được quản trị hệ thống cấp quyền truy cập.
               Theo mô hình phân quyền mới, người dùng mặc định không nhìn thấy
               module nào cho đến khi được gán vai trò, workspace hoặc dự án phù
               hợp.

@@ -142,7 +142,7 @@ async function resolveVisibleRelatedRecord(
           id: detail.proposal.id,
           label: `${detail.proposal.code} - ${detail.proposal.title}`,
           type: record.type,
-          typeLabel: "Approval/Proposal",
+          typeLabel: "Phê duyệt/Đề xuất",
         }
       : undefined;
   }
@@ -183,7 +183,7 @@ async function resolveVisibleRelatedRecord(
           id: decision.id,
           label: decision.title ?? decision.decisionText,
           type: record.type,
-          typeLabel: "Decision",
+          typeLabel: "Quyết định",
         }
       : undefined;
   }
@@ -196,7 +196,7 @@ async function resolveVisibleRelatedRecord(
           id: risk.id,
           label: risk.title,
           type: record.type,
-          typeLabel: "Risk/Blocker",
+          typeLabel: "Rủi ro/Vướng mắc",
         }
       : undefined;
   }
@@ -483,14 +483,14 @@ export default async function MeetingDetailPage({
           </p>
         </div>
         <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Meeting Engine</p>
+          <p className="text-sm text-slate-500">Bộ xử lý cuộc họp</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <MeetingTypeBadge meetingType={meeting.meetingType} />
             <MeetingStatusBadge status={meeting.status} />
             <MeetingVisibilityBadge visibility={meeting.visibility} />
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Participant scope:{" "}
+            Phạm vi người tham dự:{" "}
             <MeetingParticipantScopeLabel
               participantScope={meeting.participantScope}
             />

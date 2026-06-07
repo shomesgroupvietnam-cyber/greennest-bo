@@ -61,7 +61,7 @@ describe("executive drill-down source helpers", () => {
         expect.objectContaining({
           href: "/projects/demo-project-riverside",
           permissionState: "allowed",
-          title: "Project demo-project-riverside",
+          title: "Dự án demo-project-riverside",
         }),
       ]),
     );
@@ -70,14 +70,14 @@ describe("executive drill-down source helpers", () => {
         expect.objectContaining({
           enabled: true,
           href: "/proposals/proposal-secret",
-          label: "Mo nguon",
+          label: "Mở nguồn",
         }),
       ]),
     );
     expect(item.timeline).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          label: "Trang thai hien tai",
+          label: "Trạng thái hiện tại",
           status: "pending",
         }),
       ]),

@@ -294,6 +294,7 @@ function approvalDetail(
   return {
     backHref: "/command-center?view=executive-approvals",
     generatedAt: "2026-06-04T00:00:00.000Z",
+    attachments: [],
     history: [
       {
         actorId: "submitter-01",
@@ -364,6 +365,8 @@ function approvalDetail(
     },
     requestSummary: {
       amountLabel: "9,999,000,000 VND",
+      attachmentCount: 0,
+      deadlineCompliance: "valid",
       dueDate: "2026-06-10",
       financialAccess: "no_permission",
       module: "finance",

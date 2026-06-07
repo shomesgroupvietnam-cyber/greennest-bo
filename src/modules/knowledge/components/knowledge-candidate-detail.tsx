@@ -123,7 +123,7 @@ export function KnowledgeCandidateDetail({
             <h2 className="text-base font-semibold text-slate-950">Metadata</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <div>
-                <dt className="text-slate-500">Source ref</dt>
+                <dt className="text-slate-500">Nguồn tham chiếu</dt>
                 <dd className="font-medium text-slate-950">{candidate.sourceRefId ?? "-"}</dd>
               </div>
               <div>

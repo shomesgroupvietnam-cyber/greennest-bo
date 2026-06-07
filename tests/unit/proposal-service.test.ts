@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { PermissionUser } from "@/lib/permissions/can";
 import { JsonLeadershipDelegationRepository } from "@/modules/settings/services/leadership-delegation-repository";
+import type { DocumentRepository } from "@/modules/documents/services/document-repository";
 import { upsertLeadershipDelegation } from "@/modules/settings/services/leadership-delegation-service";
 import { JsonPolicySettingsRepository } from "@/modules/settings/services/policy-settings-repository";
 import { JsonProposalRepository } from "@/modules/proposals/services/proposal-repository";
@@ -32,6 +33,46 @@ const systemAdmin: PermissionUser = { id: "admin-user", role: "admin" };
 const viewer: PermissionUser = { id: "viewer-user", role: "viewer" };
 const assistant: PermissionUser = { id: "viewer", role: "thu_ky_tro_ly" };
 const qaReviewer: PermissionUser = { id: "qa-reviewer", role: "qa_qc_chat_luong" };
+const documentRepository = {
+  async listDocuments() {
+    return [];
+  },
+  async getDocument(documentId: string) {
+    if (["document-contract-01", "document-complete-01"].includes(documentId)) {
+      return {
+        id: documentId,
+        projectId: "project-01",
+        title: documentId,
+        docType: "approval",
+        version: "v1",
+        status: "complete" as const,
+        createdAt: "2026-05-23T00:00:00.000Z",
+        updatedAt: "2026-05-23T00:00:00.000Z",
+      };
+    }
+
+    return undefined;
+  },
+  async listDocumentVersions() {
+    return [];
+  },
+  async createDocument(document) {
+    return document;
+  },
+  async updateDocument(_documentId, patch) {
+    return {
+      id: _documentId,
+      projectId: "project-01",
+      title: "updated",
+      docType: "approval",
+      version: "v1",
+      status: "complete" as const,
+      createdAt: "2026-05-23T00:00:00.000Z",
+      updatedAt: "2026-05-23T00:00:00.000Z",
+      ...patch,
+    };
+  },
+} satisfies DocumentRepository;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(tmpdir(), "greennest-proposals-"));
@@ -72,6 +113,13 @@ describe("proposal service", () => {
         projectId: "project-01",
         priority: "high",
         amount: 320_000_000,
+        attachments: [
+          {
+            name: "Ho so nghien cuu.pdf",
+            url: "https://example.com/ho-so-nghien-cuu.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
         summary: "Can danh gia phap ly, tai chinh va kha nang trien khai."
       },
       investmentUser,
@@ -84,6 +132,13 @@ describe("proposal service", () => {
 
     const listed = await listProposals({ type: "investment" }, investmentUser, repository);
     expect(listed.map((proposal) => proposal.id)).toEqual([detail.proposal.id]);
+    expect(detail.attachments).toEqual([
+      expect.objectContaining({
+        name: "Ho so nghien cuu.pdf",
+        source: "external_url",
+        url: "https://example.com/ho-so-nghien-cuu.pdf",
+      }),
+    ]);
 
     const submitted = await submitProposal(detail.proposal.id, investmentUser, repository, policyRepository);
     const submittedDetail = await getProposalDetail(submitted.id, financeManager, repository);
@@ -107,7 +162,14 @@ describe("proposal service", () => {
         amount: 50_000_000,
         title: "De xuat dieu chinh ngan sach",
         type: "finance",
-        priority: "normal"
+        priority: "normal",
+        attachments: [
+          {
+            name: "Bang dong tien.pdf",
+            url: "https://example.com/bang-dong-tien.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
       },
       financeManager,
       repository
@@ -128,10 +190,20 @@ describe("proposal service", () => {
         amount: 50_000_000,
         title: "De xuat hop dong phu",
         type: "contract",
-        priority: "normal"
+        projectId: "project-01",
+        priority: "normal",
+        attachments: [
+          {
+            documentId: "document-contract-01",
+            name: "Hop dong phu.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
       },
       { id: "contract-user", role: "quan_ly_hop_dong" },
-      repository
+      repository,
+      undefined,
+      documentRepository,
     );
     await submitProposal(second.proposal.id, { id: "contract-user", role: "quan_ly_hop_dong" }, repository);
 
@@ -184,6 +256,13 @@ describe("proposal service", () => {
   it("does not let proposal.review bypass proposal.request_change", async () => {
     const detail = await createProposal(
       {
+        attachments: [
+          {
+            name: "Ho so can dieu chinh.pdf",
+            url: "https://example.com/ho-so-can-dieu-chinh.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
         title: "De xuat can dieu chinh",
         type: "finance",
         priority: "normal"
@@ -218,6 +297,13 @@ describe("proposal service", () => {
         projectId: "project-01",
         module: "proposal",
         priority: "normal",
+        attachments: [
+          {
+            name: "Ho so thay lanh dao.pdf",
+            url: "https://example.com/ho-so-thay-lanh-dao.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
         summary: "Thu ky tao de xuat trong scope duoc uy quyen.",
         onBehalfOf: "mock-founder",
       },
@@ -277,6 +363,13 @@ describe("proposal service", () => {
         title: "De xuat can duyet",
         type: "finance",
         priority: "normal",
+        attachments: [
+          {
+            name: "Ho so can duyet.pdf",
+            url: "https://example.com/ho-so-can-duyet.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
       },
       financeManager,
       repository,
@@ -301,5 +394,80 @@ describe("proposal service", () => {
         delegationId: "delegation-a",
       }),
     ).rejects.toThrow(/MVP|approve|duyet|thay/i);
+  });
+
+  it("requires deadline and attachment metadata before a proposal enters approval queue", async () => {
+    const missingDeadline = await createProposal(
+      {
+        attachments: [
+          {
+            name: "Ho so thieu deadline.pdf",
+            url: "https://example.com/ho-so-thieu-deadline.pdf",
+          },
+        ],
+        title: "Thieu deadline",
+        type: "general",
+      },
+      investmentUser,
+      repository,
+    );
+    const missingAttachment = await createProposal(
+      {
+        dueDate: "2026-05-29",
+        title: "Thieu attachment",
+        type: "general",
+      },
+      investmentUser,
+      repository,
+    );
+    const complete = await createProposal(
+      {
+        attachments: [
+          {
+            documentId: "document-complete-01",
+            name: "Ho so day du.pdf",
+          },
+        ],
+        dueDate: "2026-05-29",
+        projectId: "project-01",
+        title: "Day du metadata",
+        type: "general",
+      },
+      investmentUser,
+      repository,
+      undefined,
+      documentRepository,
+    );
+
+    await expect(
+      submitProposal(missingDeadline.proposal.id, investmentUser, repository),
+    ).rejects.toThrow(/deadline|han xu ly/i);
+    await expect(
+      submitProposal(missingAttachment.proposal.id, investmentUser, repository),
+    ).rejects.toThrow(/file|attachment|dinh kem/i);
+
+    const submitted = await submitProposal(
+      complete.proposal.id,
+      investmentUser,
+      repository,
+    );
+
+    expect(submitted.status).toBe("in_review");
+  });
+
+  it("keeps proposal attachment migration aligned with the metadata contract", async () => {
+    const migration = await readFile(
+      "database/migrations/202606070002_add_proposal_attachments.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("public.proposal_attachments");
+    expect(migration).toContain("proposal_id");
+    expect(migration).toContain("document_id");
+    expect(migration).toContain("external_url");
+    expect(migration).toContain("proposal_attachments_reference_by_source_check");
+    expect(migration).toContain("current_user_can_read_proposal_attachment");
+    expect(migration).toContain("attachment_ids");
+    expect(migration).toContain("on delete cascade");
   });
 });

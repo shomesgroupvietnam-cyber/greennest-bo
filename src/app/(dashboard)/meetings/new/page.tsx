@@ -48,7 +48,7 @@ export default async function NewMeetingPage({
   return (
     <PageShell
       title="Tạo cuộc họp"
-      description="Tạo meeting record trong One Meeting Engine; có thể gắn dự án hoặc chỉ nằm ở scope điều hành."
+      description="Tạo hồ sơ cuộc họp; có thể gắn dự án hoặc chỉ nằm trong phạm vi điều hành."
     >
       {!can(currentUser, "meeting.create") ? (
         <UnauthorizedState

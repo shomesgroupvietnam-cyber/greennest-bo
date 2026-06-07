@@ -194,14 +194,14 @@ function buildAssistantSource(detail: ApprovalCenterDetailData) {
     `Module: ${detail.requestSummary.module}`,
     `Priority: ${detail.requestSummary.priority}`,
     detail.requestSummary.dueDate
-      ? `Deadline: ${detail.requestSummary.dueDate}`
+      ? `Hạn xử lý: ${detail.requestSummary.dueDate}`
       : undefined,
     `Proposer: ${detail.requestSummary.proposer}`,
     detail.requestSummary.submittedBy
       ? `Submitted by: ${detail.requestSummary.submittedBy}`
       : undefined,
     detail.requestSummary.ownerName
-      ? `Owner: ${detail.requestSummary.ownerName}`
+      ? `Người phụ trách: ${detail.requestSummary.ownerName}`
       : undefined,
     detail.requestSummary.financialAccess === "allowed" &&
     detail.requestSummary.amountLabel
@@ -276,7 +276,7 @@ function buildPrompt(source: ReturnType<typeof buildAssistantSource>) {
     "Khong tuyen bo da approve/reject/request-change/tao meeting. Chi duoc de xuat va can nguoi dung xac nhan.",
     "Khong dung web search, raw prompt, source bi an, hoac du lieu tai chinh bi gioi han.",
     "",
-    "Context da loc quyen:",
+    "Ngữ cảnh đã lọc quyền:",
     source.sourceText,
     "",
     "Citation duoc phep:",

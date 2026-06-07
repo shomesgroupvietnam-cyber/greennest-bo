@@ -173,10 +173,10 @@ function StatusBadge({ status, ai = false }: { ai?: boolean; status: "APPROVED" 
 
 function aiMeetingSummaryStatusLabel(status: AiMeetingSummary["status"]) {
   const labels: Record<AiMeetingSummary["status"], string> = {
-    draft: "Goi y AI",
-    insufficient_context: "Thieu context",
-    placeholder: "Placeholder",
-    unavailable: "Tam thoi unavailable",
+    draft: "Gợi ý AI",
+    insufficient_context: "Thiếu ngữ cảnh",
+    placeholder: "Bản giữ chỗ",
+    unavailable: "Tạm thời chưa khả dụng",
   };
 
   return labels[status];
@@ -196,7 +196,7 @@ function AiMeetingSummaryContext({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium">{aiMeetingSummaryStatusLabel(summary.status)}</p>
         <p className="text-xs text-amber-800">
-          Generated: {formatDateTime(summary.updatedAt)}
+          Tạo lúc: {formatDateTime(summary.updatedAt)}
         </p>
       </div>
       {summary.status !== "draft" ? (
@@ -207,7 +207,7 @@ function AiMeetingSummaryContext({
       {summary.citations.length > 0 ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-            Citations
+            Nguồn trích dẫn
           </p>
           <ul className="space-y-2">
             {summary.citations.map((citation) => (
@@ -238,7 +238,7 @@ function AiMeetingSummaryContext({
       {summary.actionProposals.length > 0 ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-            Action proposal preview
+            Xem trước đề xuất hành động
           </p>
           <ul className="space-y-2">
             {summary.actionProposals.map((proposal) => (
@@ -262,12 +262,12 @@ function AiMeetingSummaryContext({
                 </div>
                 {proposal.affectedFields.length > 0 ? (
                   <p className="mt-2 text-slate-600">
-                    Fields: {proposal.affectedFields.join(", ")}
+                    Trường thay đổi: {proposal.affectedFields.join(", ")}
                   </p>
                 ) : null}
                 {proposal.sourceCitationIds.length > 0 ? (
                   <p className="mt-1 text-slate-600">
-                    Citations: {proposal.sourceCitationIds.join(", ")}
+                    Nguồn trích dẫn: {proposal.sourceCitationIds.join(", ")}
                   </p>
                 ) : null}
                 <Link
@@ -557,7 +557,7 @@ export function MeetingFollowUpActionsPanel({
                   <div className="min-w-0">
                     <p className="font-medium text-slate-950">{action.title}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Owner: {action.ownerId ?? "-"} Â· Deadline:{" "}
+                      Người phụ trách: {action.ownerId ?? "-"} · Hạn xử lý:{" "}
                       {action.dueDate ? formatDateOnly(action.dueDate) : "-"}
                     </p>
                   </div>
@@ -770,7 +770,7 @@ export function MeetingDecisionTrackingPanel({
                     {item.title}
                   </Link>
                   <p className="mt-1 text-xs text-slate-500">
-                    Owner: {item.ownerId ?? "-"} · Deadline:{" "}
+                    Người phụ trách: {item.ownerId ?? "-"} · Hạn xử lý:{" "}
                     {item.dueDate ? formatDateOnly(item.dueDate) : "-"}
                   </p>
                 </div>
@@ -780,20 +780,20 @@ export function MeetingDecisionTrackingPanel({
                     <TaskPriorityBadge priority={item.priority} />
                   ) : null}
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                    {item.relation === "source" ? "Source" : "Context"}
+                    {item.relation === "source" ? "Nguồn" : "Ngữ cảnh"}
                   </span>
                 </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
-                  {item.assignmentCount} assignment
+                  {item.assignmentCount} giao việc
                 </span>
                 <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
                   {item.openAssignmentCount} đang mở
                 </span>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
-                  {item.dueSoonAssignmentCount} sap den han
+                  {item.dueSoonAssignmentCount} sắp đến hạn
                 </span>
                 <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-700">
                   {item.overdueAssignmentCount} quá hạn
@@ -803,7 +803,7 @@ export function MeetingDecisionTrackingPanel({
               {item.assignments.length > 0 ? (
                 <div className="mt-4 space-y-2">
                   <h3 className="text-sm font-medium text-slate-900">
-                    Assignments
+                    Giao việc
                   </h3>
                   <ul className="space-y-2">
                     {item.assignments.map((assignment) => (
@@ -817,8 +817,8 @@ export function MeetingDecisionTrackingPanel({
                               {assignment.title}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              Project: {assignment.projectId} · Assignee:{" "}
-                              {assignment.assigneeId ?? "-"} · Deadline:{" "}
+                              Dự án: {assignment.projectId} · Người nhận:{" "}
+                              {assignment.assigneeId ?? "-"} · Hạn xử lý:{" "}
                               {assignment.dueDate
                                 ? formatDateOnly(assignment.dueDate)
                                 : "-"}

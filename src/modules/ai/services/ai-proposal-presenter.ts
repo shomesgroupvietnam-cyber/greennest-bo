@@ -147,16 +147,16 @@ function getApprovalContentItems(proposal: AiActionProposal) {
   const sourceCitationIds = readStringArray(proposal.proposedPayload.sourceCitationIds);
 
   return [
-    proposalId ? `Approval: ${proposalId}` : undefined,
-    approvalAction ? `Action: ${approvalAction}` : undefined,
+    proposalId ? `Phê duyệt: ${proposalId}` : undefined,
+    approvalAction ? `Hành động: ${approvalAction}` : undefined,
     currentStatus || nextStatus
-      ? `Status: ${currentStatus ?? "?"} -> ${nextStatus ?? "?"}`
+      ? `Trạng thái: ${currentStatus ?? "?"} -> ${nextStatus ?? "?"}`
       : undefined,
-    affectedFields.length > 0 ? `Field: ${affectedFields.join(", ")}` : undefined,
+    affectedFields.length > 0 ? `Trường thay đổi: ${affectedFields.join(", ")}` : undefined,
     reason ? `Ly do: ${reason}` : undefined,
     meetingType ? `Loai hop: ${meetingType}` : undefined,
     agendaDraft ? `Agenda: ${agendaDraft}` : undefined,
-    sourceCitationIds.length > 0 ? `Citation: ${sourceCitationIds.join(", ")}` : undefined,
+    sourceCitationIds.length > 0 ? `Nguồn trích dẫn: ${sourceCitationIds.join(", ")}` : undefined,
   ].filter((item): item is string => Boolean(item));
 }
 
@@ -176,8 +176,8 @@ function getRiskContentItems(proposal: AiActionProposal) {
     title ? `Tieu de: ${title}` : undefined,
     level ? `Muc do: ${level}` : undefined,
     categoryKey ? `Nhom risk: ${categoryKey}` : undefined,
-    deadline ? `Deadline: ${deadline}` : undefined,
-    ownerId ? `Owner: ${ownerId}` : undefined,
+    deadline ? `Hạn xử lý: ${deadline}` : undefined,
+    ownerId ? `Người phụ trách: ${ownerId}` : undefined,
     projectId ? `Du an: ${projectId}` : undefined,
     reason ? `Ly do: ${reason}` : undefined,
     nextAction ? `Hanh dong tiep theo: ${nextAction}` : undefined,

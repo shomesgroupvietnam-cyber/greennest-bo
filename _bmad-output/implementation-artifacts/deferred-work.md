@@ -55,3 +55,7 @@
 - Generic risk action proposals can execute without source citation validation in `src/modules/ai/services/ai-action-proposal-service.ts:371`. Reason: shared AI proposal hardening outside the meeting-specific proposal path added in Story 8.4.
 - Rejecting AI proposals is not protected by the same atomic claim pattern as accept in `src/modules/ai/services/ai-action-proposal-service.ts:179`. Reason: pre-existing shared proposal lifecycle race, should be fixed across all proposal types together.
 - AI proposal accept path does not enforce `workflowStatus` before executing shared proposal types in `src/modules/ai/services/ai-action-proposal-service.ts:105`. Reason: pre-existing shared proposal lifecycle hardening, broader than Story 8.4.
+
+## Deferred from: code review of 2-11-dashboard-tong-quan-alignment-theo-yeu-cau-1-1 (2026-06-06)
+
+- Non-Dashboard test assertion rewrites are present in `tests/unit/command-center-dashboard.test.tsx` around role workspace, Morning Briefing, Common Center, and Approval Center assertions. Reason: this looks like existing localization/dirty-worktree churn outside Dashboard Tổng Quan AC1-5; keep Story 2.11 review focused on dashboard behavior.

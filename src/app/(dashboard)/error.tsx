@@ -12,7 +12,7 @@ export default function DashboardError({ error, reset }: { error: Error; reset: 
       </h1>
       <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">
         {isPermissionError
-          ? "Hệ thống đã chặn thao tác theo phân quyền hiện tại. Hãy quay lại hoặc liên hệ Admin nếu cần thay đổi quyền."
+          ? "Hệ thống đã chặn thao tác theo phân quyền hiện tại. Hãy quay lại hoặc liên hệ quản trị hệ thống nếu cần thay đổi quyền."
           : "Đã có lỗi khi xử lý dữ liệu. Bạn có thể thử tải lại màn hình."}
       </p>
       <Button className="mt-4" onClick={reset} type="button">

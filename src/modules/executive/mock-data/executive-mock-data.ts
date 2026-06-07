@@ -293,7 +293,7 @@ export const executiveAxisDefinitions: ExecutiveAxisDefinition[] = [
       { id: "kpi", label: "KPI", executiveScope: "KPI tổng và điểm lệch mục tiêu." },
       { id: "cashflow", label: "Dòng tiền", executiveScope: "Dòng tiền tổng và cảnh báo vượt ngưỡng." },
       { id: "audit", label: "Audit", executiveScope: "Audit rủi ro hoặc truy cập bị từ chối." },
-      { id: "risk", label: "Risk", executiveScope: "Risk map điều hành." },
+      { id: "risk", label: "Rủi ro", executiveScope: "Bản đồ rủi ro điều hành." },
       { id: "permissions", label: "Phân quyền", executiveScope: "Thay đổi quyền nhạy cảm." },
       { id: "executive-reporting", label: "Báo cáo tổng", executiveScope: "Báo cáo tổng hợp cho lãnh đạo." },
     ],
@@ -471,7 +471,7 @@ export const dashboardLayers: ExecutiveDashboardLayer[] = [
   {
     id: "global-executive-dashboard",
     layer: "global",
-    title: "Global Executive Dashboard",
+    title: "Dashboard điều hành toàn công ty",
     description:
       "Danh cho Chu tich/TGD: KPI tong, dong tien tong, rui ro do va quyet dinh cap cao.",
     targetRole: "CHAIRMAN",
@@ -510,7 +510,7 @@ export const dashboardLayers: ExecutiveDashboardLayer[] = [
   {
     id: "project-executive-dashboard",
     layer: "project",
-    title: "Project Executive Dashboard",
+    title: "Dashboard điều hành theo dự án",
     description:
       "Danh cho Giam doc du an: tinh trang du an, trinh duyet, chi phi phat sinh va rui ro trong pham vi duoc giao.",
     targetRole: "PROJECT_DIRECTOR",

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -206,5 +208,16 @@ describe("notification outbox service", () => {
       recordId: "risk-a",
       thresholdDays: 3,
     });
+  });
+
+  it("keeps notification source type contract aligned with risk notifications", async () => {
+    const migration = await readFile(
+      "database/migrations/202606070001_align_notification_outbox_source_types.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("'risk'");
+    expect(migration).toContain("notification_outbox");
+    expect(migration).toContain("source_type");
   });
 });

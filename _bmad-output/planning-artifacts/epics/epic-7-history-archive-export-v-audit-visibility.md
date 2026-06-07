@@ -1,8 +1,8 @@
-# Epic 7: History, Archive, Export Và Audit Visibility
+# Epic 7: Lịch Sử, Lưu Trữ, Xuất Dữ Liệu Và Hiển Thị Nhật Ký
 
 Người có quyền có thể tra cứu lịch sử điều hành, approval, decision, assignment, meeting, audit log, version hồ sơ, timeline và export theo permission; dữ liệu nhạy cảm hoặc export quan trọng luôn bị kiểm soát và ghi audit.
 
-## Story 7.1: History & Archive Center Service
+## Story 7.1: Dịch Vụ Trung Tâm Lịch Sử Và Lưu Trữ
 
 **Requirements Covered:** FR-080, FR-081, NFR-001, NFR-004, NFR-006.
 
@@ -33,7 +33,7 @@ AC3:
 
 **Dependencies:** Story 3.4, Story 4.3, Story 6.4.
 
-## Story 7.2: Search, Filter Và Timeline UI
+## Story 7.2: Giao Diện Tìm Kiếm, Lọc Và Dòng Thời Gian
 
 **Requirements Covered:** FR-082, UX-DR15, UX-DR25, UX-DR27, UX-DR29, UX-DR30.
 
@@ -64,7 +64,7 @@ AC3:
 
 **Dependencies:** Story 7.1.
 
-## Story 7.3: Export Theo Permission Và Audit
+## Story 7.3: Xuất Dữ Liệu Theo Quyền Và Nhật Ký
 
 **Requirements Covered:** FR-083, FR-084, NFR-005, NFR-006, NFR-012.
 
@@ -95,7 +95,7 @@ AC3:
 
 **Dependencies:** Story 7.1.
 
-## Story 7.4: History/Export States Và QA Nghiệm Thu
+## Story 7.4: Trạng Thái Lịch Sử/Xuất Dữ Liệu Và QA Nghiệm Thu
 
 **Requirements Covered:** FR-080, FR-082, FR-083, FR-084, NFR-004, UX-DR22, UX-DR26, UX-DR30, UX-DR31, UX-DR32.
 

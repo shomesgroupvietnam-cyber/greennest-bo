@@ -47,6 +47,28 @@ export type ProposalApprovalAction =
   | "hold"
   | "cancel";
 
+export type ProposalAttachmentSource = "document" | "external_url";
+
+export type ProposalAttachment = {
+  id: EntityId;
+  proposalId: EntityId;
+  name: string;
+  source: ProposalAttachmentSource;
+  url?: string;
+  externalUrl?: string;
+  documentId?: EntityId;
+  uploadedBy?: EntityId;
+  uploadedAt?: string;
+  createdAt: string;
+};
+
+export type ProposalAttachmentInput = {
+  name: string;
+  url?: string;
+  externalUrl?: string;
+  documentId?: EntityId;
+};
+
 export type ProposalLink = {
   id: EntityId;
   proposalId: EntityId;
@@ -104,6 +126,7 @@ export type ProposalDecision = {
   nextStatus?: ProposalStatus;
   previousStepStatus?: ProposalStep["status"];
   nextStepStatus?: ProposalStep["status"];
+  attachmentIds?: EntityId[];
 };
 
 export type Proposal = TimestampFields & {
@@ -141,6 +164,7 @@ export type ProposalInput = {
   amount?: number;
   dueDate?: string;
   summary?: string;
+  attachments?: ProposalAttachmentInput[];
   links?: Array<Pick<ProposalLink, "entityType" | "entityId" | "relationType">>;
 };
 
@@ -157,5 +181,6 @@ export type ProposalDetail = {
   proposal: Proposal;
   steps: ProposalStep[];
   links: ProposalLink[];
+  attachments: ProposalAttachment[];
   decisions: ProposalDecision[];
 };

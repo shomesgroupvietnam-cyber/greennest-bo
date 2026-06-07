@@ -34,40 +34,24 @@ describe("command center service", () => {
     expect(executiveItem?.href).toBe(
       "/command-center?view=executive-dashboard",
     );
-    expect(executiveItem?.children).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          href: "/command-center?view=executive-dashboard",
-          label: "Dashboard Tong Quan",
-          viewKey: "executive-dashboard",
-        }),
-        expect.objectContaining({
-          href: "/command-center?view=executive-morning-briefing",
-          label: "Morning Briefing",
-          viewKey: "executive-morning-briefing",
-        }),
-        expect.objectContaining({
-          href: "/command-center?view=executive-common-center",
-          label: "Executive Common Center",
-          viewKey: "executive-common-center",
-        }),
-        expect.objectContaining({
-          href: "/command-center?view=executive-approvals",
-          label: "Approval Center",
-          viewKey: "executive-approvals",
-        }),
-        expect.objectContaining({
-          href: "/command-center?view=executive-history",
-          label: "History & Archive",
-          viewKey: "executive-history",
-        }),
-        expect.objectContaining({
-          href: "/command-center?view=executive-private-workspace",
-          label: "Private Workspace",
-          viewKey: "executive-private-workspace",
-        }),
-      ]),
-    );
+    expect(executiveItem?.children?.map((child) => child.viewKey)).toEqual([
+      "executive-dashboard",
+      "executive-morning-briefing",
+      "executive-common-center",
+      "executive-approvals",
+      "executive-decision-log",
+      "executive-history",
+      "executive-private-workspace",
+    ]);
+    expect(executiveItem?.children?.map((child) => child.href)).toEqual([
+      "/command-center?view=executive-dashboard",
+      "/command-center?view=executive-morning-briefing",
+      "/command-center?view=executive-common-center",
+      "/command-center?view=executive-approvals",
+      "/command-center?view=executive-decision-log",
+      "/command-center?view=executive-history",
+      "/command-center?view=executive-private-workspace",
+    ]);
     expect(
       data.axes.flatMap((axis) => axis.items).every((item) => item.viewKey),
     ).toBe(true);
@@ -86,6 +70,7 @@ describe("command center service", () => {
       projectPortfolio: expect.objectContaining({ total: expect.any(Number) }),
       approvalSummary: expect.objectContaining({ pending: expect.any(Number) }),
     });
+    expect(data.executiveDashboard).not.toHaveProperty("riskMutationOptions");
     expect(data.executiveMorningBriefing).toMatchObject({
       scope: expect.objectContaining({ operatingRole: "CEO" }),
       summary: expect.objectContaining({
@@ -109,7 +94,6 @@ describe("command center service", () => {
       tabs: expect.arrayContaining([
         expect.objectContaining({
           key: "axis_1",
-          label: "Truc 1",
           state: "available",
         }),
         expect.objectContaining({
@@ -179,7 +163,7 @@ describe("command center service", () => {
     expect(superAdminData.availableViews.settings).toBe(true);
   });
 
-  it("does not serialize legacy executive approvals when Approval Center permission is denied", async () => {
+  it("does not serialize legacy executive approvals when Trung T?m Ph? Duy?t permission is denied", async () => {
     const data = await getCommandCenterData(admin, {
       rolePermissionCatalog: createDefaultRolePermissionCatalog(),
       scopeAssignments: [],
@@ -283,7 +267,7 @@ describe("command center service", () => {
     expect(data.executivePrivateWorkspace).not.toBeNull();
   });
 
-  it("shows Approval Center to scoped proposal approvers without executive dashboard data", async () => {
+  it("shows Trung T?m Ph? Duy?t to scoped proposal approvers without executive dashboard data", async () => {
     const scopeAssignments: ScopeAssignment[] = [
       {
         id: "scoped-proposal-approval",

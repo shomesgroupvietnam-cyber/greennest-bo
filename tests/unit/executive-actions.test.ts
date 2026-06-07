@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   overrideExecutiveRiskStatus: vi.fn(),
   revalidatePath: vi.fn(),
   updateDecisionRecord: vi.fn(),
+  updateDecisionAssignmentLifecycle: vi.fn(),
   updateExecutiveRiskRecord: vi.fn(),
 }));
 
@@ -29,6 +30,10 @@ vi.mock("@/modules/executive/services/decision-assignment-service", () => ({
   createDecisionAssignments: mocks.createDecisionAssignments,
 }));
 
+vi.mock("@/modules/executive/services/decision-assignment-lifecycle-service", () => ({
+  updateDecisionAssignmentLifecycle: mocks.updateDecisionAssignmentLifecycle,
+}));
+
 vi.mock("@/modules/executive/services/risk-record-service", () => ({
   closeExecutiveRiskRecord: mocks.closeExecutiveRiskRecord,
   createExecutiveRiskRecord: mocks.createExecutiveRiskRecord,
@@ -41,6 +46,7 @@ import {
   createDecisionAssignmentsAction,
   createDecisionRecordAction,
   createExecutiveRiskRecordStateAction,
+  updateDecisionAssignmentLifecycleAction,
   overrideExecutiveRiskStatusStateAction,
   updateDecisionRecordAction,
   updateExecutiveRiskRecordAction,
@@ -125,6 +131,45 @@ describe("executive actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
   });
 
+  it("creates a decision from approval source and revalidates approval detail surfaces", async () => {
+    const currentUser = { id: "leader-01", role: "tong_giam_doc" };
+    const formData = new FormData();
+
+    formData.set("sourceType", "approval");
+    formData.set("sourceId", "finance-secret");
+    formData.set("title", "Decision after approval");
+    formData.set("decisionText", "Issue official instruction after approval.");
+    formData.set("projectId", "project-a");
+    mocks.getCurrentUser.mockResolvedValue(currentUser);
+    mocks.createDecisionRecord.mockResolvedValue({
+      id: "decision-approval-01",
+      projectId: "project-a",
+      projectIds: ["project-a"],
+      sourceType: "approval",
+      sourceId: "finance-secret",
+    });
+
+    await createDecisionRecordAction(formData);
+
+    expect(mocks.createDecisionRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionText: "Issue official instruction after approval.",
+        projectId: "project-a",
+        sourceId: "finance-secret",
+        sourceType: "approval",
+        title: "Decision after approval",
+      }),
+      currentUser,
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/approvals/proposal/finance-secret",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/command-center");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/executive/decision-log");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/executive/decisions");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
+  });
+
   it("creates a single decision assignment from center form fields", async () => {
     const currentUser = { id: "leader-01", role: "tong_giam_doc" };
     const formData = new FormData();
@@ -196,6 +241,52 @@ describe("executive actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/meetings/meeting-01");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-b");
+  });
+
+  it("updates assignment lifecycle through the service and revalidates task and decision surfaces", async () => {
+    const currentUser = { id: "leader-01", role: "tong_giam_doc" };
+    const formData = new FormData();
+
+    formData.set("assignmentId", "assignment-01");
+    formData.set("status", "in_progress");
+    formData.set("reason", "Bat dau xu ly.");
+    mocks.getCurrentUser.mockResolvedValue(currentUser);
+    mocks.updateDecisionAssignmentLifecycle.mockResolvedValue({
+      assignment: {
+        id: "assignment-01",
+        decisionId: "decision-01",
+        projectId: "project-a",
+        taskId: "task-01",
+      },
+      decision: {
+        id: "decision-01",
+        meetingId: "meeting-01",
+        projectId: "project-a",
+        projectIds: ["project-a"],
+      },
+      task: {
+        id: "task-01",
+        projectId: "project-a",
+      },
+    });
+
+    await updateDecisionAssignmentLifecycleAction(formData);
+
+    expect(mocks.updateDecisionAssignmentLifecycle).toHaveBeenCalledWith(
+      {
+        assignmentId: "assignment-01",
+        reason: "Bat dau xu ly.",
+        status: "in_progress",
+      },
+      currentUser,
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/tasks");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/tasks/task-01");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/command-center");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/executive/decision-log");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/executive/decisions");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/meetings/meeting-01");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/projects/project-a");
   });
 
   it("creates a risk record from FormData and revalidates executive surfaces", async () => {

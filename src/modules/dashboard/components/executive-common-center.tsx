@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { ExecutiveDrilldownPanel } from "@/modules/dashboard/components/executive-drilldown-panel";
+import { executiveSourceTypeLabel } from "@/modules/dashboard/source-labels";
 import type {
   ExecutiveCommonCenterData,
   ExecutiveCommonCenterNotification,
@@ -100,16 +101,16 @@ function ApprovalMeta({ item }: { item: ExecutiveDashboardSourceItem }) {
           <span className="block font-semibold text-red-700">
             {item.overdue.severity} - {item.overdue.reason}
           </span>
-          <span className="block">Next action: {item.overdue.nextAction}</span>
+          <span className="block">Hành động tiếp theo: {item.overdue.nextAction}</span>
         </>
       ) : null}
       {item.escalation?.required ? (
         <>
           <span className="block font-semibold text-red-700">
-            Escalation: {item.escalation.trigger}
+            Leo thang: {item.escalation.trigger}
             {item.escalation.status ? ` - ${item.escalation.status}` : ""}
           </span>
-          {targetSummary ? <span className="block">Targets: {targetSummary}</span> : null}
+          {targetSummary ? <span className="block">Người nhận: {targetSummary}</span> : null}
         </>
       ) : null}
     </span>
@@ -180,10 +181,10 @@ function SourceList<T extends ExecutiveDashboardSourceItem>({
             ) : null}
             <ApprovalMeta item={item} />
             <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-              {item.owner ? <span>Owner: {item.owner}</span> : null}
-              {item.deadline ? <span>Deadline: {item.deadline}</span> : null}
-              {item.projectId ? <span>Project: {item.projectId}</span> : null}
-              <span>{item.sourceType}: {item.sourceId}</span>
+              {item.owner ? <span>Người phụ trách: {item.owner}</span> : null}
+              {item.deadline ? <span>Hạn xử lý: {item.deadline}</span> : null}
+              {item.projectId ? <span>Dự án: {item.projectId}</span> : null}
+              <span>{executiveSourceTypeLabel(item.sourceType)}: {item.sourceId}</span>
             </span>
           </>
         );
@@ -196,7 +197,7 @@ function SourceList<T extends ExecutiveDashboardSourceItem>({
             >
               {content}
               <span className="mt-2 block text-xs font-semibold text-slate-500">
-                Khong co quyen drill-down
+                Không có quyền xem chi tiết
               </span>
             </article>
           );
@@ -204,7 +205,7 @@ function SourceList<T extends ExecutiveDashboardSourceItem>({
 
         return (
           <button
-            aria-label={`Xem chi tiet ${item.title}`}
+            aria-label={`Xem chi tiết ${item.title}`}
             className="min-h-11 w-full rounded-md border border-slate-200 p-3 text-left transition hover:border-emerald-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             key={item.id}
             onClick={() => onSelectSource(item)}
@@ -231,21 +232,21 @@ function PriorityArea({
     data.permissions.canViewRisk ||
     data.permissions.canViewProposals ||
     data.permissions.canViewProjects
-      ? "Khong co item uu tien trong scope hien tai."
-      : "Khong co quyen xem item uu tien trong scope hien tai.";
+      ? "Không có việc ưu tiên trong phạm vi hiện tại."
+      : "Không có quyền xem việc ưu tiên trong phạm vi hiện tại.";
 
   return (
     <section
-      aria-label="Priority area"
+      aria-label="Khu vực ưu tiên"
       className="rounded-md border bg-white p-4 shadow-sm"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-slate-600" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-slate-950">Priority area</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Khu vực ưu tiên</h2>
         </div>
         <span className="w-fit rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-          {data.priorityItems.length} muc
+          {data.priorityItems.length} mục
         </span>
       </div>
 
@@ -287,19 +288,19 @@ function PriorityArea({
                   {item.title}
                 </span>
                 <span className="mt-1 block text-xs leading-5 text-slate-600">
-                  {item.reason ?? "Can lanh dao xem truoc."}
+                  {item.reason ?? "Cần lãnh đạo xem trước."}
                 </span>
                 <ApprovalMeta item={item} />
                 <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                  {item.owner ? <span>Owner: {item.owner}</span> : null}
-                  {item.deadline ? <span>Deadline: {item.deadline}</span> : null}
-                  {item.projectId ? <span>Project: {item.projectId}</span> : null}
-                  <span>{item.sourceType}: {item.sourceId}</span>
+                  {item.owner ? <span>Người phụ trách: {item.owner}</span> : null}
+                  {item.deadline ? <span>Hạn xử lý: {item.deadline}</span> : null}
+                  {item.projectId ? <span>Dự án: {item.projectId}</span> : null}
+                  <span>{executiveSourceTypeLabel(item.sourceType)}: {item.sourceId}</span>
                   {item.financialAccess === "allowed" && item.amountLabel ? (
-                    <span>Gia tri: {item.amountLabel}</span>
+                    <span>Giá trị: {item.amountLabel}</span>
                   ) : null}
                   {item.financialAccess === "no_permission" ? (
-                    <span>Tai chinh: khong co quyen</span>
+                    <span>Tài chính: không có quyền xem</span>
                   ) : null}
                 </span>
               </>
@@ -313,7 +314,7 @@ function PriorityArea({
                 >
                   {content}
                   <span className="mt-2 block text-xs font-semibold">
-                    Khong co quyen drill-down
+                    Không có quyền xem chi tiết
                   </span>
                 </article>
               );
@@ -321,7 +322,7 @@ function PriorityArea({
 
             return (
               <button
-                aria-label={`Xem chi tiet ${item.title}`}
+                aria-label={`Xem chi tiết ${item.title}`}
                 className={`min-h-11 w-full rounded-md border p-3 text-left transition hover:border-emerald-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${toneClasses[item.tone]}`}
                 key={`${item.sourceType}-${item.sourceId}`}
                 onClick={() => onSelectSource(item)}
@@ -361,7 +362,7 @@ function KpiSection({ data }: { data: ExecutiveCommonCenterData }) {
           ))}
         </div>
       ) : (
-        <EmptyState>Khong co KPI trong scope hien tai.</EmptyState>
+        <EmptyState>Không có KPI trong phạm vi hiện tại.</EmptyState>
       )}
     </SectionShell>
   );
@@ -373,7 +374,7 @@ function NotificationList({
   items: ExecutiveCommonCenterNotification[];
 }) {
   if (!items.length) {
-    return <EmptyState>Khong co thong bao trong scope hien tai.</EmptyState>;
+    return <EmptyState>Không có thông báo trong phạm vi hiện tại.</EmptyState>;
   }
 
   return (
@@ -386,9 +387,9 @@ function NotificationList({
           <p className="break-words text-sm font-semibold">{item.title}</p>
           <p className="mt-1 text-xs leading-5">{item.description}</p>
           <p className="mt-2 text-xs">
-            {item.timeLabel ?? "Moi cap nhat"}
+            {item.timeLabel ?? "Mới cập nhật"}
             {item.sourceType && item.sourceId
-              ? ` - ${item.sourceType}: ${item.sourceId}`
+              ? ` - ${executiveSourceTypeLabel(item.sourceType)}: ${item.sourceId}`
               : ""}
           </p>
         </article>
@@ -409,7 +410,7 @@ function RiskOverview({
   return (
     <SectionShell
       icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
-      label="Risk tổng"
+      label="Rủi ro tổng"
     >
       <div className="grid grid-cols-2 gap-2 text-center text-xs">
         <div className="rounded-md border border-red-200 bg-red-50 p-2 text-red-800">
@@ -430,7 +431,7 @@ function RiskOverview({
             </div>
           ))
         ) : (
-          <EmptyState>Khong co category risk trong scope hien tai.</EmptyState>
+          <EmptyState>Không có nhóm rủi ro trong phạm vi hiện tại.</EmptyState>
         )}
       </div>
       <div className="mt-3">
@@ -438,8 +439,8 @@ function RiskOverview({
           canDrillDown={canDrillDown}
           emptyLabel={
             data.permissions.canViewRisk
-              ? "Khong co risk trong scope hien tai."
-              : "Khong co quyen xem risk trong scope hien tai."
+              ? "Không có rủi ro trong phạm vi hiện tại."
+              : "Không có quyền xem rủi ro trong phạm vi hiện tại."
           }
           items={data.riskOverview.items}
           onSelectSource={onSelectSource}
@@ -455,7 +456,7 @@ function StrategyList({
   items: ExecutiveCommonCenterStrategyItem[];
 }) {
   if (!items.length) {
-    return <EmptyState>Khong co chien luoc trong scope hien tai.</EmptyState>;
+    return <EmptyState>Không có chiến lược trong phạm vi hiện tại.</EmptyState>;
   }
 
   return (
@@ -469,7 +470,7 @@ function StrategyList({
           <p className="mt-1 text-xs leading-5">{item.description}</p>
           <p className="mt-2 text-xs">
             {item.status}
-            {item.owner ? ` - Owner: ${item.owner}` : ""}
+            {item.owner ? ` - Người phụ trách: ${item.owner}` : ""}
           </p>
         </article>
       ))}
@@ -500,7 +501,7 @@ export function ExecutiveCommonCenter({
 }) {
   const [selectedSourceItem, setSelectedSourceItem] =
     useState<ExecutiveDashboardSourceItem | null>(null);
-  const scopeLabel = data.scope.scopeLabel || legacyScopeLabel || "Scope hien tai";
+  const scopeLabel = data.scope.scopeLabel || legacyScopeLabel || "Phạm vi hiện tại";
   const canDrillDown = data.permissions.canDrillDown;
   const deadlineItems = mergeDeadlineItems(data);
 
@@ -510,19 +511,19 @@ export function ExecutiveCommonCenter({
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-semibold uppercase text-emerald-700">
-              Ban lanh dao
+              Ban lãnh đạo
             </p>
             <h1 className="mt-2 break-words text-2xl font-semibold text-slate-950">
-              Executive Common Center
+              Trung Tâm Điều Hành Chung
             </h1>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
-              Common view tong hop tu ExecutiveDashboardData va ExecutiveLeadershipData da loc theo scope.
+              Góc nhìn tổng hợp KPI, rủi ro, quyết định, lịch họp và việc quá hạn trong phạm vi đã được phân quyền.
             </p>
           </div>
           <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
             <p className="font-semibold text-slate-950">{scopeLabel}</p>
             <p className="mt-1 text-xs">
-              Cap nhat {formatGeneratedAt(data.generatedAt)}
+              Cập nhật {formatGeneratedAt(data.generatedAt)}
             </p>
           </div>
         </div>
@@ -530,14 +531,14 @@ export function ExecutiveCommonCenter({
 
       {!canDrillDown ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">
-          Khong co quyen drill-down trong Common Center.
+          Không có quyền xem chi tiết trong Trung Tâm Điều Hành Chung.
         </p>
       ) : null}
 
       {!data.permissions.canViewFinance ? (
         <p className="rounded-md border border-slate-200 bg-white p-3 text-sm font-medium text-slate-700">
           <LockKeyhole className="mr-2 inline h-4 w-4 align-text-bottom text-slate-500" aria-hidden="true" />
-          Khong co quyen xem tai chinh trong Common Center.
+          Không có quyền xem tài chính trong Trung Tâm Điều Hành Chung.
         </p>
       ) : null}
 
@@ -552,14 +553,14 @@ export function ExecutiveCommonCenter({
           />
           <SectionShell
             icon={<FileCheck2 className="h-4 w-4" aria-hidden="true" />}
-            label="Quyet dinh moi"
+            label="Quyết định mới"
           >
             <SourceList
               canDrillDown={canDrillDown}
               emptyLabel={
                 data.permissions.canViewDecisions
-                  ? "Khong co quyet dinh moi trong scope hien tai."
-                  : "Khong co quyen xem quyet dinh trong scope hien tai."
+                  ? "Không có quyết định mới trong phạm vi hiện tại."
+                  : "Không có quyền xem quyết định trong phạm vi hiện tại."
               }
               items={data.decisionHighlights}
               onSelectSource={setSelectedSourceItem}
@@ -575,20 +576,20 @@ export function ExecutiveCommonCenter({
         <aside className="space-y-5">
           <SectionShell
             icon={<Bell className="h-4 w-4" aria-hidden="true" />}
-            label="Thong bao moi"
+            label="Thông báo mới"
           >
             <NotificationList items={data.notifications} />
           </SectionShell>
           <SectionShell
             icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
-            label="Lich hop va su kien"
+            label="Lịch họp và sự kiện"
           >
             <SourceList
               canDrillDown={canDrillDown}
               emptyLabel={
                 data.permissions.canViewMeetings
-                  ? "Khong co lich hop trong scope hien tai."
-                  : "Khong co quyen xem lich hop trong scope hien tai."
+                  ? "Không có lịch họp trong phạm vi hiện tại."
+                  : "Không có quyền xem lịch họp trong phạm vi hiện tại."
               }
               items={data.calendarItems}
               onSelectSource={setSelectedSourceItem}
@@ -596,17 +597,17 @@ export function ExecutiveCommonCenter({
           </SectionShell>
           <SectionShell
             icon={<Target className="h-4 w-4" aria-hidden="true" />}
-            label="Chien luoc"
+            label="Chiến lược"
           >
             <StrategyList items={data.strategyItems} />
           </SectionShell>
           <SectionShell
             icon={<Flag className="h-4 w-4" aria-hidden="true" />}
-            label="Deadline vuot nguong qua han"
+            label="Hạn xử lý vượt ngưỡng"
           >
             <SourceList
               canDrillDown={canDrillDown}
-              emptyLabel="Khong co deadline vuot nguong trong scope hien tai."
+              emptyLabel="Không có hạn xử lý vượt ngưỡng trong phạm vi hiện tại."
               items={deadlineItems}
               onSelectSource={setSelectedSourceItem}
             />
@@ -627,10 +628,10 @@ export function ExecutiveCommonCenterNoAccessState() {
     <section className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-center shadow-sm">
       <LockKeyhole className="mx-auto h-8 w-8 text-slate-500" aria-hidden="true" />
       <h1 className="mt-3 text-xl font-semibold text-slate-950">
-        Khong co quyen xem Executive Common Center
+        Không có quyền xem Trung Tâm Điều Hành Chung
       </h1>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-        Command Center khong nhan duoc ExecutiveCommonCenterData cho view nay.
+        Trung Tâm Điều Hành chưa nhận được dữ liệu Trung Tâm Điều Hành Chung cho màn này.
       </p>
     </section>
   );

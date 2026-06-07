@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
 
 const data: DecisionAssignmentCenterData = {
   generatedAt: "2026-05-31T09:00:00.000Z",
-  scopeLabel: "Decision & Assignment Center",
+  scopeLabel: "Trung Tam Quyet Dinh Va Giao Viec",
   summary: {
     dueSoonAssignments: 1,
     highPriorityDecisions: 1,
@@ -141,11 +141,11 @@ describe("DecisionAssignmentCenter", () => {
     render(<DecisionAssignmentCenter data={data} />);
 
     expect(
-      screen.getByRole("heading", { name: "Decision & Assignment Center" }),
+      screen.getByRole("heading", { name: /Trung T.m Quy.t .{1,2}nh V. Giao Vi.c/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Decision list" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Danh s.ch quy.t .{1,2}nh/ })).toBeInTheDocument();
 
-    const detail = screen.getByRole("region", { name: "Decision detail" });
+    const detail = screen.getByRole("region", { name: /Chi ti.t quy.t .{1,2}nh/ });
     expect(within(detail).getByText("Approve site priority")).toBeInTheDocument();
     expect(within(detail).getByText("Weekly leadership meeting")).toBeInTheDocument();
     expect(within(detail).getByText("Prepare legal clearance plan")).toBeInTheDocument();
@@ -153,6 +153,52 @@ describe("DecisionAssignmentCenter", () => {
     expect(within(detail).getByText("Version 2")).toBeInTheDocument();
     expect(within(detail).getByText(/noi dung da an/i)).toBeInTheDocument();
     expect(screen.queryByText("Sensitive previous instruction")).not.toBeInTheDocument();
+  });
+
+  it("renders decision body editing, batch assignment rows, and assignment lifecycle controls", () => {
+    render(<DecisionAssignmentCenter data={data} />);
+
+    const detail = screen.getByRole("region", { name: /Chi ti.t quy.t .{1,2}nh/ });
+    const updateForm = detail
+      .querySelector('textarea[name="decisionText"]')
+      ?.closest("form");
+
+    expect(updateForm?.querySelector('input[name="title"]')).toHaveValue(
+      "Approve site priority",
+    );
+    expect(updateForm?.querySelector('textarea[name="decisionText"]')).toHaveValue(
+      "Move site priority to legal clearance.",
+    );
+    expect(
+      within(updateForm as HTMLElement).getByLabelText(/L. do/i),
+    ).toBeInTheDocument();
+
+    const assignmentForm = within(detail)
+      .getByRole("button", { name: /Giao vi.c/ })
+      .closest("form");
+
+    expect(
+      assignmentForm?.querySelector('input[name="assignmentsJson"]'),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(assignmentForm as HTMLElement).getByRole("button", {
+        name: /Th.m assignment/i,
+      }),
+    );
+    expect(
+      (assignmentForm as HTMLElement).querySelectorAll(
+        'input[aria-label="Tieu de viec giao"]',
+      ),
+    ).toHaveLength(2);
+
+    const assignments = screen.getByRole("region", { name: /Vi.c .{1,2}.c giao/ });
+
+    expect(
+      within(assignments).getByRole("combobox", { name: /Trang thai assignment/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(assignments).getByRole("button", { name: /Cap nhat trang thai/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders no-access and empty states", () => {
@@ -164,7 +210,7 @@ describe("DecisionAssignmentCenter", () => {
     };
 
     const { rerender } = render(<DecisionAssignmentCenter data={noAccess} />);
-    expect(screen.getByText(/Khong co quyen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kh.*ng c.* quy.*n/i)).toBeInTheDocument();
 
     rerender(
       <DecisionAssignmentCenter
@@ -175,6 +221,6 @@ describe("DecisionAssignmentCenter", () => {
         }}
       />,
     );
-    expect(screen.getByText(/Chua co decision/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ch.a c. quy.t .{1,2}nh/i)).toBeInTheDocument();
   });
 });

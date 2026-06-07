@@ -13,6 +13,10 @@ import {
 import Link from "next/link";
 
 import { safeInternalHref } from "@/modules/dashboard/services/executive-drilldown-source";
+import {
+  executivePermissionStateLabel,
+  executiveSourceTypeLabel,
+} from "@/modules/dashboard/source-labels";
 import type {
   ExecutiveDashboardSourceItem,
   ExecutiveRiskItem,
@@ -24,16 +28,16 @@ function valueOrFallback(value: string | undefined, fallback: string) {
 
 function metadataRows(item: ExecutiveDashboardSourceItem) {
   return [
-    ["Source type", item.sourceType],
-    ["Source ID", item.sourceId],
-    ["Scope", valueOrFallback(item.scopeLabel, item.projectId ?? "Khong co scope")],
-    ["Project", item.projectId ?? "Khong co trong DTO"],
-    ["Module", item.moduleId ?? "Khong co module"],
-    ["Status", item.status],
-    ["Permission", item.permissionState ?? "read_only"],
-    ["Owner", item.owner ?? "Chua gan"],
-    ["Deadline", item.deadline ?? "Khong co deadline"],
-    ["Reason", item.reason ?? "Khong co reason"],
+    ["Loại nguồn", executiveSourceTypeLabel(item.sourceType)],
+    ["Mã nguồn", item.sourceId],
+    ["Phạm vi", valueOrFallback(item.scopeLabel, item.projectId ?? "Không có phạm vi")],
+    ["Dự án", item.projectId ?? "Không có trong dữ liệu"],
+    ["Module", item.moduleId ?? "Không có module"],
+    ["Trạng thái", item.status],
+    ["Quyền truy cập", executivePermissionStateLabel(item.permissionState)],
+    ["Người phụ trách", item.owner ?? "Chưa gán"],
+    ["Hạn xử lý", item.deadline ?? "Không có hạn xử lý"],
+    ["Lý do", item.reason ?? "Không có lý do"],
   ];
 }
 
@@ -118,7 +122,7 @@ export function ExecutiveDrilldownPanel({
       return !(
         action.enabled &&
         (action.id === "open-source" ||
-          (action.label === "Mo nguon" && (!safeHref || actionHref === safeHref)))
+          (action.label === "Mở nguồn" && (!safeHref || actionHref === safeHref)))
       );
     }) ?? [];
   const handleClose = () => {
@@ -176,7 +180,7 @@ export function ExecutiveDrilldownPanel({
         <header className="flex items-start justify-between gap-4 border-b border-slate-200 p-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase text-slate-500">
-              Drill-down read-only
+              Chi tiết chỉ xem
             </p>
             <h2 className="mt-1 break-words text-xl font-semibold text-slate-950">
               {item.title}
@@ -186,7 +190,7 @@ export function ExecutiveDrilldownPanel({
             ) : null}
           </div>
           <button
-            aria-label="Dong panel chi tiet"
+            aria-label="Đóng panel chi tiết"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             onClick={handleClose}
             ref={closeButtonRef}
@@ -213,16 +217,16 @@ export function ExecutiveDrilldownPanel({
           {isRiskDrilldownItem(item) ? (
             <DetailSection
               icon={<ShieldAlert className="h-4 w-4 text-red-700" aria-hidden="true" />}
-              title="Ma tran risk"
+              title="Ma trận rủi ro"
             >
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  ["Likelihood", item.likelihoodLabel],
-                  ["Impact", item.impactLabel],
-                  ["Matrix", item.matrixCellLabel],
-                  ["Category", item.categoryLabel],
-                  ["Severity", item.severityLabel],
-                  ["Status suggestion", item.statusSuggestion.labelVi],
+                  ["Khả năng xảy ra", item.likelihoodLabel],
+                  ["Mức ảnh hưởng", item.impactLabel],
+                  ["Ô ma trận", item.matrixCellLabel],
+                  ["Nhóm", item.categoryLabel],
+                  ["Mức nghiêm trọng", item.severityLabel],
+                  ["Gợi ý trạng thái", item.statusSuggestion.labelVi],
                 ].map(([label, value]) => (
                   <div
                     className="rounded-md border border-slate-200 bg-slate-50 p-3"
@@ -239,7 +243,7 @@ export function ExecutiveDrilldownPanel({
               </div>
               <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase text-slate-500">
-                  Next action
+                  Hành động tiếp theo
                 </p>
                 <p className="mt-1 break-words text-sm leading-6 text-slate-700">
                   {item.nextAction}
@@ -253,27 +257,27 @@ export function ExecutiveDrilldownPanel({
 
           <DetailSection
             icon={<ExternalLink className="h-4 w-4 text-slate-600" aria-hidden="true" />}
-            title="Lien ket nguon"
+            title="Liên kết nguồn"
           >
             {safeHref ? (
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 href={safeHref}
               >
-                Mo nguon
+                Mở nguồn
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </Link>
             ) : (
               <p className="text-sm leading-6 text-slate-600">
                 {item.deniedReason ??
-                  "DTO chua cung cap route an toan, nen panel chi hien metadata read-only va khong tu tao URL tu raw id."}
+                  "Dữ liệu chưa cung cấp đường dẫn an toàn, nên panel chỉ hiển thị metadata ở chế độ chỉ xem và không tự tạo URL từ mã nguồn thô."}
               </p>
             )}
           </DetailSection>
 
           <DetailSection
             icon={<Link2 className="h-4 w-4 text-slate-600" aria-hidden="true" />}
-            title="Nguon lien quan"
+            title="Nguồn liên quan"
           >
             {item.linkedRecords?.length ? (
               <ul className="space-y-2">
@@ -293,7 +297,7 @@ export function ExecutiveDrilldownPanel({
                             {record.title}
                           </p>
                           <p className="mt-1 text-xs font-medium uppercase text-slate-500">
-                            {record.type} - {record.status ?? record.permissionState}
+                            {executiveSourceTypeLabel(record.type)} - {record.status ?? executivePermissionStateLabel(record.permissionState)}
                           </p>
                           {record.reason ? (
                             <p className="mt-2 text-sm text-slate-600">{record.reason}</p>
@@ -301,11 +305,11 @@ export function ExecutiveDrilldownPanel({
                         </div>
                         {canOpenRecord && recordHref ? (
                           <Link
-                            aria-label={`Mo record ${record.title}`}
+                            aria-label={`Mở bản ghi ${record.title}`}
                             className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                             href={recordHref}
                           >
-                            Mo record
+                            Mở bản ghi
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         ) : null}
@@ -316,14 +320,14 @@ export function ExecutiveDrilldownPanel({
               </ul>
             ) : (
               <p className="text-sm leading-6 text-slate-600">
-                Chua co linked record trong DTO.
+                Chưa có bản ghi liên quan trong dữ liệu.
               </p>
             )}
           </DetailSection>
 
           <DetailSection
             icon={<ListChecks className="h-4 w-4 text-slate-600" aria-hidden="true" />}
-            title="Actions theo quyen"
+            title="Hành động theo quyền"
           >
             {visibleActions.length ? (
               <ul className="space-y-2">
@@ -341,7 +345,7 @@ export function ExecutiveDrilldownPanel({
                             {action.label}
                           </p>
                           <p className="mt-1 text-xs font-medium uppercase text-slate-500">
-                            {action.enabled ? "Enabled" : "Disabled"}
+                            {action.enabled ? "Đang bật" : "Đang tắt"}
                             {action.actionKey ? ` - ${action.actionKey}` : ""}
                           </p>
                           {action.reason ? (
@@ -350,11 +354,11 @@ export function ExecutiveDrilldownPanel({
                         </div>
                         {actionHref ? (
                           <Link
-                            aria-label={`Thuc hien ${action.label}`}
+                            aria-label={`Thực hiện ${action.label}`}
                             className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                             href={actionHref}
                           >
-                            Thuc hien
+                            Thực hiện
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         ) : null}
@@ -366,15 +370,15 @@ export function ExecutiveDrilldownPanel({
             ) : (
               <p className="text-sm leading-6 text-slate-600">
                 {safeHref
-                  ? "Nguon chinh da co link an toan; khong co action bo sung."
-                  : "Khong co action kha dung trong scope hien tai."}
+                  ? "Nguồn chính đã có liên kết an toàn; không có hành động bổ sung."
+                  : "Không có hành động khả dụng trong phạm vi hiện tại."}
               </p>
             )}
           </DetailSection>
 
           <DetailSection
             icon={<Clock3 className="h-4 w-4 text-slate-600" aria-hidden="true" />}
-            title="Timeline"
+            title="Dòng thời gian"
           >
             {item.timeline?.length ? (
               <ol className="space-y-2">
@@ -388,26 +392,26 @@ export function ExecutiveDrilldownPanel({
                     </p>
                     <p className="mt-1 text-xs font-medium uppercase text-slate-500">
                       {[
-                        timelineItem.status ? `Status: ${timelineItem.status}` : undefined,
-                        timelineItem.actor ? `Actor: ${timelineItem.actor}` : undefined,
+                        timelineItem.status ? `Trạng thái: ${timelineItem.status}` : undefined,
+                        timelineItem.actor ? `Người thực hiện: ${timelineItem.actor}` : undefined,
                         timelineItem.timestamp,
                       ]
                         .filter(Boolean)
-                        .join(" - ") || "No timestamp"}
+                        .join(" - ") || "Không có thời điểm"}
                     </p>
                   </li>
                 ))}
               </ol>
             ) : (
               <p className="text-sm leading-6 text-slate-600">
-                Chua co timeline trong DTO.
+                Chưa có dòng thời gian trong dữ liệu.
               </p>
             )}
           </DetailSection>
 
           <DetailSection
             icon={<History className="h-4 w-4 text-slate-600" aria-hidden="true" />}
-            title="Audit trail"
+            title="Nhật ký kiểm toán"
           >
             {item.auditTrail?.length ? (
               <ul className="space-y-2">
@@ -421,7 +425,7 @@ export function ExecutiveDrilldownPanel({
                     </p>
                     <p className="mt-1 text-xs font-medium uppercase text-slate-500">
                       {[auditItem.actor, auditItem.timestamp].filter(Boolean).join(" - ") ||
-                        "No actor"}
+                        "Không có người thực hiện"}
                     </p>
                     {auditItem.reason ? (
                       <p className="mt-2 text-sm text-slate-600">{auditItem.reason}</p>
@@ -432,7 +436,7 @@ export function ExecutiveDrilldownPanel({
             ) : (
               <div className="flex gap-2 rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
-                <p>Chua co audit trail trong DTO.</p>
+                <p>Chưa có nhật ký kiểm toán trong dữ liệu.</p>
               </div>
             )}
           </DetailSection>

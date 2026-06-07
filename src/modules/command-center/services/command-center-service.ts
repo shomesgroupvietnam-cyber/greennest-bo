@@ -5,6 +5,10 @@ import {
   type PermissionUser,
 } from "@/lib/permissions/can";
 import {
+  notificationRepository,
+  type NotificationRepository,
+} from "@/lib/notifications/notification-repository";
+import {
   AXIS_ONE_COMMAND_CENTER_VIEW,
   canOpenCommandCenter,
 } from "@/lib/permissions/navigation-policy";
@@ -55,6 +59,8 @@ import { listActiveScopeAssignments } from "@/modules/settings/services/scope-as
 import type { LeadershipDelegation, RolePermissionCatalog, ScopeAssignment } from "@/modules/settings/types";
 import { getExecutivePrivateWorkspaceData } from "@/modules/workspaces/services/executive-private-workspace-service";
 import { getApprovalCenterData } from "@/modules/proposals/services/approval-center-service";
+import { createAuditLog } from "@/modules/users/services/user-service";
+import type { AuditLog } from "@/modules/users/types";
 
 function buildAxes(
   user: PermissionUser,
@@ -92,41 +98,41 @@ function buildAxes(
                 viewKey: "executive-dashboard",
                 children: [
                   {
-                    label: "Dashboard Tong Quan",
+                    label: "Dashboard Tổng Quan",
                     href: "/command-center?view=executive-dashboard",
                     viewKey: "executive-dashboard",
                   },
                   {
-                    label: "Morning Briefing",
+                    label: "Bản Tóm Tắt Đầu Ngày",
                     href: "/command-center?view=executive-morning-briefing",
                     viewKey: "executive-morning-briefing",
                   },
                   {
-                    label: "Executive Common Center",
+                    label: "Trung Tâm Điều Hành Chung",
                     href: "/command-center?view=executive-common-center",
                     viewKey: "executive-common-center",
                   },
                   ...(canViewApprovalCenter
                     ? [
                         {
-                          label: "Approval Center",
+                          label: "Trung Tâm Phê Duyệt",
                           href: "/command-center?view=executive-approvals",
                           viewKey: "executive-approvals",
                         },
                       ]
                     : []),
                   {
-                    label: "Decision & Assignment Center",
+                    label: "Trung Tâm Quyết Định Và Giao Việc",
                     href: "/command-center?view=executive-decision-log",
                     viewKey: "executive-decision-log",
                   },
                   {
-                    label: "History & Archive",
+                    label: "Lịch Sử Và Lưu Trữ",
                     href: "/command-center?view=executive-history",
                     viewKey: "executive-history",
                   },
                   {
-                    label: "Private Workspace",
+                    label: "Không Gian Làm Việc Cá Nhân",
                     href: "/command-center?view=executive-private-workspace",
                     viewKey: "executive-private-workspace",
                   },
@@ -138,7 +144,7 @@ function buildAxes(
           ? [
               {
                 code: "01",
-                label: "Approval Center",
+                label: "Trung Tâm Phê Duyệt",
                 href: "/command-center?view=executive-approvals",
                 viewKey: "executive-approvals",
               },
@@ -148,7 +154,7 @@ function buildAxes(
           ? [
               {
                 code: "02",
-                label: "Private Workspace",
+                label: "Không Gian Làm Việc Cá Nhân",
                 href: "/command-center?view=executive-private-workspace",
                 viewKey: "executive-private-workspace",
               },
@@ -381,6 +387,19 @@ function emptyOperationsDashboard(): CommandCenterData["operationsDashboard"] {
     upcomingTasks: [],
     waitingAuthorityLegalSteps: [],
   };
+}
+
+function toClientExecutiveDashboard(
+  dashboard: Awaited<ReturnType<typeof getExecutiveDashboardData>> | null,
+): CommandCenterData["executiveDashboard"] {
+  if (!dashboard) {
+    return null;
+  }
+
+  const { riskMutationOptions, ...clientDashboard } = dashboard;
+  void riskMutationOptions;
+
+  return clientDashboard;
 }
 
 function summarizeAxisOneStages(stages: ReturnType<typeof getAxisOneStages>) {
@@ -731,9 +750,11 @@ function applySelectedScopeProjectFilter(
 export async function getCommandCenterData(
   user: PermissionUser,
   options: {
+    auditWriter?: (input: Omit<AuditLog, "id" | "createdAt">) => Promise<AuditLog>;
     delegations?: LeadershipDelegation[];
     decisionCenterFilters?: DecisionAssignmentCenterFilters;
     historyArchiveFilters?: HistoryArchiveFilters;
+    notificationRepository?: NotificationRepository;
     rolePermissionCatalog?: RolePermissionCatalog;
     scopeAssignments?: ScopeAssignment[];
     selectedScopeId?: string;
@@ -917,7 +938,9 @@ export async function getCommandCenterData(
   const approvalCenter =
     canOpenApprovalCenter
       ? await getApprovalCenterData(user, {
-          leadershipApprovals: executiveData?.approvals ?? [],
+          auditWriter: options.auditWriter ?? createAuditLog,
+          notificationRepository: options.notificationRepository ?? notificationRepository,
+          queueEscalationNotifications: true,
           requireScopeAssignments,
           rolePermissionCatalog,
           selectedScopeId: options.selectedScopeId,
@@ -971,7 +994,7 @@ export async function getCommandCenterData(
       overview: canViewOperations,
       settings: can(user, "settings.manage") || can(user, "delegation.manage"),
     },
-    executiveDashboard,
+    executiveDashboard: toClientExecutiveDashboard(executiveDashboard),
     executiveCommonCenter,
     executiveMorningBriefing,
     executivePrivateWorkspace,

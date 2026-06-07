@@ -7,7 +7,7 @@ import type {
 import type {
   DashboardData,
   ExecutiveCommonCenterData,
-  ExecutiveDashboardData,
+  ExecutiveDashboardClientData,
   ExecutiveMorningBriefingData,
 } from "@/modules/dashboard/types";
 import type { ExecutivePrivateWorkspaceData } from "@/modules/workspaces/types";
@@ -199,7 +199,7 @@ export type CommandCenterData = {
     settings: boolean;
   };
   executiveCommonCenter: ExecutiveCommonCenterData | null;
-  executiveDashboard: ExecutiveDashboardData | null;
+  executiveDashboard: ExecutiveDashboardClientData | null;
   executiveMorningBriefing: ExecutiveMorningBriefingData | null;
   executivePrivateWorkspace: ExecutivePrivateWorkspaceData | null;
   executiveWorkspace: CommandCenterExecutiveWorkspaceData;

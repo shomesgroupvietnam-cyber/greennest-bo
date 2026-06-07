@@ -14,39 +14,39 @@ import type {
 } from "@/modules/reports/types";
 
 const metadataLabels: Record<string, string> = {
-  action: "Action",
-  approvalLevel: "Approval level",
-  assigneeType: "Assignee type",
-  changedFields: "Changed fields",
-  documentVersion: "Document version",
-  priority: "Priority",
-  relationType: "Relation",
-  resultCount: "Result count",
-  stepOrder: "Step",
-  version: "Version",
-  versionNumber: "Version",
+  action: "Hành động",
+  approvalLevel: "Cấp phê duyệt",
+  assigneeType: "Loại người nhận",
+  changedFields: "Trường đã đổi",
+  documentVersion: "Phiên bản tài liệu",
+  priority: "Ưu tiên",
+  relationType: "Quan hệ",
+  resultCount: "Số kết quả",
+  stepOrder: "Bước",
+  version: "Phiên bản",
+  versionNumber: "Phiên bản",
 };
 
 const filterLabels: Partial<Record<keyof HistoryArchiveFilters, string>> = {
-  actorId: "Actor",
-  dateFrom: "From",
-  dateTo: "To",
-  limit: "Limit",
-  module: "Module",
-  projectId: "Project",
-  query: "Search",
-  severity: "Severity",
-  status: "Status",
-  type: "Type",
+  actorId: "Người thực hiện",
+  dateFrom: "Từ ngày",
+  dateTo: "Đến ngày",
+  limit: "Số dòng",
+  module: "Phân hệ",
+  projectId: "Dự án",
+  query: "Tìm kiếm",
+  severity: "Mức độ",
+  status: "Trạng thái",
+  type: "Loại",
 };
 const sourceCountLabels: Record<HistoryArchiveEvent["type"], string> = {
-  approval: "Approval",
-  assignment: "Assignment",
-  audit: "Audit",
-  decision: "Decision",
-  document_version: "Document",
-  meeting: "Meeting",
-  search: "Search",
+  approval: "Phê duyệt",
+  assignment: "Giao việc",
+  audit: "Kiểm toán",
+  decision: "Quyết định",
+  document_version: "Tài liệu",
+  meeting: "Cuộc họp",
+  search: "Tìm kiếm",
 };
 const defaultHistoryLimit = 100;
 const historyFilterFormId = "history-archive-filter-form";
@@ -164,7 +164,7 @@ function FilterSelect({
         defaultValue={value ?? "all"}
         name={name}
       >
-        {includeAll ? <option value="all">All</option> : null}
+        {includeAll ? <option value="all">Tất cả</option> : null}
         {mergedOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -226,7 +226,7 @@ function HistoryEventItem({ event }: { event: HistoryArchiveEvent }) {
             Source: {sourceLabel}
           </p>
           <p className="mt-1 break-words text-sm text-slate-600">
-            Actor: {actorLabel}
+            Người thực hiện: {actorLabel}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -258,7 +258,7 @@ function HistoryEventItem({ event }: { event: HistoryArchiveEvent }) {
         <Button asChild className="mt-4" size="sm" variant="outline">
           <Link aria-label={`Mo nguon ${sourceLabel}`} href={safeHref}>
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            Open source
+            Mở nguồn
           </Link>
         </Button>
       ) : null}
@@ -268,10 +268,10 @@ function HistoryEventItem({ event }: { event: HistoryArchiveEvent }) {
 
 export function HistoryArchiveCenterSkeleton() {
   return (
-    <section aria-label="History Center" className="space-y-5">
+    <section aria-label="Lịch Sử Và Lưu Trữ" className="space-y-5">
       <LoadingState
-        description="Dang tai filter, export controls va timeline trong scope hien tai."
-        title="Dang tai History & Archive"
+        description="Đang tải bộ lọc, nút xuất dữ liệu và dòng thời gian trong phạm vi hiện tại."
+        title="Đang tải Lịch Sử Và Lưu Trữ"
       />
       <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" aria-hidden="true">
         <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.5fr)_repeat(3,minmax(150px,1fr))]">
@@ -314,25 +314,25 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
     return (
       <UnauthorizedState
         backHref="/command-center"
-        backLabel="Back to Command Center"
-        description="Current permissions do not allow reading the executive history archive."
-        title="Khong co quyen xem History & Archive"
+        backLabel="Quay lại Trung Tâm Điều Hành"
+        description="Quyền hiện tại chưa cho phép xem lịch sử và lưu trữ điều hành."
+        title="Không có quyền xem Lịch Sử Và Lưu Trữ"
       />
     );
   }
 
   return (
-    <section aria-label="History Center" className="space-y-5">
+    <section aria-label="Lịch Sử Và Lưu Trữ" className="space-y-5">
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase text-emerald-700">
-            Executive operations
+            Điều hành
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-950">
-            History & Archive
+            Lịch Sử Và Lưu Trữ
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            {data.archive.total} events · Generated {formatDateTime(data.archive.generatedAt)}
+            {data.archive.total} sự kiện · Tạo lúc {formatDateTime(data.archive.generatedAt)}
           </p>
           {countsLabel ? (
             <p className="mt-1 text-xs font-medium text-slate-500">
@@ -344,7 +344,7 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
 
       <form
         action="/command-center"
-        aria-label="Bo loc lich su"
+        aria-label="Bộ lọc lịch sử"
         className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
         id={historyFilterFormId}
         method="get"
@@ -355,29 +355,29 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
         ))}
         <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.5fr)_repeat(3,minmax(150px,1fr))]">
           <label className="min-w-0 text-xs font-semibold uppercase text-slate-500">
-            Search
+            Tìm kiếm
             <input
               className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-normal normal-case text-slate-900"
               defaultValue={filters.query ?? ""}
               name="query"
-              placeholder="Search event, status, project"
+              placeholder="Tìm kiếm sự kiện, trạng thái, dự án"
               type="search"
             />
           </label>
           <FilterSelect
-            label="Project"
+            label="Dự án"
             name="projectId"
             options={projectOptions(data)}
             value={filters.projectId}
           />
           <FilterSelect
-            label="Module"
+            label="Phân hệ"
             name="module"
             options={data.filterOptions.modules}
             value={filters.module}
           />
           <FilterSelect
-            label="Type"
+            label="Loại"
             name="type"
             options={data.filterOptions.types}
             value={filters.type}
@@ -385,19 +385,19 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-[repeat(6,minmax(120px,1fr))_auto]">
           <FilterSelect
-            label="Status"
+            label="Trạng thái"
             name="status"
             options={statusOptions(data)}
             value={filters.status}
           />
           <FilterSelect
-            label="Severity"
+            label="Mức độ"
             name="severity"
             options={data.filterOptions.severities}
             value={filters.severity}
           />
           <FilterSelect
-            label="Actor"
+            label="Người thực hiện"
             name="actorId"
             options={actorOptions(data)}
             value={filters.actorId}
@@ -422,14 +422,14 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
           </label>
           <FilterSelect
             includeAll={false}
-            label="Limit"
+            label="Số dòng"
             name="limit"
             options={limitOptions}
             value={String(filters.limit ?? defaultHistoryLimit)}
           />
           <Button className="self-end" type="submit">
             <Search className="h-4 w-4" aria-hidden="true" />
-            Apply
+            Áp dụng
           </Button>
         </div>
       </form>
@@ -450,12 +450,12 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
       ) : null}
 
       {canExport ? (
-        <div aria-label="Export current history results" className="flex flex-wrap items-center gap-2">
+        <div aria-label="Xuất kết quả lịch sử hiện tại" className="flex flex-wrap items-center gap-2">
           {exportTargets.includes("dashboard") ? (
             <HistoryExportSubmitButton
               formId={historyFilterFormId}
               format="json"
-              label="Dashboard JSON"
+              label="Dữ liệu Dashboard (JSON)"
               target="dashboard"
             />
           ) : null}
@@ -463,7 +463,7 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
             <HistoryExportSubmitButton
               formId={historyFilterFormId}
               format="csv"
-              label="Approvals CSV"
+              label="Lịch sử phê duyệt (CSV)"
               target="approval_history"
             />
           ) : null}
@@ -471,7 +471,7 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
             <HistoryExportSubmitButton
               formId={historyFilterFormId}
               format="csv"
-              label="Audit CSV"
+              label="Nhật ký kiểm toán (CSV)"
               target="audit_log"
             />
           ) : null}
@@ -483,22 +483,22 @@ export function HistoryArchiveCenter({ data }: { data: HistoryArchiveCenterData 
           action={
             chips.length > 0 ? (
               <Button asChild variant="outline">
-                <Link aria-label="Clear active history filters" href={clearHref}>
+                <Link aria-label="Xóa bộ lọc lịch sử đang áp dụng" href={clearHref}>
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                  Clear active filters
+                  Xóa bộ lọc
                 </Link>
               </Button>
             ) : null
           }
           description={
             chips.length > 0
-              ? "No event matches the active filters."
-              : "No history event is available for the current scope."
+              ? "Không có sự kiện nào khớp bộ lọc đang áp dụng."
+              : "Chưa có sự kiện lịch sử trong phạm vi hiện tại."
           }
-          title={chips.length > 0 ? "Khong co ket qua theo filter" : "Khong co du lieu trong scope"}
+          title={chips.length > 0 ? "Không có kết quả theo bộ lọc" : "Không có dữ liệu trong phạm vi"}
         />
       ) : (
-        <ol aria-label="Lich su dieu hanh" className="space-y-3">
+        <ol aria-label="Lịch sử điều hành" className="space-y-3">
           {data.archive.items.map((event) => (
             <HistoryEventItem event={event} key={event.id} />
           ))}

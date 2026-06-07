@@ -45,6 +45,6 @@ describe("DecisionHistoryTimeline", () => {
   it("renders a compact empty state", () => {
     render(<DecisionHistoryTimeline events={[]} />);
 
-    expect(screen.getByText(/Chua co lich su thay doi/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có lịch sử thay đổi/i)).toBeInTheDocument();
   });
 });

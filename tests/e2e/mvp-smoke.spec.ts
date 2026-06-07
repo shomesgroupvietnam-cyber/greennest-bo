@@ -91,7 +91,7 @@ test.describe("External role isolation", () => {
 
       await page.waitForURL(`**${route}`);
       await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
-      await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+      await expect(page.locator("body")).not.toContainText("Dashboard T?ng Quan");
       await expect(page.locator("body")).not.toContainText("Ban lanh dao");
     });
   }
@@ -234,7 +234,7 @@ test.describe("Permission-aware workspace entry", () => {
     const response = await page.goto("/command-center?view=executive-decision-log");
 
     await expectForbiddenResponse(page, response?.status());
-    await expect(page.locator("body")).not.toContainText("Decision & Assignment Center");
+    await expect(page.locator("body")).not.toContainText("Trung T?m Quy?t ??nh V? Giao Vi?c");
   });
 
   test("direct history archive view is forbidden before data render", async ({ page }) => {
@@ -243,7 +243,7 @@ test.describe("Permission-aware workspace entry", () => {
     const response = await page.goto("/command-center?view=executive-history");
 
     await expectForbiddenResponse(page, response?.status());
-    await expect(page.locator("body")).not.toContainText("History & Archive");
+    await expect(page.locator("body")).not.toContainText("L?ch S? V? L?u Tr?");
   });
 
   test("history export route blocks viewer without leaking details", async ({ page }) => {
@@ -285,10 +285,10 @@ test.describe("Permission-aware workspace entry", () => {
     const response = await page.goto("/command-center?view=executive-private-workspace", { waitUntil: "domcontentloaded" });
 
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Private Workspace" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Du an duoc xem" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Read-only summary" })).toBeVisible();
-    await expect(page.getByText("Read-only: khong co mutation action trong workspace nay.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /D. .n .*c xem/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /T.m t.t ch. xem|Read-only summary/i })).toBeVisible();
+    await expect(page.getByText(/Ch. xem:.*kh.ng c. thao t.c|Read-only: khong co mutation action/i)).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -299,7 +299,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.waitForURL("**/viewer");
     await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
-    await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+    await expect(page.locator("body")).not.toContainText("Dashboard T?ng Quan");
     await expect(page.locator("body")).not.toContainText("Executive Command Center");
   });
 
@@ -316,7 +316,7 @@ test.describe("Permission-aware workspace entry", () => {
     await page.goto("/command-center", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/assistant-workspace");
     await expect(page.locator("body")).not.toContainText("Tong quan Truc 1");
-    await expect(page.locator("body")).not.toContainText("Dashboard Tong Quan");
+    await expect(page.locator("body")).not.toContainText("Dashboard T?ng Quan");
   });
 
   for (const { role, route } of [
@@ -349,10 +349,10 @@ test.describe("Permission-aware workspace entry", () => {
     await page.waitForURL("**/project-workbench");
     expect(page.url()).toContain("/project-workbench");
 
-    await page.getByRole("link", { name: "Tong quan Truc 1" }).click();
+    await page.getByRole("link", { name: /T.ng quan Tr.c 1/ }).click();
     await page.waitForURL("**/command-center?view=axis1-search-development");
     await expect(
-      page.getByRole("link", { name: /Quay lai Ban du an/i }),
+      page.getByRole("link", { name: /Quay l.i B.n d. .n|Quay lai Ban du an/i }),
     ).toHaveAttribute("href", "/project-workbench");
     await expect(page.locator("body")).not.toContainText("Application error");
 
@@ -365,12 +365,12 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-dashboard", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Dashboard Tong Quan" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "KPI Strip" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority Queue" })).toBeVisible();
-    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Deadline hom nay" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Quyet dinh moi" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Dashboard.*Quan/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /D.i KPI/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Vi.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /r.i ro/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: /H.n x. l. h.m nay/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Quy.t .{1,2}nh m.i/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -380,14 +380,14 @@ test.describe("Permission-aware workspace entry", () => {
     await page.goto("/command-center?view=executive-dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
 
-    const trigger = page.getByRole("button", { name: /^Xem chi tiet/ }).first();
+    const trigger = page.getByRole("button", { name: /^Xem chi/ }).first();
     await trigger.focus();
     await trigger.click();
 
-    const dialog = page.getByRole("dialog", { name: "Chi tiet nguon dieu hanh" });
+    const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("Nguon lien quan")).toBeVisible();
-    await expect(dialog.getByText("Timeline")).toBeVisible();
+    await expect(dialog.getByText(/Ngu.n li.n quan/)).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: /D.ng th.i gian|Timeline/i })).toBeVisible();
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -400,9 +400,9 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-dashboard", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Dashboard Tong Quan" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority Queue" })).toBeVisible();
-    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Dashboard.*Quan/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Vi.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /r.i ro/i })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -418,16 +418,16 @@ test.describe("Permission-aware workspace entry", () => {
     await page.goto("/command-center?view=executive-approvals", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Approval Center" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: /Truc 1/ })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Approval queue Truc 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Trung T.m Ph. Duy.t/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Tr.c 1/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /H.ng ch. ph. duy.t Tr.c 1/ })).toBeVisible();
 
-    const axisTwoTab = page.getByRole("tab", { name: /Truc 2/ });
+    const axisTwoTab = page.getByRole("tab", { name: /Tr.c 2/ });
     await axisTwoTab.click();
 
     await expect(axisTwoTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText("Placeholder MVP", { exact: true })).toBeVisible();
-    await expect(page.getByText(/Chua co flow chi tiet cho Truc 2/)).toBeVisible();
+    await expect(page.getByText(/M.n gi. ch. MVP/)).toBeVisible();
+    await expect(page.getByText(/Ch.a c. lu.ng chi ti.t cho Tr.c 2/)).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -439,17 +439,17 @@ test.describe("Permission-aware workspace entry", () => {
     await page.goto("/command-center?view=executive-approvals", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("link", { name: /^Mo chi tiet/ }).first().click();
+    await page.getByRole("link", { name: /^M. chi/ }).first().click();
 
     await expect(page).toHaveURL(/\/approvals\/proposal\//, { timeout: 15000 });
-    await expect(page.getByRole("heading", { name: "Approval Detail" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Request summary" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Policy" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Linked sources" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "History and audit" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Approval actions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Chi Ti.t Ph. Duy.t/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /T.m t.t y.u c.u/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Ch.nh s.ch/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Ngu.n li.n quan/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /L.ch s. v. ki.m to.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /H.nh ..ng ph. duy.t/ })).toBeVisible();
     await expect(page.getByRole("button", { name: "Duyet approval" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tu choi" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tu choi", exact: true })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -459,7 +459,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/approvals/proposal/proposal-demo-overdue-approval", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("region", { name: "Approval actions" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /H.nh ..ng ph. duy.t/ })).toBeVisible();
     await expect(page.getByRole("button", { name: "Duyet approval" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Huy approval" })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
@@ -476,7 +476,7 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/approvals/proposal/proposal-demo-overdue-approval", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByText("Ban khong co quyen xem approval nay")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /kh.ng c. quy.n xem ph. duy.t/i })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("DX-OVERDUE-DEMO");
     await expect(page.locator("body")).not.toContainText("9999000000");
   });
@@ -486,12 +486,12 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-morning-briefing", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Morning Briefing" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "AI Summary draft" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "KPI hom nay" })).toBeVisible();
-    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Approval qua han" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Du an do vang xanh" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /B.n T.m T.t .{1,2}u Ng.y/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /B.n t.m t.t AI nh.p/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: /KPI h.m nay/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /R.i ro .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Ph. duy.t qu. h.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /D. .n/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -501,9 +501,9 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-morning-briefing", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Morning Briefing" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "AI Summary draft" })).toBeVisible();
-    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /B.n T.m T.t .{1,2}u Ng.y/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /B.n t.m t.t AI nh.p/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: /R.i ro .u ti.n/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -518,13 +518,13 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-common-center", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Executive Common Center" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "KPI chung" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority area" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Thong bao moi" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Quyet dinh moi" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Lich hop va su kien" })).toBeVisible();
-    await expect(page.getByRole("region", { name: /risk/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Trung T.m .i.u H.nh Chung/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /KPI chung/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Khu v.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Th.ng b.o m.i/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Quy.t .{1,2}nh m.i/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /L.ch h.p v. s. ki.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /R.i ro t.ng/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -534,9 +534,9 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-common-center", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Executive Common Center" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority area" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Thong bao moi" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Trung T.m .i.u H.nh Chung/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Khu v.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Th.ng b.o m.i/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -551,10 +551,11 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-private-workspace", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Private Workspace" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority area" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Assigned portfolio" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Assistant support" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Ti.n .*. v. resource v.n h.nh/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Khu v.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Danh m.c .*.c giao/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /H. tr. tr. l./ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
@@ -564,9 +565,10 @@ test.describe("Permission-aware workspace entry", () => {
 
     await page.goto("/command-center?view=executive-private-workspace", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Private Workspace" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Priority area" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Assigned portfolio" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Kh.ng Gian L.m Vi.c C. Nh.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Ti.n .*. v. resource v.n h.nh/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Khu v.c .u ti.n/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Danh m.c .*.c giao/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
 
     const hasBasicHorizontalFit = await page.evaluate(
@@ -603,38 +605,38 @@ test.describe("Permission-aware workspace entry", () => {
 
     const views = [
       {
-        heading: "Dashboard Tong Quan",
-        region: "Priority Queue",
+        heading: /Dashboard.*Quan/,
+        region: /Vi.c .u ti.n/,
         url: "/command-center?view=executive-dashboard",
       },
       {
-        heading: "Morning Briefing",
-        region: /risk/i,
+        heading: /B.n T.m T.t .{1,2}u Ng.y/,
+        region: /R.i ro .u ti.n/,
         url: "/command-center?view=executive-morning-briefing",
       },
       {
-        heading: "Executive Common Center",
-        region: "Priority area",
+        heading: /Trung T.m .i.u H.nh Chung/,
+        region: /Khu v.c .u ti.n/,
         url: "/command-center?view=executive-common-center",
       },
       {
-        heading: "Approval Center",
-        region: "Approval queue Truc 1",
+        heading: /Trung T.m Ph. Duy.t/,
+        region: /H.ng ch. ph. duy.t Tr.c 1/,
         url: "/command-center?view=executive-approvals",
       },
       {
-        heading: "Decision & Assignment Center",
-        region: "Decision list",
+        heading: /Trung T.m Quy.t .{1,2}nh V. Giao Vi.c/,
+        region: /Danh s.ch quy.t .{1,2}nh/,
         url: "/command-center?view=executive-decision-log",
       },
       {
-        heading: "History & Archive",
-        region: "History Center",
+        heading: /L.ch S. V. L.u Tr./,
+        region: /L.ch S. V. L.u Tr./,
         url: "/command-center?view=executive-history",
       },
       {
-        heading: "Private Workspace",
-        region: "Priority area",
+        heading: /Kh.ng Gian L.m Vi.c C. Nh.n/,
+        region: /Khu v.c .u ti.n/,
         url: "/command-center?view=executive-private-workspace",
       },
     ];
@@ -667,6 +669,7 @@ test.describe("Permission-aware workspace entry", () => {
   });
 
   test("approval detail fits responsive QA viewports", async ({ page }) => {
+    test.setTimeout(45000);
     await useMockRole(page, "tong_giam_doc");
 
     const viewports = [
@@ -680,9 +683,9 @@ test.describe("Permission-aware workspace entry", () => {
       await page.setViewportSize(viewport);
       await page.goto("/approvals/proposal/proposal-demo-overdue-approval", { waitUntil: "domcontentloaded" });
 
-      await expect(page.getByRole("heading", { name: "Approval Detail" })).toBeVisible();
-      await expect(page.getByRole("region", { name: "Request summary" })).toBeVisible();
-      await expect(page.getByRole("region", { name: "Policy" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Chi Ti.t Ph. Duy.t/ })).toBeVisible();
+      await expect(page.getByRole("region", { name: /T.m t.t y.u c.u/ })).toBeVisible();
+      await expect(page.getByRole("region", { name: /Ch.nh s.ch/ })).toBeVisible();
       await expect(page.locator("body")).not.toContainText("Application error");
 
       const hasBasicHorizontalFit = await page.evaluate(

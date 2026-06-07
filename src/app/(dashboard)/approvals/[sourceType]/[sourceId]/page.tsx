@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageShell } from "@/components/shared/page-shell";
 import { UnauthorizedState } from "@/components/shared/unauthorized-state";
+import { notificationRepository } from "@/lib/notifications/notification-repository";
 import { requireAuthenticatedSession } from "@/lib/permissions/guard";
 import { requiresAssignmentScopeForRole } from "@/lib/permissions/access-scope";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
@@ -10,7 +11,7 @@ import { ApprovalRequestDetail } from "@/modules/executive/components/approval-r
 import { getApprovalCenterDetailData } from "@/modules/proposals/services/approval-center-service";
 import { listRolePermissionCatalog } from "@/modules/settings/services/role-permission-catalog-service";
 import { listActiveScopeAssignments } from "@/modules/settings/services/scope-assignment-service";
-import { listAuditLogs } from "@/modules/users/services/user-service";
+import { createAuditLog, listAuditLogs } from "@/modules/users/services/user-service";
 
 type ApprovalDetailPageProps = {
   params: Promise<{ sourceId: string; sourceType: string }>;
@@ -67,7 +68,10 @@ export default async function ApprovalDetailPage({
     {
       requireScopeAssignments,
       rolePermissionCatalog,
+      auditWriter: createAuditLog,
       auditLogLoader: listAuditLogs,
+      notificationRepository,
+      queueEscalationNotifications: true,
       scopeAssignments: selectedScopeAssignments,
       selectedScopeId,
     },
@@ -76,13 +80,13 @@ export default async function ApprovalDetailPage({
   if (!detail) {
     return (
       <PageShell
-        description="Approval nay khong nam trong pham vi duoc giao hoac khong ton tai."
-        title="Khong co quyen xem approval"
+        description="Phê duyệt này không nằm trong phạm vi được giao hoặc không tồn tại."
+        title="Không có quyền xem phê duyệt"
       >
         <UnauthorizedState
           backHref={approvalCenterBackHref(selectedScopeId)}
-          backLabel="Ve Approval Center"
-          title="Ban khong co quyen xem approval nay"
+          backLabel="Về Trung Tâm Phê Duyệt"
+          title="Bạn không có quyền xem phê duyệt này"
         />
       </PageShell>
     );
@@ -95,8 +99,8 @@ export default async function ApprovalDetailPage({
 
   return (
     <PageShell
-      description="Request summary, policy, linked sources va history hien co."
-      title="Approval Detail"
+      description="Tóm tắt yêu cầu, chính sách, nguồn liên quan và lịch sử hiện có."
+      title="Chi Tiết Phê Duyệt"
     >
       <ApprovalRequestDetail detail={{ ...detail, aiAssistant }} />
     </PageShell>

@@ -7,6 +7,7 @@ import type {
   ExecutiveDrilldownPermissionState,
   ExecutiveDrilldownTimelineItem,
 } from "@/modules/dashboard/types";
+import { executiveSourceTypeLabel } from "@/modules/dashboard/source-labels";
 
 type EnrichContext = {
   permissions: ExecutiveDashboardPermissions;
@@ -97,10 +98,10 @@ function sourceDeniedReason(
   permissions: ExecutiveDashboardPermissions,
 ) {
   if (!permissions.canDrillDown) {
-    return "Khong co quyen drill-down nguon dieu hanh trong scope hien tai.";
+    return "Không có quyền xem chi tiết nguồn điều hành trong phạm vi hiện tại.";
   }
 
-  return `Khong co quyen xem ${item.sourceType} trong scope hien tai.`;
+  return `Không có quyền xem ${executiveSourceTypeLabel(item.sourceType)} trong phạm vi hiện tại.`;
 }
 
 function sourceRouteForItem(
@@ -185,9 +186,9 @@ function buildLinkedRecords(
       permissionState: canOpenProject ? "allowed" : "denied",
       reason: canOpenProject
         ? undefined
-        : "Khong co quyen xem project lien quan trong scope hien tai.",
+        : "Không có quyền xem dự án liên quan trong phạm vi hiện tại.",
       status: "linked",
-      title: `Project ${item.projectId}`,
+      title: `Dự án ${item.projectId}`,
       type: "project",
     });
   }
@@ -199,7 +200,7 @@ function buildLinkedRecords(
     records.push({
       id: item.moduleId,
       permissionState: "read_only",
-      reason: "Module lien quan duoc cung cap nhu metadata read-only.",
+      reason: "Module liên quan được cung cấp dưới dạng metadata chỉ xem.",
       status: "linked",
       title: `Module ${item.moduleId}`,
       type: "module",
@@ -233,7 +234,7 @@ function buildAvailableActions(
         enabled: true,
         href,
         id: "open-source",
-        label: "Mo nguon",
+        label: "Mở nguồn",
       },
     ];
   }
@@ -242,9 +243,9 @@ function buildAvailableActions(
     {
       enabled: false,
       id: "read-only-source",
-      label: "Read-only",
+      label: "Chỉ xem",
       reason:
-        "DTO chua cung cap route an toan, nen panel khong tu tao URL tu raw id.",
+        "Dữ liệu chưa cung cấp đường dẫn an toàn, nên panel không tự tạo URL từ mã nguồn thô.",
     },
   ];
 }
@@ -257,7 +258,7 @@ function buildTimeline(item: ExecutiveDashboardSourceItem) {
   const timeline: ExecutiveDrilldownTimelineItem[] = [
     {
       id: `${item.id}-status`,
-      label: "Trang thai hien tai",
+      label: "Trạng thái hiện tại",
       status: item.status,
     },
   ];
@@ -265,7 +266,7 @@ function buildTimeline(item: ExecutiveDashboardSourceItem) {
   if (item.deadline) {
     timeline.push({
       id: `${item.id}-deadline`,
-      label: "Deadline",
+      label: "Hạn xử lý",
       timestamp: item.deadline,
     });
   }

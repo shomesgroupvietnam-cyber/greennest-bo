@@ -4,7 +4,7 @@ import React from "react";
 import { Activity, AlertTriangle, CalendarClock, CheckCircle2, CircleDollarSign, FolderKanban } from "lucide-react";
 
 import type {
-  ExecutiveDashboardData,
+  ExecutiveDashboardClientData,
   ExecutiveDashboardKpi,
   ExecutiveDashboardSourceItem,
   ExecutiveDashboardTone,
@@ -73,58 +73,67 @@ export function ExecutiveDashboardKpiStrip({
   onSelectSource,
 }: {
   canDrillDown: boolean;
-  data: ExecutiveDashboardData;
+  data: ExecutiveDashboardClientData;
   onSelectSource: (item: ExecutiveDashboardSourceItem) => void;
 }) {
   const financialLabel =
     data.financialSummary.state === "allowed"
       ? formatCurrency(data.financialSummary.visibleAmountTotal)
-      : "Bi che theo quyen";
+      : "Bị giới hạn theo quyền";
+  const projectCount = data.sourceCounts.projects;
+  const opportunityCount = data.sourceCounts.proposals;
+  const projectOpportunityTotal = projectCount + opportunityCount;
+  const financialAccessLabel =
+    data.financialSummary.state === "allowed"
+      ? data.financialSummary.access === "full"
+        ? "Quyền đầy đủ"
+        : "Quyền một phần"
+      : data.financialSummary.reason;
 
   const supportingMetrics = [
     {
       icon: FolderKanban,
-      label: "Danh muc du an",
-      value: `${data.projectPortfolio.active}/${data.projectPortfolio.total}`,
-      helper: `Do ${data.projectPortfolio.red} | Vang ${data.projectPortfolio.yellow} | Xanh ${data.projectPortfolio.green}`,
+      label: "Dự án / Cơ hội",
+      value: projectOpportunityTotal,
+      helper: `Dự án ${projectCount} | Cơ hội ${opportunityCount} | Đang hoạt động ${data.projectPortfolio.active} | Đỏ ${data.projectPortfolio.red} | Vàng ${data.projectPortfolio.yellow} | Xanh ${data.projectPortfolio.green}`,
     },
     {
       icon: CheckCircle2,
-      label: "Phe duyet",
+      label: "Phê duyệt",
       value: data.approvalSummary.pending,
-      helper: `Qua han ${data.approvalSummary.overdue} | Risk cao ${data.approvalSummary.highRisk}`,
+      helper: `Quá hạn ${data.approvalSummary.overdue} | Rủi ro cao ${data.approvalSummary.highRisk}`,
     },
     {
       icon: AlertTriangle,
-      label: "Bản đồ risk",
+      label: "Bản đồ rủi ro",
       value: data.riskSummary.critical + data.riskSummary.high,
       helper: `Nghiêm trọng ${data.riskSummary.critical} | Cao ${data.riskSummary.high}`,
     },
     {
       icon: CalendarClock,
-      label: "Deadline",
+      label: "Hạn xử lý",
       value: data.todayDeadlines.today + data.todayDeadlines.overdue,
-      helper: `Hom nay ${data.todayDeadlines.today} | Qua han ${data.todayDeadlines.overdue}`,
+      helper: `Hôm nay ${data.todayDeadlines.today} | Quá hạn ${data.todayDeadlines.overdue}`,
     },
     {
       icon: Activity,
-      label: "Lich hop",
+      label: "Lịch họp",
       value: data.meetingSnapshot.today + data.meetingSnapshot.upcoming,
-      helper: `Follow-up qua han ${data.meetingSnapshot.followUpsOverdue}`,
+      helper: `Theo dõi quá hạn ${data.meetingSnapshot.followUpsOverdue}`,
     },
     {
       icon: CircleDollarSign,
-      label: "Tai chinh",
+      label: "Dòng tiền / Chi phí tổng quan",
       value: financialLabel,
       helper:
         data.financialSummary.state === "allowed"
-          ? `${data.financialSummary.visibleRecordCount} ban ghi duoc xem`
-          : data.financialSummary.reason,
+          ? `${data.financialSummary.visibleRecordCount} bản ghi tài chính được xem | ${financialAccessLabel}`
+          : financialAccessLabel,
     },
   ];
 
   return (
-    <section aria-label="KPI Strip" className="space-y-3">
+    <section aria-label="Dải KPI" className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {data.kpis.map((kpi) => {
           const sourceItem = sourceFromKpi(kpi);
@@ -153,7 +162,7 @@ export function ExecutiveDashboardKpiStrip({
                 {content}
                 {sourceItem && !canDrillDown ? (
                   <p className="mt-2 text-xs font-semibold text-slate-500">
-                    Khong co quyen drill-down
+                    Không có quyền xem chi tiết
                   </p>
                 ) : null}
               </article>
@@ -162,7 +171,7 @@ export function ExecutiveDashboardKpiStrip({
 
           return (
             <button
-              aria-label={`Xem chi tiet ${kpi.label}`}
+              aria-label={`Xem chi tiết ${kpi.label}`}
               className={`min-h-32 rounded-md border bg-white p-4 text-left shadow-sm ring-1 ring-transparent transition hover:ring-2 focus:outline-none focus-visible:ring-2 ${toneClasses[kpi.tone].ring}`}
               key={kpi.id}
               onClick={() => onSelectSource(sourceItem)}

@@ -829,7 +829,13 @@ export type ApprovalCenterFinancialAccess =
   | "no_permission"
   | "not_applicable";
 
-export type ApprovalCenterSourceType = "proposal" | "leadership_approval";
+export type ApprovalDeadlineCompliance =
+  | "valid"
+  | "missing_required"
+  | "invalid"
+  | "not_applicable";
+
+export type ApprovalCenterSourceType = "proposal";
 
 export type ApprovalCenterQueueItem = {
   id: string;
@@ -853,6 +859,8 @@ export type ApprovalCenterQueueItem = {
   dueDate?: string;
   dueGroup: ApprovalCenterDueGroup;
   dueLabel: string;
+  deadlineCompliance: ApprovalDeadlineCompliance;
+  attachmentCount: number;
   updatedAt?: string;
   overdue?: ApprovalOverdueState;
   escalation?: ApprovalEscalationState;
@@ -905,6 +913,26 @@ export type ApprovalCenterDetailSource = {
   href?: string;
 };
 
+export type ApprovalCenterDetailAttachmentState =
+  | "linked"
+  | "placeholder"
+  | "no_permission";
+
+export type ApprovalCenterDetailAttachment = {
+  id: string;
+  name: string;
+  source: "document" | "external_url";
+  state: ApprovalCenterDetailAttachmentState;
+  helper: string;
+  href?: string;
+  documentId?: string;
+  url?: string;
+  externalUrl?: string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  createdAt?: string;
+};
+
 export type ApprovalCenterDetailPolicy = {
   currentStepId?: string;
   stepOrder?: number;
@@ -920,8 +948,9 @@ export type ApprovalCenterDetailPolicy = {
 
 export type ApprovalCenterDetailHistoryItem = {
   id: string;
-  kind: "audit" | "decision" | "link" | "step" | "version";
+  kind: "attachment" | "audit" | "decision" | "link" | "step" | "version";
   label: string;
+  attachmentIds?: string[];
   actorId?: string;
   occurredAt: string;
   status?: string;
@@ -955,8 +984,19 @@ export type ApprovalCenterDetailAction = {
   requiresReason?: boolean;
 };
 
+export type ApprovalDecisionEntryPoint = {
+  canCreate: boolean;
+  disabledReason?: string;
+  projectId?: string;
+  selectedScopeId?: string;
+  sourceId: string;
+  sourceType: "approval";
+  titleSuggestion: string;
+};
+
 export type ApprovalCenterDetailData = {
   aiAssistant?: AiApprovalAssistant;
+  decisionEntryPoint?: ApprovalDecisionEntryPoint;
   generatedAt: string;
   backHref: string;
   selectedScopeId?: string;
@@ -975,6 +1015,7 @@ export type ApprovalCenterDetailData = {
     canView: true;
     canViewAudit: boolean;
     canViewFinance: boolean;
+    canCreateDecisionFromApproval?: boolean;
     availableActions: ApprovalCenterDetailAction[];
   };
   requestSummary: {
@@ -988,12 +1029,15 @@ export type ApprovalCenterDetailData = {
     module: string;
     priority: string;
     dueDate?: string;
+    deadlineCompliance: ApprovalDeadlineCompliance;
+    attachmentCount: number;
     financialAccess: ApprovalCenterFinancialAccess;
     amountLabel?: string;
   };
   policy: ApprovalCenterDetailPolicy | null;
   overdue?: ApprovalOverdueState;
   escalation?: ApprovalEscalationState;
+  attachments: ApprovalCenterDetailAttachment[];
   linkedSources: ApprovalCenterDetailSource[];
   history: ApprovalCenterDetailHistoryItem[];
 };

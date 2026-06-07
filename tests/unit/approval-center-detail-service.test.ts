@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PermissionUser } from "@/lib/permissions/can";
+import type { DocumentRepository } from "@/modules/documents/services/document-repository";
 import {
   getApprovalCenterDetailData,
   getApprovalCenterData,
@@ -11,6 +12,7 @@ import type {
 } from "@/modules/proposals/services/proposal-repository";
 import type {
   Proposal,
+  ProposalAttachment,
   ProposalDecision,
   ProposalDetail,
   ProposalLink,
@@ -30,12 +32,33 @@ import type { NotificationRepository } from "@/lib/notifications/notification-se
 import type { NotificationOutboxItem } from "@/lib/notifications/types";
 
 class InMemoryProposalRepository implements ProposalRepository {
+  private attachments: ProposalAttachment[];
+  private decisions: ProposalDecision[];
+  private links: ProposalLink[];
+  private proposals: Proposal[];
+  private steps: ProposalStep[];
+
   constructor(
-    private proposals: Proposal[],
-    private links: ProposalLink[] = [],
-    private steps: ProposalStep[] = [],
-    private decisions: ProposalDecision[] = [],
-  ) {}
+    proposals: Proposal[],
+    links: ProposalLink[] = [],
+    attachmentsOrSteps: Array<ProposalAttachment | ProposalStep> = [],
+    stepsOrDecisions: Array<ProposalStep | ProposalDecision> = [],
+    decisions: ProposalDecision[] = [],
+  ) {
+    this.proposals = proposals;
+    this.links = links;
+
+    if (attachmentsOrSteps.some((item) => "stepOrder" in item)) {
+      this.attachments = [];
+      this.steps = attachmentsOrSteps as ProposalStep[];
+      this.decisions = stepsOrDecisions as ProposalDecision[];
+      return;
+    }
+
+    this.attachments = attachmentsOrSteps as ProposalAttachment[];
+    this.steps = stepsOrDecisions as ProposalStep[];
+    this.decisions = decisions;
+  }
 
   async listProposals(filters: ProposalListFilters = {}) {
     return this.proposals.filter((proposal) => {
@@ -58,6 +81,7 @@ class InMemoryProposalRepository implements ProposalRepository {
       decisions: this.decisions
         .filter((decision) => decision.proposalId === proposalId)
         .sort((a, b) => b.decidedAt.localeCompare(a.decidedAt)),
+      attachments: this.attachments.filter((attachment) => attachment.proposalId === proposalId),
       links: this.links.filter((link) => link.proposalId === proposalId),
       proposal,
       steps: this.steps
@@ -66,11 +90,16 @@ class InMemoryProposalRepository implements ProposalRepository {
     };
   }
 
-  async createProposal(proposal: Proposal, links: ProposalLink[] = []) {
+  async createProposal(
+    proposal: Proposal,
+    links: ProposalLink[] = [],
+    attachments: ProposalAttachment[] = [],
+  ) {
     this.proposals = [proposal, ...this.proposals];
     this.links = [...links, ...this.links];
+    this.attachments = [...attachments, ...this.attachments];
 
-    return { decisions: [], links, proposal, steps: [] };
+    return { attachments, decisions: [], links, proposal, steps: [] };
   }
 
   async updateProposal(proposalId: string, patch: Partial<Proposal>) {
@@ -171,6 +200,60 @@ class InMemoryNotificationRepository implements NotificationRepository {
 
 const approver: PermissionUser = { id: "approver-01", role: "tong_giam_doc" };
 const qaReviewer: PermissionUser = { id: "qa-reviewer", role: "qa_qc_chat_luong" };
+const documentRepository = {
+  async listDocuments() {
+    return [];
+  },
+  async getDocument(documentId: string) {
+    if (documentId === "document-visible") {
+      return {
+        id: documentId,
+        projectId: "demo-project-riverside",
+        title: "Tai lieu trong scope.pdf",
+        docType: "approval",
+        version: "v1",
+        status: "complete" as const,
+        ownerId: "qa-reviewer",
+        createdAt: "2026-05-20T00:00:00.000Z",
+        updatedAt: "2026-05-20T00:00:00.000Z",
+      };
+    }
+
+    if (documentId === "document-hidden") {
+      return {
+        id: documentId,
+        projectId: "other-project",
+        title: "HIDDEN_DOCUMENT_ATTACHMENT",
+        docType: "approval",
+        version: "v1",
+        status: "complete" as const,
+        createdAt: "2026-05-20T00:00:00.000Z",
+        updatedAt: "2026-05-20T00:00:00.000Z",
+      };
+    }
+
+    return undefined;
+  },
+  async listDocumentVersions() {
+    return [];
+  },
+  async createDocument(document) {
+    return document;
+  },
+  async updateDocument(documentId, patch) {
+    return {
+      id: documentId,
+      projectId: "demo-project-riverside",
+      title: "updated",
+      docType: "approval",
+      version: "v1",
+      status: "complete" as const,
+      createdAt: "2026-05-20T00:00:00.000Z",
+      updatedAt: "2026-05-20T00:00:00.000Z",
+      ...patch,
+    };
+  },
+} satisfies DocumentRepository;
 
 function proposal(
   overrides: Partial<Proposal> & Pick<Proposal, "id" | "title">,
@@ -422,6 +505,102 @@ describe("approval center detail service", () => {
     });
   });
 
+  it("exposes proposal attachments as first-class detail DTO with scoped document redaction", async () => {
+    const source = proposal({
+      id: "attachment-detail",
+      title: "Attachment approval detail",
+    });
+    const repository = new InMemoryProposalRepository(
+      [source],
+      [],
+      [
+        {
+          createdAt: "2026-05-20T00:00:00.000Z",
+          documentId: "document-visible",
+          id: "attachment-document",
+          name: "Tai lieu trong scope.pdf",
+          proposalId: source.id,
+          source: "document",
+          uploadedAt: "2026-05-20T00:00:00.000Z",
+          uploadedBy: "submitter-01",
+        },
+        {
+          createdAt: "2026-05-20T00:00:00.000Z",
+          documentId: "document-hidden",
+          id: "attachment-hidden",
+          name: "HIDDEN_DOCUMENT_ATTACHMENT",
+          proposalId: source.id,
+          source: "document",
+        },
+        {
+          createdAt: "2026-05-20T00:00:00.000Z",
+          id: "attachment-external",
+          name: "External evidence.pdf",
+          proposalId: source.id,
+          source: "external_url",
+          url: "https://example.com/evidence.pdf",
+        },
+      ],
+      [step(source.id)],
+      [decision(source.id)],
+    );
+
+    const detail = await getApprovalCenterDetailData(
+      { sourceId: source.id, sourceType: "proposal" },
+      qaReviewer,
+      {
+        documentRepository,
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [
+          scopeAssignment(),
+          scopeAssignment({
+            id: "document-visible-scope",
+            permissionKeys: ["document.view"],
+            recordId: "document-visible",
+          }),
+        ],
+      },
+    );
+    const serialized = JSON.stringify(detail);
+
+    expect(detail?.attachments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          documentId: "document-visible",
+          href: "/documents/document-visible",
+          name: "Tai lieu trong scope.pdf",
+          state: "linked",
+        }),
+        expect.objectContaining({
+          href: "https://example.com/evidence.pdf",
+          name: "External evidence.pdf",
+          state: "linked",
+        }),
+        expect.objectContaining({
+          documentId: undefined,
+          href: undefined,
+          name: "File bi gioi han quyen",
+          state: "no_permission",
+        }),
+      ]),
+    );
+    expect(serialized).not.toContain("HIDDEN_DOCUMENT_ATTACHMENT");
+    expect(detail?.requestSummary).toMatchObject({
+      attachmentCount: 3,
+      deadlineCompliance: "valid",
+    });
+    expect(detail?.history).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          attachmentIds: ["attachment-document"],
+          kind: "attachment",
+        }),
+      ]),
+    );
+  });
+
   it("redacts linked source ids and hrefs when the source is outside scope", async () => {
     const source = proposal({
       id: "linked-source-scope",
@@ -580,7 +759,7 @@ describe("approval center detail service", () => {
     });
   });
 
-  it.each<ProposalStatus>(["draft", "archived"])(
+  it.each<ProposalStatus>(["draft"])(
     "does not return %s proposals through the approval detail route",
     async (status) => {
       const source = proposal({
@@ -606,7 +785,7 @@ describe("approval center detail service", () => {
     },
   );
 
-  it.each<ProposalStatus>(["approved", "rejected", "cancelled"])(
+  it.each<ProposalStatus>(["approved", "archived", "rejected", "cancelled"])(
     "returns read-only detail for final %s proposals without enabled actions",
     async (status) => {
       const source = proposal({
@@ -825,6 +1004,63 @@ describe("approval center detail service", () => {
     expect(reviewerDetail?.permissions.availableActions.every((action) => !action.enabled)).toBe(true);
   });
 
+  it("exposes a scoped decision entry point for approval detail when decision.create is granted", async () => {
+    const source = proposal({
+      amount: 9_999_000_000,
+      id: "decision-entry-approval",
+      title: "Finance approval detail",
+      type: "finance",
+    });
+    const repository = new InMemoryProposalRepository(
+      [source],
+      [],
+      [step(source.id)],
+      [decision(source.id)],
+    );
+
+    const allowedDetail = await getApprovalCenterDetailData(
+      { sourceId: source.id, sourceType: "proposal" },
+      qaReviewer,
+      {
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [
+          scopeAssignment({
+            permissionKeys: ["proposal.view", "decision.create"],
+            roleKey: "tong_giam_doc",
+          }),
+        ],
+        selectedScopeId: "scope-a",
+      },
+    );
+    const deniedDetail = await getApprovalCenterDetailData(
+      { sourceId: source.id, sourceType: "proposal" },
+      qaReviewer,
+      {
+        repository,
+        requireScopeAssignments: true,
+        rolePermissionCatalog: createDefaultRolePermissionCatalog(),
+        scopeAssignments: [scopeAssignment()],
+        selectedScopeId: "scope-a",
+      },
+    );
+
+    expect(allowedDetail?.permissions.canCreateDecisionFromApproval).toBe(true);
+    expect(allowedDetail?.decisionEntryPoint).toMatchObject({
+      canCreate: true,
+      projectId: "demo-project-riverside",
+      selectedScopeId: "scope-a",
+      sourceId: source.id,
+      sourceType: "approval",
+    });
+    expect(JSON.stringify(allowedDetail?.decisionEntryPoint)).not.toContain(
+      "9999000000",
+    );
+    expect(deniedDetail?.permissions.canCreateDecisionFromApproval).toBe(false);
+    expect(deniedDetail?.decisionEntryPoint).toBeUndefined();
+  });
+
   it("redacts finance amount from detail DTOs before serialization", async () => {
     const source = proposal({
       amount: 9_999_000_000,
@@ -907,7 +1143,6 @@ describe("approval center detail service", () => {
     ]);
 
     const data = await getApprovalCenterData(approver, {
-      leadershipApprovals: [],
       repository,
       rolePermissionCatalog: createDefaultRolePermissionCatalog(),
       scopeAssignments: [

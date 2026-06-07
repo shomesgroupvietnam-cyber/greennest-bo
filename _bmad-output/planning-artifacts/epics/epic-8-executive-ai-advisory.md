@@ -1,8 +1,8 @@
-# Epic 8: Executive AI Advisory
+# Epic 8: AI Tư Vấn Điều Hành
 
 Lãnh đạo có thể dùng AI Summary, AI Meeting Summary và AI Approval Assistant ở mức advisory trong đúng context và permission; AI chỉ đọc/tóm tắt/gợi ý từ dữ liệu được phép, output là draft/gợi ý, các năng lực AI nâng cao để phase sau hoặc mock/placeholder.
 
-## Story 8.1: AI Gateway Với Permission Context Và Citation
+## Story 8.1: Cổng AI Với Ngữ Cảnh Phân Quyền Và Nguồn Trích Dẫn
 
 **Requirements Covered:** FR-087, FR-088, NFR-009, UX-DR16, UX-DR34.
 
@@ -33,7 +33,7 @@ AC3:
 
 **Dependencies:** Story 1.2, Story 2.2.
 
-## Story 8.2: Executive AI Summary Draft Trong Workspace
+## Story 8.2: Bản Nháp Tóm Tắt AI Điều Hành Trong Không Gian Làm Việc
 
 **Requirements Covered:** FR-085, FR-086, FR-087, FR-088, FR-090, NFR-009, NFR-010, UX-DR16, UX-DR34.
 
@@ -64,7 +64,7 @@ AC3:
 
 **Dependencies:** Story 8.1, Story 2.4.
 
-## Story 8.3: AI Approval Assistant Với Action Proposal
+## Story 8.3: AI Hỗ Trợ Phê Duyệt Với Đề Xuất Hành Động
 
 **Requirements Covered:** FR-085, FR-087, FR-088, FR-089, FR-090, NFR-005, NFR-009, NFR-010, UX-DR16, UX-DR23, UX-DR34.
 
@@ -100,7 +100,7 @@ AC4:
 
 **Dependencies:** Story 8.1, Story 3.2, Story 3.3.
 
-## Story 8.4: AI Meeting Summary Và Future AI Placeholders
+## Story 8.4: Tóm Tắt Cuộc Họp Bằng AI Và Placeholder Cho Năng Lực Tương Lai
 
 **Requirements Covered:** FR-076, FR-085, FR-086, FR-087, FR-088, FR-089, FR-090, NFR-009, NFR-010, UX-DR16, UX-DR34.
 

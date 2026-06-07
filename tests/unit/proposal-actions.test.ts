@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   applyProposalApprovalAction: vi.fn(),
   createAuditLog: vi.fn(),
+  createProposal: vi.fn(),
   getCurrentUser: vi.fn(),
   listActiveScopeAssignments: vi.fn(),
   listRolePermissionCatalog: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/modules/proposals/services/proposal-service", () => ({
   applyProposalApprovalAction: mocks.applyProposalApprovalAction,
   approveProposal: vi.fn(),
-  createProposal: vi.fn(),
+  createProposal: mocks.createProposal,
   rejectProposal: vi.fn(),
   requestProposalChange: vi.fn(),
   submitProposalWithResult: mocks.submitProposalWithResult,
@@ -46,7 +47,11 @@ vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }));
 
-import { applyApprovalDetailAction, submitProposalAction } from "@/modules/proposals/actions";
+import {
+  applyApprovalDetailAction,
+  createProposalAction,
+  submitProposalAction,
+} from "@/modules/proposals/actions";
 
 function formData(values: Record<string, string>) {
   const data = new FormData();
@@ -67,6 +72,22 @@ describe("proposal approval detail actions", () => {
     });
     mocks.listActiveScopeAssignments.mockResolvedValue([]);
     mocks.listRolePermissionCatalog.mockResolvedValue({ roles: [] });
+    mocks.createProposal.mockResolvedValue({
+      attachments: [],
+      proposal: {
+        aiReviewStatus: "not_checked",
+        code: "DX-GENERAL-ACTION",
+        createdAt: "2026-05-29T00:00:00.000Z",
+        id: "proposal-action",
+        module: "proposal",
+        priority: "normal",
+        requestedBy: "approver-01",
+        status: "draft",
+        title: "Action proposal",
+        type: "general",
+        updatedAt: "2026-05-29T00:00:00.000Z",
+      },
+    });
     mocks.applyProposalApprovalAction.mockResolvedValue({
       action: "approve",
       decision: {
@@ -138,6 +159,32 @@ describe("proposal approval detail actions", () => {
           stepStatus: "in_review",
         },
       }),
+    );
+  });
+
+  it("does not synthesize attachment names from URL or document id in create action input", async () => {
+    await expect(
+      createProposalAction(
+        formData({
+          attachmentUrl: "https://example.com/evidence.pdf",
+          dueDate: "2026-05-29",
+          title: "Action proposal",
+          type: "general",
+        }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT:/proposals/proposal-action");
+
+    expect(mocks.createProposal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [
+          expect.objectContaining({
+            externalUrl: "https://example.com/evidence.pdf",
+            name: "",
+            url: "https://example.com/evidence.pdf",
+          }),
+        ],
+      }),
+      { id: "approver-01", role: "tong_giam_doc" },
     );
   });
 

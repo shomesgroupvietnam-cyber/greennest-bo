@@ -1,8 +1,8 @@
-# Epic 4: Decision & Assignment Center
+# Epic 4: Trung Tâm Quyết Định Và Giao Việc
 
 Lãnh đạo có thể ban hành quyết định/chỉ đạo khác biệt với approval, tạo assignment/task từ decision, gán deadline/KPI/ưu tiên, theo dõi trạng thái thực hiện và giữ version/history khi sửa nội dung quan trọng.
 
-## Story 4.1: Decision Record Từ Approval, Meeting Hoặc Độc Lập
+## Story 4.1: Bản Ghi Quyết Định Từ Phê Duyệt, Cuộc Họp Hoặc Độc Lập
 
 **Requirements Covered:** FR-044, FR-045, FR-046, NFR-005, NFR-006.
 
@@ -33,7 +33,7 @@ AC3:
 
 **Dependencies:** Story 1.2; liên kết approval/meeting dùng source nếu đã có, nhưng tạo độc lập phải hoạt động trước.
 
-## Story 4.2: Assignment/Task Từ Decision Cho Nhiều Người
+## Story 4.2: Giao Việc Từ Quyết Định Cho Nhiều Người
 
 **Requirements Covered:** FR-047, FR-048, FR-049, NFR-005, NFR-007.
 
@@ -64,7 +64,7 @@ AC3:
 
 **Dependencies:** Story 4.1.
 
-## Story 4.3: Version/History Khi Sửa Decision Quan Trọng
+## Story 4.3: Phiên Bản/Lịch Sử Khi Sửa Quyết Định Quan Trọng
 
 **Requirements Covered:** FR-050, NFR-006, UX-DR15.
 
@@ -95,7 +95,7 @@ AC3:
 
 **Dependencies:** Story 4.1.
 
-## Story 4.4: Decision & Assignment Center UI
+## Story 4.4: Giao Diện Trung Tâm Quyết Định Và Giao Việc
 
 **Requirements Covered:** FR-051, NFR-001, NFR-011, UX-DR11, UX-DR14, UX-DR15, UX-DR27, UX-DR29.
 

@@ -1,37 +1,37 @@
-# Story 1.6: Separate Chairman Role From Super Admin
+# Story 1.6: Tách Vai Trò Chủ Tịch Khỏi Super Admin
 
 Status: done
 
-Ghi chu tao story: Ultimate context engine analysis completed - comprehensive developer guide created. Story nay bo sung vao Epic 1 vi day la role foundation/RBAC contract, khong chi la navigation tweak. Pham vi la tach role Chu tich dieu hanh (`chu_tich`) khoi `super_admin` ky thuat/BO, dong bo role catalog, seed/demo user, navigation/default route va test coverage.
+Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này bổ sung vào Epic 1 vì đây là nền role/RBAC contract, không chỉ là navigation tweak. Phạm vi là tách vai trò Chủ tịch điều hành (`chu_tich`) khỏi `super_admin` kỹ thuật/BO, đồng bộ role catalog, seed/demo user, navigation/default route và test coverage.
 
 ## Story
 
-As a system owner quan ly RBAC Module 1,
-I want role Chu tich dieu hanh duoc tach rieng khoi Super Admin ky thuat/BO,
-so that Chu tich co quyen dieu hanh nghiep vu nhung khong mac dinh nam giu quyen quan tri he thong, user, settings va role catalog.
+As a người quản lý RBAC Module 1,
+I want vai trò Chủ tịch điều hành được tách riêng khỏi Super Admin kỹ thuật/BO,
+so that Chủ tịch có quyền điều hành nghiệp vụ nhưng không mặc định nắm giữ quyền quản trị hệ thống, người dùng, settings và role catalog.
 
-## Tieu Chi Chap Nhan
+## Tiêu Chí Chấp Nhận
 
-1. **Role catalog tach `chu_tich` va `super_admin`**
-   - Given static role catalog va role-permission catalog load
-   - When system liet ke roles
-   - Then co role moi `chu_tich` label "Chu tich" va default route `/command-center`
-   - And `super_admin` duoc doi meaning thanh technical/business super admin, label/description khong con dong nghia "Chu tich/Super Admin"
-   - And moi `Record<Role, ...>`/policy row/default screen/role scope phai exhaustive, compile fail neu thieu `chu_tich`.
+1. **Role catalog tách `chu_tich` và `super_admin`**
+   - Given static role catalog và role-permission catalog load
+   - When hệ thống liệt kê roles
+   - Then có role mới `chu_tich` label "Chủ tịch" và default route `/command-center`
+   - And `super_admin` được đổi meaning thành technical/business super admin, label/description không còn đồng nghĩa "Chủ tịch/Super Admin"
+   - And mọi `Record<Role, ...>`/policy row/default screen/role scope phải exhaustive, compile fail nếu thiếu `chu_tich`.
 
-2. **Chu tich co quyen dieu hanh nhung khong co BO/system permissions**
+2. **Chủ tịch có quyền điều hành nhưng không có BO/system permissions**
    - Given user role `chu_tich`
-   - When runtime permission check chay
-   - Then role co cac quyen dieu hanh can thiet cho Module 1: `axis1.view`, dashboard/project/task/document/legal/meeting/decision/proposal approval, risk/approval visibility, `finance.view` va finance-sensitive approval neu workflow hien co can
-   - And role khong co BO permissions: `settings.manage`, `user.invite`, `user.update_role`, `user.view`, role-permission catalog config, `/admin`, `/settings`, `/users`
-   - And `delegation.manage` khong duoc gan cho `chu_tich` neu van la BO-level permission; neu can uy quyen nghiep vu rieng thi tao/tach permission nghiep vu rieng va test deny-list cu van pass.
+   - When runtime permission check chạy
+   - Then role có các quyền điều hành cần thiết cho Module 1: `axis1.view`, dashboard/project/task/document/legal/meeting/decision/proposal approval, risk/approval visibility, `finance.view` và finance-sensitive approval nếu workflow hiện có cần
+   - And role không có BO permissions: `settings.manage`, `user.invite`, `user.update_role`, `user.view`, role-permission catalog config, `/admin`, `/settings`, `/users`
+   - And `delegation.manage` không được gán cho `chu_tich` nếu vẫn là BO-level permission; nếu cần ủy quyền nghiệp vụ riêng thì tạo/tách permission nghiệp vụ riêng và test deny-list cũ vẫn pass.
 
-3. **Super Admin co toan bo quyen Chu tich cong BO/system**
+3. **Super Admin có toàn bộ quyền Chủ tịch cộng BO/system**
    - Given user role `super_admin`
-   - When permission/nav/default route duoc resolve
-   - Then `super_admin` co tat ca quyen cua `chu_tich` cong `settings.manage`, `user.invite`, `user.update_role`, `user.view`, `delegation.manage`, role catalog config, audit/system/AI config permissions
-   - And `super_admin` tiep tuc vao `/command-center` theo khuyen nghi, voi BO la menu/workspace rieng
-   - And role `admin` khong bi cap lai business approval permissions neu truoc do da duoc tach khoi approval authority.
+   - When permission/nav/default route được resolve
+   - Then `super_admin` có tất cả quyền của `chu_tich` cộng `settings.manage`, `user.invite`, `user.update_role`, `user.view`, `delegation.manage`, role catalog config, audit/system/AI config permissions
+   - And `super_admin` tiếp tục vào `/command-center` theo khuyến nghị, với BO là menu/workspace riêng
+   - And role `admin` không bị cấp lại business approval permissions nếu trước đó đã được tách khỏi approval authority.
 
 4. **Seed/demo user va policy threshold dong bo meaning moi**
    - Given `npm run seed:demo` hoac local/staging seed SQL chay
@@ -41,14 +41,14 @@ so that Chu tich co quyen dieu hanh nghiep vu nhung khong mac dinh nam giu quyen
    - And mock session/login role mapping, `.mock-data/users.json`, `tests/fixtures/module-one-acceptance.json`, Supabase demo seed va docs khong con map chairman persona vao `super_admin`
    - And approval/policy fixture nao dang dung approver role `super_admin` cho "CHAIRMAN" business approval phai duoc doi sang `chu_tich`, tru khi test ghi ro super admin override/system path.
 
-5. **Navigation va default route dung ranh gioi Chu tich vs BO**
+5. **Navigation và default route đúng ranh giới Chủ tịch vs BO**
    - Given role `chu_tich`
    - When sidebar/workspace selector/default login render
-   - Then user thay "Tong quan Truc 1" va "Lanh dao"
-   - And khong thay "Quan tri Chu tich"/BO admin entry, `/admin`, `/settings`, `/users`
-   - And direct `/admin`, `/settings`, `/users` bi deny/redirect truoc khi render BO data
+   - Then user thấy "Tổng quan Trục 1" và "Lãnh đạo"
+   - And không thấy "Quản trị Chủ tịch"/BO admin entry, `/admin`, `/settings`, `/users`
+   - And direct `/admin`, `/settings`, `/users` bị deny/redirect trước khi render BO data
    - Given role `super_admin`
-   - Then user thay cac phan Chu tich/cong cu lanh dao cong BO/system navigation.
+   - Then user thấy các phần Chủ tịch/công cụ lãnh đạo cộng BO/system navigation.
 
 6. **Regression tests va e2e bao phu role split**
    - Given test suite chay

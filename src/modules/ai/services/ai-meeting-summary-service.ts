@@ -239,7 +239,7 @@ function buildMeetingSummarySource(input: AiMeetingSummarySourceInput) {
   ].filter((item): item is string => Boolean(item));
   const sourceText = [
     `Meeting: ${meeting.title}`,
-    `Status: ${meeting.status}`,
+    `Trạng thái: ${meeting.status}`,
     `Scope: ${meeting.visibility}`,
     meeting.agenda ? `Agenda: ${meeting.agenda}` : undefined,
     hasMinutes ? `Meeting minutes:\n${meeting.meetingMinutes}` : undefined,

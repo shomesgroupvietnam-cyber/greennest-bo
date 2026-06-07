@@ -1,16 +1,16 @@
-# Story 2.9: Role Navigation Policy Matrix And Command Center Eligibility
+# Story 2.9: Ma Trận Chính Sách Điều Hướng Theo Vai Trò Và Điều Kiện Vào Command Center
 
 Status: done
 
-Ghi chu tao story: Ultimate context engine analysis completed - comprehensive developer guide created. Story nay la follow-up cua Story 2.1 va 2.8 de dong khe ho con lai: sidebar/default route/direct URL phai dung mot navigation policy matrix ro rang cho tung role, va `/command-center` khong duoc render dua tren cac quyen rong nhu `project.view`, route `/executive`, hoac item `common`.
+Ghi chú tạo story: Ultimate context engine analysis completed - comprehensive developer guide created. Story này là follow-up của Story 2.1 và 2.8 để đóng khe hở còn lại: sidebar/default route/direct URL phải dùng một navigation policy matrix rõ ràng cho từng role, và `/command-center` không được render dựa trên các quyền rộng như `project.view`, route `/executive` hoặc item `common`.
 
 ## Story
 
-As a system owner quan ly Module 1,
-I want role navigation va Command Center eligibility duoc dieu khien boi mot policy matrix tap trung,
-so that moi role chi thay workspace dung pham vi va direct `/command-center` khong lo dashboard noi bo.
+As a người quản lý Module 1,
+I want role navigation và Command Center eligibility được điều khiển bởi một policy matrix tập trung,
+so that mỗi role chỉ thấy workspace đúng phạm vi và direct `/command-center` không lộ dashboard nội bộ.
 
-## Tieu Chi Chap Nhan
+## Tiêu Chí Chấp Nhận
 
 1. **Policy matrix bao phu toan bo role catalog**
    - Given each role in `ROLES`

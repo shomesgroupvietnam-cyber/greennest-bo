@@ -148,13 +148,13 @@ function buildSummaryText(input: {
   todayDecisionCount: number;
 }) {
   const parts = [
-    `${input.criticalRiskCount} risk cao/nghiêm trọng cần theo dõi`,
-    `${input.overdueApprovalCount} approval qua han hoac dang do`,
-    `${input.todayDecisionCount} viec can quyet/decision trong ngay`,
-    `${input.redProjectCount} du an do`,
+    `${input.criticalRiskCount} rủi ro cao/nghiêm trọng cần theo dõi`,
+    `${input.overdueApprovalCount} phê duyệt quá hạn hoặc đang dở`,
+    `${input.todayDecisionCount} việc cần quyết trong ngày`,
+    `${input.redProjectCount} dự án đỏ`,
   ];
 
-  return `Bản tóm tắt gợi ý: ${parts.join("; ")}. Vui lòng kiểm tra citation nội bộ trước khi ra quyết định.`;
+  return `Bản tóm tắt gợi ý: ${parts.join("; ")}. Vui lòng kiểm tra nguồn trích dẫn nội bộ trước khi ra quyết định.`;
 }
 
 function buildSummary(input: {
@@ -179,7 +179,7 @@ function buildSummary(input: {
       citations: [],
       generatedFrom: [],
       status: "insufficient_context",
-      text: "Khong co du lieu trong scope hoac khong co quyen xem du lieu de tao Morning Briefing.",
+      text: "Không có dữ liệu trong phạm vi hoặc không có quyền xem dữ liệu để tạo Bản Tóm Tắt Đầu Ngày.",
       updatedAt: input.generatedAt,
     };
   }

@@ -13,7 +13,7 @@ type UnauthorizedStateProps = {
 export function UnauthorizedState({
   backHref = "/dashboard",
   backLabel = "Về dashboard",
-  description = "Vai trò hiện tại không có quyền thực hiện thao tác này. Nếu cần truy cập, hãy liên hệ Admin để điều chỉnh vai trò hoặc quyền dự án.",
+  description = "Vai trò hiện tại không có quyền thực hiện thao tác này. Nếu cần truy cập, hãy liên hệ quản trị hệ thống để điều chỉnh vai trò hoặc quyền dự án.",
   title = "Bạn không có quyền truy cập"
 }: UnauthorizedStateProps) {
   return (

@@ -20,8 +20,8 @@ const initialActionState: ExecutiveActionFormState = {
 };
 
 const recordTypeOptions = [
-  { label: "Risk", value: "risk" },
-  { label: "Blocker", value: "blocker" },
+  { label: "Rủi ro", value: "risk" },
+  { label: "Vướng mắc", value: "blocker" },
 ];
 
 const levelOptions = [
@@ -34,7 +34,7 @@ const levelOptions = [
 const statusOptions = [
   { label: "Mo", value: "open" },
   { label: "Theo doi", value: "monitoring" },
-  { label: "Dang xu ly", value: "in_progress" },
+  { label: "Đang xử lý", value: "in_progress" },
   { label: "Bi chan", value: "blocked" },
 ];
 const overrideStatusOptions = [
@@ -146,7 +146,7 @@ export function RiskRecordForm({
             <LockKeyhole className="h-4 w-4 text-slate-700" aria-hidden="true" />
           )}
           <h3 className="text-sm font-semibold text-slate-950">
-            {mode === "override" ? "Xac nhan/override trang thai" : "Dong risk/blocker"}
+            {mode === "override" ? "Xác nhận/điều chỉnh trạng thái" : "Đóng rủi ro/vướng mắc"}
           </h3>
         </div>
 
@@ -161,7 +161,7 @@ export function RiskRecordForm({
         {mode === "override" ? (
           <>
             <label className="space-y-1 text-sm">
-              <RequiredLabel>Trang thai xac nhan</RequiredLabel>
+              <RequiredLabel>Trạng thái xác nhận</RequiredLabel>
               <select
                 aria-describedby="risk-statusOverride-error"
                 className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -182,7 +182,7 @@ export function RiskRecordForm({
               <FieldError name="statusOverride" state={state} />
             </label>
             <label className="space-y-1 text-sm">
-              <RequiredLabel>Ly do override</RequiredLabel>
+              <RequiredLabel>Lý do điều chỉnh</RequiredLabel>
               <textarea
                 aria-describedby="risk-reason-error"
                 className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2"
@@ -196,7 +196,7 @@ export function RiskRecordForm({
         ) : (
           <>
             <label className="space-y-1 text-sm">
-              <RequiredLabel>Trang thai dong</RequiredLabel>
+              <RequiredLabel>Trạng thái đóng</RequiredLabel>
               <select
                 aria-describedby="risk-status-error"
                 className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -213,7 +213,7 @@ export function RiskRecordForm({
               <FieldError name="status" state={state} />
             </label>
             <label className="space-y-1 text-sm">
-              <RequiredLabel>Ly do dong</RequiredLabel>
+              <RequiredLabel>Lý do đóng</RequiredLabel>
               <textarea
                 aria-describedby="risk-reason-error"
                 className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2"
@@ -256,10 +256,10 @@ export function RiskRecordForm({
           >
             <Save className="h-4 w-4" aria-hidden="true" />
             {isPending
-              ? "Dang luu"
+              ? "Đang lưu"
               : mode === "override"
                 ? "Xac nhan trang thai"
-                : "Dong risk/blocker"}
+                : "Đóng rủi ro/vướng mắc"}
           </button>
         </div>
       </form>
@@ -275,7 +275,7 @@ export function RiskRecordForm({
           <RefreshCcw className="h-4 w-4 text-emerald-700" aria-hidden="true" />
         )}
         <h3 className="text-sm font-semibold text-slate-950">
-          {mode === "create" ? "Tao risk/blocker" : "Cap nhat risk/blocker"}
+          {mode === "create" ? "Tạo rủi ro/vướng mắc" : "Cập nhật rủi ro/vướng mắc"}
         </h3>
       </div>
 
@@ -328,7 +328,7 @@ export function RiskRecordForm({
       </div>
 
       <label className="space-y-1 text-sm">
-        <RequiredLabel>Tieu de</RequiredLabel>
+        <RequiredLabel>Tiêu đề</RequiredLabel>
         <input
           aria-describedby="risk-title-error"
           className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -341,7 +341,7 @@ export function RiskRecordForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">
-          <RequiredLabel>Nhom risk</RequiredLabel>
+          <RequiredLabel>Nhóm rủi ro</RequiredLabel>
           {options.categories.length ? (
             <select
               aria-describedby="risk-categoryKey-error"
@@ -369,7 +369,7 @@ export function RiskRecordForm({
         </label>
 
         <label className="space-y-1 text-sm">
-          <RequiredLabel>Trang thai</RequiredLabel>
+          <RequiredLabel>Trạng thái</RequiredLabel>
           <select
             aria-describedby="risk-status-error"
             className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -388,7 +388,7 @@ export function RiskRecordForm({
       </div>
 
       <label className="space-y-1 text-sm">
-        <RequiredLabel>Ly do / mo ta</RequiredLabel>
+        <RequiredLabel>Lý do / mô tả</RequiredLabel>
         <textarea
           aria-describedby="risk-reason-error"
           className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2"
@@ -401,7 +401,7 @@ export function RiskRecordForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">
-          <RequiredLabel>Du an / module lien quan</RequiredLabel>
+          <RequiredLabel>Dự án / module liên quan</RequiredLabel>
           {options.projects.length ? (
             <select
               aria-describedby="risk-projectId-error"
@@ -441,7 +441,7 @@ export function RiskRecordForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">
-          <RequiredLabel>Nguoi phu trach</RequiredLabel>
+          <RequiredLabel>Người phụ trách</RequiredLabel>
           {options.owners.length ? (
             <select
               aria-describedby="risk-ownerId-error"
@@ -470,7 +470,7 @@ export function RiskRecordForm({
         </label>
 
         <label className="space-y-1 text-sm">
-          <RequiredLabel>Deadline xu ly</RequiredLabel>
+          <RequiredLabel>Hạn xử lý</RequiredLabel>
           <input
             aria-describedby="risk-deadline-error"
             className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -525,10 +525,10 @@ export function RiskRecordForm({
         >
           <Save className="h-4 w-4" aria-hidden="true" />
           {isPending
-            ? "Dang luu"
+            ? "Đang lưu"
             : mode === "create"
-              ? "Tao risk/blocker"
-              : "Cap nhat risk/blocker"}
+              ? "Tạo rủi ro/vướng mắc"
+              : "Cập nhật rủi ro/vướng mắc"}
         </button>
       </div>
     </form>

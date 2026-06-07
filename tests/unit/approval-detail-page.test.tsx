@@ -38,7 +38,16 @@ vi.mock("@/modules/settings/services/role-permission-catalog-service", () => ({
 }));
 
 vi.mock("@/modules/users/services/user-service", () => ({
+  createAuditLog: vi.fn(),
   listAuditLogs: vi.fn(),
+}));
+
+vi.mock("@/lib/notifications/notification-repository", () => ({
+  notificationRepository: {
+    getByDedupeKey: vi.fn(),
+    list: vi.fn(),
+    upsert: vi.fn(),
+  },
 }));
 
 vi.mock("@/modules/proposals/services/approval-center-service", () => ({
@@ -105,6 +114,7 @@ describe("ApprovalDetailPage", () => {
       { sourceId: "finance-secret", sourceType: "proposal" },
       user,
       expect.objectContaining({
+        queueEscalationNotifications: true,
         requireScopeAssignments: true,
         selectedScopeId: "scope-a",
       }),
@@ -118,6 +128,7 @@ describe("ApprovalDetailPage", () => {
 
 function approvalDetail(): ApprovalCenterDetailData {
   return {
+    attachments: [],
     backHref: "/command-center?view=executive-approvals&scopeId=scope-a",
     generatedAt: "2026-06-04T00:00:00.000Z",
     history: [],
@@ -137,6 +148,8 @@ function approvalDetail(): ApprovalCenterDetailData {
     },
     policy: null,
     requestSummary: {
+      attachmentCount: 0,
+      deadlineCompliance: "valid",
       financialAccess: "no_permission",
       module: "finance",
       priority: "high",

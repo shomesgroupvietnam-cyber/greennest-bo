@@ -163,13 +163,15 @@ describe("role workspaces", () => {
     const labelsByHref = new Map(adminNav.map((item) => [item.href, item.label]));
     const labels = [...labelsByHref.values()];
 
-    expect(labelsByHref.get("/command-center")).toBe("Tong quan Truc 1");
+    expect(labelsByHref.get("/command-center")).toBe("Tổng quan Trục 1");
     expect(labelsByHref.get("/command-center?view=executive-dashboard")).toBe(
-      "Lanh dao",
+      "Lãnh đạo",
     );
-    expect(labelsByHref.get("/admin")).toBe("Quan tri he thong");
-    expect(labels).not.toContain("Tong quan");
-    expect(labels).not.toContain("Quan tri");
+    expect(labelsByHref.get("/admin")).toBe("Quản trị hệ thống");
+    expect(labelsByHref.get("/settings")).toBe("Cài đặt BO");
+    expect(labels).not.toContain("Tổng quan");
+    expect(labels).not.toContain("Quản trị");
+    expect(labels).not.toContain("Cài đặt");
   });
 
   it("allows scoped grants to reveal matching navigation without static role-wide access", () => {

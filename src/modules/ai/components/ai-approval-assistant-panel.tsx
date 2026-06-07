@@ -138,20 +138,20 @@ function ActionProposalPreview({
           </dd>
         </div>
         <div>
-          <dt className="font-semibold">Action</dt>
-          <dd>Action: {proposal.approvalAction}</dd>
+          <dt className="font-semibold">Hành động</dt>
+          <dd>Hành động: {proposal.approvalAction}</dd>
         </div>
         {proposal.currentStatus || proposal.nextStatus ? (
           <div>
-            <dt className="font-semibold">Status</dt>
+            <dt className="font-semibold">Trạng thái</dt>
             <dd>
               {proposal.currentStatus ?? "?"} -&gt; {proposal.nextStatus ?? "?"}
             </dd>
           </div>
         ) : null}
         <div>
-          <dt className="font-semibold">Field</dt>
-          <dd>Field: {proposal.affectedFields.join(", ") || "-"}</dd>
+          <dt className="font-semibold">Trường thay đổi</dt>
+          <dd>Trường thay đổi: {proposal.affectedFields.join(", ") || "-"}</dd>
         </div>
         <div>
           <dt className="font-semibold">Permission</dt>
@@ -211,20 +211,20 @@ export function AiApprovalAssistantPanel({
 }) {
   return (
     <section
-      aria-label="AI Approval Assistant"
+      aria-label="Trợ lý phê duyệt AI"
       className="rounded-lg border bg-white p-5 shadow-sm"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-emerald-700" aria-hidden="true" />
           <h2 className="text-base font-semibold text-slate-950">
-            AI Approval Assistant
+            Trợ lý phê duyệt AI
           </h2>
         </div>
         <StatusBadge status={assistant.status} />
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        Generated {formatDateTime(assistant.updatedAt)}
+        Tạo lúc {formatDateTime(assistant.updatedAt)}
       </p>
       <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
         {assistant.summaryText}
@@ -234,23 +234,23 @@ export function AiApprovalAssistantPanel({
         <TextList
           icon={<AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden="true" />}
           items={assistant.riskNotes}
-          title="Risk notes"
+          title="Ghi chú rủi ro"
         />
         <TextList
           icon={<FileSearch className="h-4 w-4 text-slate-700" aria-hidden="true" />}
           items={assistant.missingInformation}
-          title="Missing information"
+          title="Thiếu thông tin"
         />
         <TextList
           icon={<HelpCircle className="h-4 w-4 text-blue-700" aria-hidden="true" />}
           items={assistant.suggestedQuestions}
-          title="Suggested questions"
+          title="Câu hỏi gợi ý"
         />
       </div>
 
       {assistant.citations.length > 0 ? (
         <div className="mt-4">
-          <p className="text-sm font-semibold text-slate-950">Citations</p>
+          <p className="text-sm font-semibold text-slate-950">Nguồn trích dẫn</p>
           <ul className="mt-2 space-y-2 text-sm">
             {assistant.citations.map((citation) => (
               <li

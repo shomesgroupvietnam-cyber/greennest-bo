@@ -69,7 +69,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const policySettings = settingsData?.[3];
 
   return (
-    <PageShell title="Cai dat BO" description="Cau hinh he thong, delegation, AI va chinh sach quan tri.">
+    <PageShell title="Cài đặt BO" description="Cấu hình hệ thống, ủy quyền, AI và chính sách quản trị.">
       <div className="space-y-6">
         {canManageDelegation ? (
           <LeadershipDelegationPanel
@@ -84,14 +84,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <>
             <ProviderHealthPanel results={providerHealth} checked={shouldCheckProviders} />
             <section className="rounded-lg border bg-white p-5 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-950">Cau hinh AI/Web Search</h2>
+              <h2 className="text-base font-semibold text-slate-950">Cấu hình AI/Tìm kiếm web</h2>
               <div className="mt-3 grid gap-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-md bg-slate-50 p-3">
-                  <p className="font-medium text-slate-950">Provider search</p>
+                  <p className="font-medium text-slate-950">Nhà cung cấp tìm kiếm</p>
                   <p className="mt-1">{process.env.WEB_SEARCH_PROVIDER || "mock_web"}</p>
                 </div>
                 <div className="rounded-md bg-slate-50 p-3">
-                  <p className="font-medium text-slate-950">Provider AI</p>
+                  <p className="font-medium text-slate-950">Nhà cung cấp AI</p>
                   <p className="mt-1">{process.env.AI_PROVIDER || "mock"}</p>
                 </div>
                 <div className="rounded-md bg-slate-50 p-3">
@@ -99,12 +99,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <p className="mt-1">{process.env.AI_EMBEDDING_PROVIDER || "mock"}</p>
                 </div>
                 <div className="rounded-md bg-slate-50 p-3">
-                  <p className="font-medium text-slate-950">Registry entries</p>
-                  <p className="mt-1">{entries.filter((entry) => entry.enabled).length} enabled</p>
+                  <p className="font-medium text-slate-950">Nguồn đã đăng ký</p>
+                  <p className="mt-1">{entries.filter((entry) => entry.enabled).length} đang bật</p>
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-600">
-                API key va provider runtime van dat qua environment variables. BO UI quan ly nguon duoc phep intake de bao toan review gate truoc khi vao RAG.
+                API key và runtime của provider vẫn cấu hình qua biến môi trường. BO UI quản lý nguồn được phép intake để giữ bước review trước khi đưa vào RAG.
               </p>
             </section>
             <RolePermissionCatalogPanel catalog={rolePermissionCatalog} currentRole={session.user.role} />

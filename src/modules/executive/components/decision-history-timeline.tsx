@@ -44,7 +44,7 @@ function fieldChangeSummary(
 
 export function DecisionHistoryTimeline({ events }: DecisionHistoryTimelineProps) {
   if (events.length === 0) {
-    return <p className="text-sm text-slate-500">Chua co lich su thay doi.</p>;
+    return <p className="text-sm text-slate-500">Chưa có lịch sử thay đổi.</p>;
   }
 
   const sortedEvents = [...events].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
@@ -63,7 +63,7 @@ export function DecisionHistoryTimeline({ events }: DecisionHistoryTimelineProps
 
           {event.type === "version" ? (
             <div className="mt-1 space-y-1 text-sm text-slate-600">
-              {event.reason ? <p>Ly do: {event.reason}</p> : null}
+              {event.reason ? <p>Lý do: {event.reason}</p> : null}
               <div className="space-y-1">
                 {event.changedFields.map((field) => (
                   <p key={field}>{fieldChangeSummary(field, event.previousValue, event.newValue)}</p>

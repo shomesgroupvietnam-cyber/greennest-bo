@@ -168,7 +168,7 @@ describe("meeting list filters", () => {
       />,
     );
 
-    expect(screen.getByText("Chua co meeting trong pham vi cua ban")).toBeInTheDocument();
+    expect(screen.getByText("Chưa có cuộc họp trong phạm vi của bạn")).toBeInTheDocument();
   });
 
   it("keeps scoped-empty state when filters are active but the scoped list is already empty", () => {

@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { createDecisionAssignments } from "@/modules/executive/services/decision-assignment-service";
+import { updateDecisionAssignmentLifecycle } from "@/modules/executive/services/decision-assignment-lifecycle-service";
 import { createDecisionRecord, updateDecisionRecord } from "@/modules/executive/services/decision-record-service";
 import {
   closeExecutiveRiskRecord,
@@ -27,13 +28,19 @@ import type {
 import { createDecisionAssignmentsInputSchema, updateDecisionRecordInputSchema } from "@/modules/meetings/validation";
 
 export type ExecutiveActionFormState = {
+  entityId?: string;
   fieldErrors?: Record<string, string[]>;
   fields?: Record<string, string>;
+  href?: string;
   message?: string;
   status: "idle" | "success" | "error";
 };
 
-const initialSuccess = (message: string): ExecutiveActionFormState => ({
+const initialSuccess = (
+  message: string,
+  extra: Pick<ExecutiveActionFormState, "entityId" | "href"> = {},
+): ExecutiveActionFormState => ({
+  ...extra,
   message,
   status: "success",
 });
@@ -324,25 +331,63 @@ function formDataToDecisionAssignmentsInput(formData: FormData): CreateDecisionA
   });
 }
 
-export async function createDecisionRecordAction(formData: FormData) {
-  const currentUser = await getCurrentUser();
-  const decision = await createDecisionRecord(formDataToDecisionRecordInput(formData), currentUser);
+function formDataToDecisionAssignmentLifecycleInput(formData: FormData) {
+  return {
+    assignmentId: readString(formData, "assignmentId") ?? "",
+    status: readString(formData, "status") as Parameters<
+      typeof updateDecisionAssignmentLifecycle
+    >[0]["status"],
+    reason: readString(formData, "reason"),
+  };
+}
 
+function decisionCenterHref(decisionId: string, scopeId?: string) {
+  const params = new URLSearchParams({
+    view: "executive-decision-log",
+    decisionId,
+  });
+
+  if (scopeId && scopeId !== "all") {
+    params.set("scopeId", scopeId);
+  }
+
+  return `/command-center?${params.toString()}`;
+}
+
+function revalidateDecisionRecordPaths(decision: {
+  meetingId?: string;
+  projectId?: string;
+  projectIds?: string[];
+  sourceId?: string;
+  sourceType?: string;
+}) {
   revalidatePath("/executive/decision-log");
   revalidatePath("/executive/decisions");
   revalidatePath("/command-center");
+
+  if (
+    decision.sourceId &&
+    (decision.sourceType === "approval" || decision.sourceType === "proposal")
+  ) {
+    revalidatePath(`/approvals/proposal/${decision.sourceId}`);
+  }
 
   if (decision.meetingId) {
     revalidatePath(`/meetings/${decision.meetingId}`);
   }
 
-  if (decision.projectId) {
-    revalidatePath(`/projects/${decision.projectId}`);
-  }
-
-  for (const projectId of decision.projectIds ?? []) {
+  for (const projectId of [
+    ...new Set([decision.projectId, ...(decision.projectIds ?? [])].filter(Boolean)),
+  ]) {
     revalidatePath(`/projects/${projectId}`);
   }
+}
+
+export async function createDecisionRecordAction(formData: FormData) {
+  const currentUser = await getCurrentUser();
+  const decision = await createDecisionRecord(formDataToDecisionRecordInput(formData), currentUser);
+
+  revalidateDecisionRecordPaths(decision);
 
   return decision;
 }
@@ -374,23 +419,39 @@ export async function updateDecisionRecordAction(formData: FormData) {
   const currentUser = await getCurrentUser();
   const decision = await updateDecisionRecord(formDataToUpdateDecisionRecordInput(formData), currentUser);
 
-  revalidatePath("/executive/decision-log");
-  revalidatePath("/executive/decisions");
-  revalidatePath("/command-center");
+  revalidateDecisionRecordPaths(decision);
 
-  if (decision.meetingId) {
-    revalidatePath(`/meetings/${decision.meetingId}`);
+  return decision;
+}
+
+export async function updateDecisionAssignmentLifecycleAction(formData: FormData) {
+  const currentUser = await getCurrentUser();
+  const result = await updateDecisionAssignmentLifecycle(
+    formDataToDecisionAssignmentLifecycleInput(formData),
+    currentUser,
+  );
+
+  revalidateDecisionRecordPaths(result.decision);
+  revalidatePath("/tasks");
+
+  const taskId = result.task?.id ?? result.assignment.taskId;
+
+  if (taskId) {
+    revalidatePath(`/tasks/${taskId}`);
   }
 
-  if (decision.projectId) {
-    revalidatePath(`/projects/${decision.projectId}`);
-  }
-
-  for (const projectId of decision.projectIds ?? []) {
+  for (const projectId of [
+    ...new Set([
+      result.assignment.projectId,
+      result.task?.projectId,
+      result.decision.projectId,
+      ...(result.decision.projectIds ?? []),
+    ].filter(Boolean)),
+  ]) {
     revalidatePath(`/projects/${projectId}`);
   }
 
-  return decision;
+  return result;
 }
 
 function revalidateRiskRecordPaths(record: { projectId?: string; sourceType?: string }) {
@@ -459,9 +520,12 @@ export async function createDecisionRecordStateAction(
   formData: FormData,
 ): Promise<ExecutiveActionFormState> {
   try {
-    await createDecisionRecordAction(formData);
+    const decision = await createDecisionRecordAction(formData);
 
-    return initialSuccess("Da luu decision.");
+    return initialSuccess("Da luu decision.", {
+      entityId: decision.id,
+      href: decisionCenterHref(decision.id, readString(formData, "scopeId")),
+    });
   } catch (error) {
     return actionError(error);
   }
@@ -548,6 +612,19 @@ export async function updateDecisionRecordStateAction(
     await updateDecisionRecordAction(formData);
 
     return initialSuccess("Da cap nhat decision.");
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function updateDecisionAssignmentLifecycleStateAction(
+  _previousState: ExecutiveActionFormState,
+  formData: FormData,
+): Promise<ExecutiveActionFormState> {
+  try {
+    await updateDecisionAssignmentLifecycleAction(formData);
+
+    return initialSuccess("Da cap nhat trang thai assignment.");
   } catch (error) {
     return actionError(error);
   }

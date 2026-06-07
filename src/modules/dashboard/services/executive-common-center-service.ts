@@ -164,15 +164,15 @@ function riskPriorityLabel(item: ExecutiveRiskItem) {
 
 function approvalPriorityLabel(item: ExecutiveApprovalItem, today: Date) {
   if (item.escalation?.required) {
-    return item.escalation.trigger === "risk_policy" ? "Escalation risk" : "Escalation";
+    return item.escalation.trigger === "risk_policy" ? "Leo thang rủi ro" : "Leo thang";
   }
 
   if (item.overdue?.isOverdue || isBeforeDay(item.deadline, today) || item.tone === "red") {
-    return "Qua han";
+    return "Quá hạn";
   }
 
   if (item.riskLevel === "critical" || item.priority === "critical") {
-    return "Critical";
+    return "Nghiêm trọng";
   }
 
   if (item.riskLevel === "high" || item.priority === "high") {
@@ -224,8 +224,8 @@ function buildDeadlinePriority(
 ): ExecutiveCommonCenterPriorityItem {
   return {
     ...item,
-    groupLabel: "Deadline he thong",
-    priorityLabel: isBeforeDay(item.deadline, today) || item.tone === "red" ? "Qua han" : "Hom nay",
+    groupLabel: "Hạn xử lý hệ thống",
+    priorityLabel: isBeforeDay(item.deadline, today) || item.tone === "red" ? "Quá hạn" : "Hôm nay",
     score: 45 + (isBeforeDay(item.deadline, today) ? 25 : 0) + toneScore(item),
   };
 }
@@ -236,8 +236,8 @@ function buildProjectPriority(
   return {
     ...item,
     amountLabel: undefined,
-    groupLabel: "Du an do",
-    priorityLabel: "Do",
+    groupLabel: "Dự án đỏ",
+    priorityLabel: "Đỏ",
     score: 75 + toneScore(item),
   };
 }
@@ -348,8 +348,8 @@ function buildDecisionHighlights(
       highlightLabel:
         item.decidedBy?.toLowerCase().includes("chairman") ||
         item.decidedBy?.toLowerCase().includes("chu tich")
-          ? "Quyet dinh Chu tich"
-          : "Moi",
+          ? "Quyết định Chủ tịch"
+          : "Mới",
     }),
   );
   const leadershipDecisions =
@@ -361,8 +361,8 @@ function buildDecisionHighlights(
         highlightLabel:
           item.decidedBy.toLowerCase().includes("chairman") ||
           item.decidedBy.toLowerCase().includes("chu tich")
-            ? "Quyet dinh Chu tich"
-            : "Moi",
+            ? "Quyết định Chủ tịch"
+            : "Mới",
         projectId: item.projectId,
         reason: item.reason,
         sourceId: item.id,
@@ -376,7 +376,7 @@ function buildDecisionHighlights(
     executiveData?.directives.map(
       (item): ExecutiveCommonCenterDecisionHighlight => ({
         deadline: item.dueDate,
-        highlightLabel: "Chi dao",
+        highlightLabel: "Chỉ đạo",
         id: `directive-${item.id}`,
         owner: item.ownerName ?? item.assignedTo,
         projectId: item.projectId,

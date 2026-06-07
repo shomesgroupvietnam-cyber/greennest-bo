@@ -50,8 +50,8 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
 
   return (
     <PageShell
-      title="Meeting Center"
-      description="One Meeting Engine: phan loai theo loai hop, scope, visibility va follow-up."
+      title="Trung Tâm Họp"
+      description="Quản lý cuộc họp theo loại họp, phạm vi, quyền hiển thị và việc theo dõi sau họp."
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -61,7 +61,7 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
           <Button asChild>
             <Link href="/meetings/new">
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Tao cuoc hop
+              Tạo cuộc họp
             </Link>
           </Button>
         ) : null}

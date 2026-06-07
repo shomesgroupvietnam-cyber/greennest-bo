@@ -162,7 +162,7 @@ const meetingStatusLabels = {
 
 const decisionStatusLabels = {
   effective: "Có hiệu lực",
-  follow_up: "Cần follow-up",
+  follow_up: "Cần theo dõi",
   superseded: "Đã thay thế",
 };
 
@@ -182,9 +182,9 @@ const fallbackExecutiveAxisOptions: Array<{
   key: CommandCenterLeadershipActionItem["axis"];
   label: string;
 }> = [
-  { key: "project_management", label: "Dự án | Project Management" },
-  { key: "build_management", label: "Kiến tạo | Build Management" },
-  { key: "operations_analytics", label: "Điều hành | Operations & Analytics" },
+  { key: "project_management", label: "Dự án | Quản lý dự án" },
+  { key: "build_management", label: "Kiến tạo | Quản lý xây dựng" },
+  { key: "operations_analytics", label: "Điều hành | Phân tích vận hành" },
 ];
 
 const leadershipActionCategoryLabels: Record<
@@ -238,74 +238,74 @@ const executiveRiskLevelLabels: Record<
   string
 > = {
   low: "Thap",
-  medium: "Trung binh",
+  medium: "Trung bình",
   high: "Cao",
-  critical: "Khan cap",
+  critical: "Khẩn cấp",
 };
 
 const executiveApprovalLevelLabels: Record<
   CommandCenterExecutiveApprovalLevel,
   string
 > = {
-  DEPARTMENT_HEAD: "Truong bo phan",
-  PROJECT_DIRECTOR: "Giam doc du an",
-  CEO: "CEO/TGD",
-  CHAIRMAN: "Chu tich",
+  DEPARTMENT_HEAD: "Trưởng bộ phận",
+  PROJECT_DIRECTOR: "Giám đốc dự án",
+  CEO: "Tổng Giám đốc",
+  CHAIRMAN: "Chủ tịch",
 };
 
 const executiveApprovalCategoryLabels: Record<
   CommandCenterExecutiveApprovalCategory,
   string
 > = {
-  legal_approval: "Legal approval",
-  planning_approval: "Planning approval",
-  design_approval: "Design approval",
-  feasibility_approval: "Feasibility approval",
-  investment_approval: "Investment approval",
-  contractor_approval: "Contractor approval",
-  material_approval: "Material approval",
-  progress_approval: "Progress approval",
-  variation_order_approval: "Variation order",
-  acceptance_approval: "Acceptance approval",
-  payment_approval: "Payment approval",
-  budget_approval: "Budget approval",
-  executive_payment_approval: "Executive payment",
-  kpi_approval: "KPI approval",
-  strategy_approval: "Strategy approval",
-  permission_approval: "Permission approval",
+  legal_approval: "Phê duyệt pháp lý",
+  planning_approval: "Phê duyệt quy hoạch",
+  design_approval: "Phê duyệt thiết kế",
+  feasibility_approval: "Phê duyệt khả thi",
+  investment_approval: "Phê duyệt đầu tư",
+  contractor_approval: "Phê duyệt nhà thầu",
+  material_approval: "Phê duyệt vật tư",
+  progress_approval: "Phê duyệt tiến độ",
+  variation_order_approval: "Điều chỉnh phát sinh",
+  acceptance_approval: "Phê duyệt nghiệm thu",
+  payment_approval: "Phê duyệt thanh toán",
+  budget_approval: "Phê duyệt ngân sách",
+  executive_payment_approval: "Phê duyệt thanh toán lãnh đạo",
+  kpi_approval: "Phê duyệt KPI",
+  strategy_approval: "Phê duyệt chiến lược",
+  permission_approval: "Phê duyệt phân quyền",
 };
 
 const executiveRiskCategoryLabels: Record<
   CommandCenterExecutiveRiskCategory,
   string
 > = {
-  legal_risk: "Legal risk",
-  land_risk: "Land risk",
-  planning_risk: "Planning risk",
-  approval_risk: "Approval risk",
-  schedule_risk: "Schedule risk",
-  delay_risk: "Delay risk",
-  quality_risk: "Quality risk",
-  safety_risk: "Safety risk",
-  contractor_risk: "Contractor risk",
-  cost_overrun_risk: "Cost overrun",
-  material_risk: "Material risk",
-  cashflow_risk: "Cashflow risk",
-  operational_risk: "Operational risk",
-  permission_risk: "Permission risk",
-  compliance_risk: "Compliance risk",
-  system_risk: "System risk",
+  legal_risk: "Rủi ro pháp lý",
+  land_risk: "Rủi ro đất đai",
+  planning_risk: "Rủi ro quy hoạch",
+  approval_risk: "Rủi ro phê duyệt",
+  schedule_risk: "Rủi ro tiến độ",
+  delay_risk: "Rủi ro chậm trễ",
+  quality_risk: "Rủi ro chất lượng",
+  safety_risk: "Rủi ro an toàn",
+  contractor_risk: "Rủi ro nhà thầu",
+  cost_overrun_risk: "Vượt chi phí",
+  material_risk: "Rủi ro vật tư",
+  cashflow_risk: "Rủi ro dòng tiền",
+  operational_risk: "Rủi ro vận hành",
+  permission_risk: "Rủi ro phân quyền",
+  compliance_risk: "Rủi ro tuân thủ",
+  system_risk: "Rủi ro hệ thống",
 };
 
 const executiveViewModeOptions: Array<{
   key: CommandCenterExecutiveViewMode;
   label: string;
 }> = [
-  { key: "system_overview", label: "Tong quan toan he thong" },
-  { key: "by_project", label: "Theo du an" },
-  { key: "by_axis", label: "Theo truc" },
-  { key: "by_risk", label: "Theo loai rui ro" },
-  { key: "pending_approval", label: "Theo viec cho duyet" },
+  { key: "system_overview", label: "Tổng quan toàn hệ thống" },
+  { key: "by_project", label: "Theo dự án" },
+  { key: "by_axis", label: "Theo trục" },
+  { key: "by_risk", label: "Theo loại rủi ro" },
+  { key: "pending_approval", label: "Theo việc chờ duyệt" },
 ];
 
 const executiveMockDecisionActions: Array<{
@@ -316,9 +316,9 @@ const executiveMockDecisionActions: Array<{
   >;
   tone: CommandCenterTone;
 }> = [
-  { label: "Approve", status: "approved", tone: "emerald" },
-  { label: "Reject", status: "rejected", tone: "red" },
-  { label: "Return", status: "returned", tone: "amber" },
+  { label: "Duyệt", status: "approved", tone: "emerald" },
+  { label: "Từ chối", status: "rejected", tone: "red" },
+  { label: "Trả lại", status: "returned", tone: "amber" },
 ];
 
 const executiveActionRoles = new Set([
@@ -342,7 +342,7 @@ const approvalActionReasons: Record<
   Exclude<CommandCenterApprovalStatus, "pending">,
   string
 > = {
-  approved: "Lãnh đạo duyệt trên Command Center mock.",
+  approved: "Lãnh đạo duyệt trên Trung Tâm Điều Hành mock.",
   rejected: "Lãnh đạo không duyệt và yêu cầu dừng xử lý đề xuất này.",
   revision_required:
     "Lãnh đạo yêu cầu chỉnh sửa, bổ sung hồ sơ trước khi trình lại.",
@@ -353,14 +353,14 @@ function canRunExecutiveActions(user: AppSessionUser) {
 }
 
 const defaultWorkspaceReturnLabels: Record<string, string> = {
-  "/project-workbench": "Ban du an",
-  "/legal-workspace": "khong gian phap ly",
-  "/design-workspace": "khong gian thiet ke",
-  "/technical-workspace": "khong gian ky thuat",
-  "/assistant-workspace": "khong gian tro ly",
-  "/viewer": "dashboard chi xem",
-  "/contractor": "cong nha thau",
-  "/consultant": "cong tu van",
+  "/project-workbench": "Bàn dự án",
+  "/legal-workspace": "không gian pháp lý",
+  "/design-workspace": "không gian thiết kế",
+  "/technical-workspace": "không gian kỹ thuật",
+  "/assistant-workspace": "không gian trợ lý",
+  "/viewer": "dashboard chỉ xem",
+  "/contractor": "cổng nhà thầu",
+  "/consultant": "cổng tư vấn",
 };
 
 function resolveWorkspaceReturnLink(user: AppSessionUser) {
@@ -410,7 +410,7 @@ function formatLeadershipDeadline(deadline: string) {
 function buildCommandCenterQuickSwitchGroups(data: CommandCenterData) {
   const groups = [
     {
-      label: "Command Center",
+      label: "Trung Tâm Điều Hành",
       options: [
         { label: "Tổng quan", viewKey: "overview" },
         { label: "Thông báo", viewKey: "notifications" },
@@ -437,7 +437,7 @@ function buildCommandCenterQuickSwitchGroups(data: CommandCenterData) {
 
   return groups
     .map((group) =>
-      group.label === "Command Center"
+      group.label === "Trung Tâm Điều Hành"
         ? {
             ...group,
             options: group.options.filter((option) => {
@@ -467,11 +467,11 @@ function resolveCommandCenterBreadcrumbs(
   activeViewLabel: string,
 ) {
   if (activeView === "overview") {
-    return ["GreenNest Group", "Command Center", "Tổng quan"];
+    return ["GreenNest Group", "Trung Tâm Điều Hành", "Tổng quan"];
   }
 
   if (activeView === "notifications" || activeView === "settings") {
-    return ["GreenNest Group", "Command Center", activeViewLabel];
+    return ["GreenNest Group", "Trung Tâm Điều Hành", activeViewLabel];
   }
 
   for (const axis of data.axes) {
@@ -490,7 +490,7 @@ function resolveCommandCenterBreadcrumbs(
     }
   }
 
-  return ["GreenNest Group", "Command Center", activeViewLabel];
+  return ["GreenNest Group", "Trung Tâm Điều Hành", activeViewLabel];
 }
 
 function AxisMenuItem({
@@ -1179,7 +1179,7 @@ function LegacyExecutiveCommandCenterView({
           Ban lãnh đạo
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-950">
-          Executive Command Center
+          Trung Tâm Điều Hành Lãnh Đạo
         </h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-500">
           Trung tâm tổng hợp cho 3 trục, chỉ giữ lại các việc cần lãnh đạo xem,
@@ -1191,7 +1191,7 @@ function LegacyExecutiveCommandCenterView({
         <section className="grid gap-4 lg:grid-cols-[1fr_1fr_280px]">
           <article className="rounded-lg border bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase text-slate-400">
-              Tang dieu hanh hien tai
+              Tầng điều hành hiện tại
             </p>
             <h2 className="mt-1 font-semibold text-slate-950">
               {activeRoleDefinition.label}
@@ -1202,7 +1202,7 @@ function LegacyExecutiveCommandCenterView({
           </article>
           <article className="rounded-lg border bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase text-slate-400">
-              Chi xem/quyet dinh
+              Chỉ xem/quyết định
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {activeRoleDefinition.manages.slice(0, 6).map((item) => (
@@ -1217,7 +1217,7 @@ function LegacyExecutiveCommandCenterView({
           </article>
           <article className="rounded-lg border bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase text-slate-400">
-              Khong xu ly mac dinh
+              Không xử lý mặc định
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {activeRoleDefinition.doesNotHandle.slice(0, 4).map((item) => (
@@ -1236,11 +1236,11 @@ function LegacyExecutiveCommandCenterView({
       <section className="space-y-3">
         <div>
           <h2 className="font-semibold text-slate-950">
-            Mo hinh dashboard dieu hanh 3 lop
+            Mô hình dashboard điều hành 3 lớp
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Global Executive, Project Executive va Department Workspace Summary
-            duoc tra ve theo quyen tu service layer.
+            Tổng quan lãnh đạo, điều hành dự án và tóm tắt không gian bộ phận
+            được trả về theo quyền từ service layer.
           </p>
         </div>
         <div className="grid gap-4 xl:grid-cols-3">
@@ -1396,7 +1396,7 @@ function LegacyExecutiveCommandCenterView({
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-slate-400">
-                Approval categories
+                Nhóm phê duyệt
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {selectedAxisDefinition.approvalCategories.map((category) => (
@@ -1411,7 +1411,7 @@ function LegacyExecutiveCommandCenterView({
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-slate-400">
-                Risk categories
+                Nhóm rủi ro
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {selectedAxisDefinition.riskCategories.map((category) => (
@@ -1447,7 +1447,7 @@ function LegacyExecutiveCommandCenterView({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
-            Organization
+            Tổ chức
             <select
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case text-slate-800 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               onChange={(event) => {
@@ -1456,7 +1456,7 @@ function LegacyExecutiveCommandCenterView({
               }}
               value={organizationFilter}
             >
-              <option value="all">Tat ca organization</option>
+              <option value="all">Tất cả tổ chức</option>
               {organizationOptions.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.name}
@@ -1545,7 +1545,7 @@ function LegacyExecutiveCommandCenterView({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
-            Risk level
+            Mức rủi ro
             <select
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case text-slate-800 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               onChange={(event) =>
@@ -1557,7 +1557,7 @@ function LegacyExecutiveCommandCenterView({
               }
               value={riskFilter}
             >
-              <option value="all">Tat ca risk level</option>
+              <option value="all">Tất cả mức rủi ro</option>
               {Object.entries(executiveRiskLevelLabels).map(
                 ([riskLevel, label]) => (
                   <option key={riskLevel} value={riskLevel}>
@@ -1568,7 +1568,7 @@ function LegacyExecutiveCommandCenterView({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
-            Approval level
+            Cấp duyệt
             <select
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case text-slate-800 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               onChange={(event) =>
@@ -1580,7 +1580,7 @@ function LegacyExecutiveCommandCenterView({
               }
               value={approvalLevelFilter}
             >
-              <option value="all">Tat ca approval level</option>
+              <option value="all">Tất cả cấp duyệt</option>
               {Object.entries(executiveApprovalLevelLabels).map(
                 ([approvalLevel, label]) => (
                   <option key={approvalLevel} value={approvalLevel}>
@@ -1621,10 +1621,10 @@ function LegacyExecutiveCommandCenterView({
               <tr className="border-b text-xs font-semibold uppercase text-slate-400">
                 <th className="py-3 pr-4">Việc cần quyết định</th>
                 <th className="px-4 py-3">Nhóm</th>
-                <th className="px-4 py-3">Organization</th>
+                <th className="px-4 py-3">Tổ chức</th>
                 <th className="px-4 py-3">Dự án</th>
                 <th className="px-4 py-3">Người phụ trách</th>
-                <th className="px-4 py-3">Risk</th>
+                <th className="px-4 py-3">Rủi ro</th>
                 <th className="px-4 py-3">Cấp duyệt</th>
                 <th className="px-4 py-3">Ưu tiên</th>
                 <th className="px-4 py-3">Hạn xử lý</th>
@@ -1779,14 +1779,14 @@ function LegacyExecutiveCommandCenterView({
                     leadershipActionTypeLabels[selectedAction.type],
                   ],
                   ["Dự án", selectedAction.projectName],
-                  ["Organization", selectedAction.organizationName],
+                  ["Tổ chức", selectedAction.organizationName],
                   ["Người phụ trách", selectedAction.ownerName],
                   [
-                    "Risk level",
+                    "Mức rủi ro",
                     executiveRiskLevelLabels[selectedAction.riskLevel],
                   ],
                   [
-                    "Risk category",
+                    "Nhóm rủi ro",
                     executiveRiskCategoryLabels[selectedAction.riskCategory],
                   ],
                   [
@@ -1794,7 +1794,7 @@ function LegacyExecutiveCommandCenterView({
                     executiveApprovalLevelLabels[selectedAction.approvalLevel],
                   ],
                   [
-                    "Approval category",
+                    "Nhóm phê duyệt",
                     executiveApprovalCategoryLabels[
                       selectedAction.approvalCategory
                     ],
@@ -1802,7 +1802,7 @@ function LegacyExecutiveCommandCenterView({
                   ["Giá trị", selectedAction.amountLabel ?? "Không áp dụng"],
                   ["Module", selectedAction.moduleId],
                   [
-                    "Deadline",
+                    "Hạn xử lý",
                     formatLeadershipDeadline(selectedAction.deadline),
                   ],
                   [
@@ -1810,11 +1810,11 @@ function LegacyExecutiveCommandCenterView({
                     leadershipPriorityLabels[selectedAction.priority],
                   ],
                   [
-                    "Hạn xử lý",
+                    "Nhóm hạn",
                     leadershipDueGroupLabels[selectedAction.dueGroup],
                   ],
-                ].map(([label, value]) => (
-                  <div className="rounded-md bg-slate-50 p-3" key={label}>
+                ].map(([label, value], index) => (
+                  <div className="rounded-md bg-slate-50 p-3" key={`${label}-${index}`}>
                     <p className="text-xs font-semibold uppercase text-slate-400">
                       {label}
                     </p>
@@ -1834,7 +1834,7 @@ function LegacyExecutiveCommandCenterView({
               </div>
               <div className="rounded-md bg-red-50 p-4">
                 <p className="text-xs font-semibold uppercase text-red-700">
-                  Approval escalation
+                  Lý do leo thang phê duyệt
                 </p>
                 <p className="mt-1 text-sm leading-6 text-red-900">
                   {selectedAction.escalationReason}
@@ -2154,7 +2154,7 @@ function CommandCenterExecutivePanel({
                 </span>
               </div>
               <p className="mt-3 text-sm text-slate-600">
-                Deadline: {directive.dueDate} · Task: {directive.taskCode}
+                Hạn xử lý: {directive.dueDate} · Việc: {directive.taskCode}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
@@ -2412,7 +2412,7 @@ function CommandCenterExecutivePanel({
           </div>
 
           <aside className="rounded-lg border bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-slate-950">Audit log</h2>
+            <h2 className="font-semibold text-slate-950">Nhật ký kiểm toán</h2>
             <p className="mt-1 text-sm text-slate-500">
               Lưu vết thao tác quan trọng phát sinh từ workflow lãnh đạo.
             </p>
@@ -2524,13 +2524,13 @@ function CommandCenterInPagePanel({
     <section className="rounded-lg border bg-white p-6 shadow-sm">
       <div className="max-w-3xl">
         <p className="text-sm font-semibold uppercase text-emerald-700">
-          Command Center
+          Trung Tâm Điều Hành
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-950">
           {activeViewLabel}
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Mục này đang giữ điều hướng nội bộ trong Command Center. Nội dung chi
+          Mục này đang giữ điều hướng nội bộ trong Trung Tâm Điều Hành. Nội dung chi
           tiết sẽ được triển khai ở giai đoạn riêng, không chuyển sang route
           khác khi chưa có lệnh.
         </p>
@@ -2637,7 +2637,7 @@ export function CommandCenterDashboard({
         decisionText,
         decidedBy: user.fullName,
         decidedAt: decidedAt.slice(0, 10),
-        source: "Command Center mock",
+        source: "Trung Tâm Điều Hành mock",
         reason,
         aiRecommendation:
           status === "revision_required"
@@ -2699,8 +2699,8 @@ export function CommandCenterDashboard({
       const createdAt = new Date().toISOString();
       const reason =
         status === "done"
-          ? "Lãnh đạo đánh dấu chỉ đạo đã hoàn tất trên Command Center mock."
-          : "Lãnh đạo chuyển chỉ đạo sang trạng thái đang xử lý trên Command Center mock.";
+          ? "Lãnh đạo đánh dấu chỉ đạo đã hoàn tất trên Trung Tâm Điều Hành mock."
+          : "Lãnh đạo chuyển chỉ đạo sang trạng thái đang xử lý trên Trung Tâm Điều Hành mock.";
       const auditItem: CommandCenterAuditLogItem = {
         id: `audit-ui-${directive.id}-${Date.now()}`,
         action: `directive.${status}`,
@@ -2816,7 +2816,7 @@ export function CommandCenterDashboard({
                 className="rounded-md border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
                 href={workspaceReturnLink.href}
               >
-                Quay lai {workspaceReturnLink.label}
+                Quay lại {workspaceReturnLink.label}
               </Link>
             ) : null}
             <Bell className="h-5 w-5 text-slate-500" aria-hidden="true" />

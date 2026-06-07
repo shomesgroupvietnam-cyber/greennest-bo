@@ -7,10 +7,8 @@ import type {
   ExecutiveDashboardSourceItem,
   ExecutiveDashboardTone,
   ExecutiveProjectPortfolio,
-  ExecutiveRiskMutationOptions,
   ExecutiveRiskSummary as ExecutiveRiskSummaryData,
 } from "@/modules/dashboard/types";
-import { RiskRecordForm } from "@/modules/executive/components/risk-record-form";
 
 const healthLabels = {
   green: "Xanh",
@@ -71,21 +69,21 @@ function renderRiskAlertMeta(item: ExecutiveRiskSummaryData["items"][number]) {
       {showOverdue && item.overdue ? (
         <>
           <span className="block font-semibold">
-            Qua han: {item.overdue.severity} - {item.overdue.reason}
+            Quá hạn: {item.overdue.severity} - {item.overdue.reason}
           </span>
-          <span className="block">Next action: {item.overdue.nextAction}</span>
+          <span className="block">Hành động tiếp theo: {item.overdue.nextAction}</span>
         </>
       ) : null}
       {item.escalation?.required ? (
         <>
           <span className="block font-semibold">
-            Escalation: {item.escalation.trigger}
+            Leo thang: {item.escalation.trigger}
             {item.escalation.status ? ` - ${item.escalation.status}` : ""}
           </span>
           {item.escalation.policyLabel ? (
-            <span className="block">Policy: {item.escalation.policyLabel}</span>
+            <span className="block">Chính sách: {item.escalation.policyLabel}</span>
           ) : null}
-          {targetSummary ? <span className="block">Targets: {targetSummary}</span> : null}
+          {targetSummary ? <span className="block">Người nhận: {targetSummary}</span> : null}
         </>
       ) : null}
     </span>
@@ -94,55 +92,29 @@ function renderRiskAlertMeta(item: ExecutiveRiskSummaryData["items"][number]) {
 
 export function ExecutiveRiskSummary({
   canDrillDown,
-  canCreateRisk,
-  canUpdateRisk,
-  canOverrideRisk,
-  canCloseRisk,
-  canCloseHighRisk,
   categoryEmptyLabel,
   emptyLabel,
   portfolio,
-  riskMutationOptions,
   riskSummary,
   onSelectSource,
 }: {
   canDrillDown: boolean;
-  canCreateRisk: boolean;
-  canUpdateRisk: boolean;
-  canOverrideRisk: boolean;
-  canCloseRisk: boolean;
-  canCloseHighRisk: boolean;
   categoryEmptyLabel: string;
   emptyLabel: string;
   portfolio: ExecutiveProjectPortfolio;
-  riskMutationOptions: ExecutiveRiskMutationOptions;
   riskSummary: ExecutiveRiskSummaryData;
   onSelectSource: (item: ExecutiveDashboardSourceItem) => void;
 }) {
   const categoryEntries = riskSummary.riskMap.categories;
   const matrixEntries = riskSummary.riskMap.matrix;
-  const firstOfficialRisk = riskSummary.items.find((item) =>
-    item.id.startsWith("risk-record-"),
-  );
-  const selectedRiskNeedsHighClose =
-    firstOfficialRisk?.severity === "high" || firstOfficialRisk?.severity === "critical";
-  const canCloseSelectedRisk = Boolean(
-    firstOfficialRisk &&
-      (canCloseRisk || (selectedRiskNeedsHighClose && canCloseHighRisk)),
-  );
-  const canShowMutationPanel =
-    canCreateRisk ||
-    (canUpdateRisk && firstOfficialRisk) ||
-    (canOverrideRisk && firstOfficialRisk) ||
-    canCloseSelectedRisk;
 
   return (
-    <section aria-label="Tổng hợp risk" className="rounded-md border bg-white p-4 shadow-sm">
+    <section aria-label="Tổng hợp rủi ro" className="rounded-md border bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Tổng hợp risk</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Tổng hợp rủi ro</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Risk map theo category, mức ảnh hưởng, khả năng xảy ra, owner và deadline.
+            Bản đồ rủi ro theo nhóm, mức ảnh hưởng, khả năng xảy ra, người phụ trách và hạn xử lý.
           </p>
         </div>
         <span className="rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-800">
@@ -150,77 +122,17 @@ export function ExecutiveRiskSummary({
         </span>
       </div>
 
-      {canShowMutationPanel ? (
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {canCreateRisk ? (
-            <details className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-emerald-950">
-                Tao risk/blocker
-              </summary>
-              <div className="mt-3">
-                <RiskRecordForm
-                  mode="create"
-                  options={riskMutationOptions}
-                />
-              </div>
-            </details>
-          ) : null}
-          {canUpdateRisk && firstOfficialRisk ? (
-            <details className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-950">
-                Cap nhat risk/blocker dang mo
-              </summary>
-              <div className="mt-3">
-                <RiskRecordForm
-                  mode="update"
-                  options={riskMutationOptions}
-                  record={firstOfficialRisk}
-                />
-              </div>
-            </details>
-          ) : null}
-          {canOverrideRisk && firstOfficialRisk ? (
-            <details className="rounded-md border border-blue-200 bg-blue-50/50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-blue-950">
-                Xac nhan/override trang thai
-              </summary>
-              <div className="mt-3">
-                <RiskRecordForm
-                  mode="override"
-                  options={riskMutationOptions}
-                  record={firstOfficialRisk}
-                />
-              </div>
-            </details>
-          ) : null}
-          {canCloseSelectedRisk && firstOfficialRisk ? (
-            <details className="rounded-md border border-slate-300 bg-slate-50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-950">
-                Dong risk/blocker
-              </summary>
-              <div className="mt-3">
-                <RiskRecordForm
-                  mode="close"
-                  options={riskMutationOptions}
-                  record={firstOfficialRisk}
-                />
-              </div>
-            </details>
-          ) : null}
-        </div>
-      ) : null}
-
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
         <div className="rounded-md border border-slate-200 p-3">
           <div className="flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-red-700" aria-hidden="true" />
-            <h3 className="text-sm font-semibold text-slate-950">Risk map</h3>
+            <h3 className="text-sm font-semibold text-slate-950">Bản đồ rủi ro</h3>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {categoryEntries.length ? (
               categoryEntries.map((category) => (
                 <div
-                  aria-label={`Risk map category ${category.categoryLabel}: ${category.count} risk, ${category.affectedProjectCount} du an anh huong`}
+                  aria-label={`Nhóm rủi ro ${category.categoryLabel}: ${category.count} rủi ro, ${category.affectedProjectCount} dự án ảnh hưởng`}
                   className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm"
                   key={category.categoryKey}
                 >
@@ -230,7 +142,7 @@ export function ExecutiveRiskSummary({
                         {category.categoryLabel}
                       </p>
                       <p className="mt-1 text-xs text-slate-600">
-                        {category.count} risk | {category.affectedProjectCount} dự án
+                        {category.count} rủi ro | {category.affectedProjectCount} dự án
                       </p>
                     </div>
                     {category.nearestDeadline ? (
@@ -262,10 +174,10 @@ export function ExecutiveRiskSummary({
                     ))}
                   </div>
                   <p className="mt-3 text-xs leading-5 text-slate-600">
-                    Owner: {compactList(category.owners, "Chưa gán")}
+                    Người phụ trách: {compactList(category.owners, "Chưa gán")}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Project: {compactList(category.affectedProjectIds, "Không có project")}
+                    Dự án: {compactList(category.affectedProjectIds, "Không có dự án")}
                   </p>
                 </div>
               ))
@@ -280,13 +192,13 @@ export function ExecutiveRiskSummary({
         <div className="rounded-md border border-slate-200 p-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden="true" />
-            <h3 className="text-sm font-semibold text-slate-950">Ma tran risk</h3>
+            <h3 className="text-sm font-semibold text-slate-950">Ma trận rủi ro</h3>
           </div>
           <div className="mt-3 grid gap-2">
             {matrixEntries.length ? (
               matrixEntries.map((cell) => (
                 <div
-                  aria-label={`Ma tran risk ${cell.likelihoodLabel} x ${cell.impactLabel}: ${cell.count} risk`}
+                  aria-label={`Ma trận rủi ro ${cell.likelihoodLabel} x ${cell.impactLabel}: ${cell.count} rủi ro`}
                   className="rounded-md border border-slate-200 bg-white p-3 text-sm"
                   key={`${cell.likelihood}-${cell.impact}`}
                 >
@@ -294,7 +206,7 @@ export function ExecutiveRiskSummary({
                     {cell.likelihoodLabel} x {cell.impactLabel}
                   </p>
                   <p className="mt-1 text-xs text-slate-600">
-                    {cell.count} risk | IDs {compactList(cell.riskIds, "Không có risk")}
+                    {cell.count} rủi ro | Mã {compactList(cell.riskIds, "Không có rủi ro")}
                   </p>
                 </div>
               ))
@@ -310,7 +222,7 @@ export function ExecutiveRiskSummary({
       <div className="mt-4 rounded-md border border-slate-200 p-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden="true" />
-          <h3 className="text-sm font-semibold text-slate-950">Risk cần xem</h3>
+          <h3 className="text-sm font-semibold text-slate-950">Rủi ro cần xem</h3>
         </div>
         <div className="mt-3 space-y-2">
           {riskSummary.items.length ? (
@@ -342,9 +254,9 @@ export function ExecutiveRiskSummary({
                   </span>
                   {renderRiskAlertMeta(item)}
                   <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                    {item.owner ? <span>Owner: {item.owner}</span> : null}
-                    {item.deadline ? <span>Deadline: {item.deadline}</span> : null}
-                    {item.projectId ? <span>Project: {item.projectId}</span> : null}
+                    {item.owner ? <span>Người phụ trách: {item.owner}</span> : null}
+                    {item.deadline ? <span>Hạn xử lý: {item.deadline}</span> : null}
+                    {item.projectId ? <span>Dự án: {item.projectId}</span> : null}
                     {item.moduleId ? <span>Module: {item.moduleId}</span> : null}
                   </span>
                 </>
@@ -358,7 +270,7 @@ export function ExecutiveRiskSummary({
                   >
                     {content}
                     <span className="mt-2 block text-xs font-semibold text-slate-500">
-                      Khong co quyen drill-down
+                      Không có quyền xem chi tiết
                     </span>
                   </article>
                 );
@@ -366,7 +278,7 @@ export function ExecutiveRiskSummary({
 
               return (
                 <button
-                  aria-label={`Xem chi tiet ${item.title}`}
+                  aria-label={`Xem chi tiết ${item.title}`}
                   className="w-full rounded-md border border-slate-200 p-3 text-left transition hover:border-emerald-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                   key={item.id}
                   onClick={() => onSelectSource(item)}

@@ -138,6 +138,7 @@ function proposalDetail(overrides: Partial<ProposalDetail> = {}): ProposalDetail
     proposal: proposal(),
     steps: [],
     ...overrides,
+    attachments: overrides.attachments ?? [],
   };
 }
 

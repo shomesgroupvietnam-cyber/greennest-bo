@@ -906,11 +906,28 @@ describe("executive dashboard service", () => {
       { name: "Overdue Dashboard Project", status: "active" },
       projectRepository,
     );
-    await seedProposal({
+    const overdueProposal = await seedProposal({
       dueDate: "2026-05-20",
       id: "proposal-overdue-dashboard",
       projectId: project.id,
       title: "Overdue dashboard proposal",
+    });
+    await proposalRepository.updateProposal(overdueProposal.id, {
+      currentStepId: "dashboard-current-step",
+    });
+    await proposalRepository.addStep({
+      approvalLevel: "CEO",
+      approverRole: "tong_giam_doc",
+      approverUserId: "current-approver-dashboard",
+      createdAt: "2026-05-20T00:00:00.000Z",
+      id: "dashboard-current-step",
+      proposalId: overdueProposal.id,
+      requiredPermission: "proposal.approve",
+      status: "in_review",
+      stepOrder: 1,
+      thresholdLabel: "Dashboard approval",
+      thresholdPolicyId: "policy-dashboard",
+      updatedAt: "2026-05-20T00:00:00.000Z",
     });
     const notifications = new InMemoryNotificationRepository();
     const audits: Array<Omit<AuditLog, "id" | "createdAt">> = [];
@@ -972,6 +989,7 @@ describe("executive dashboard service", () => {
     expect(overdueItem?.escalation?.targets).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: "delegate", userId: "assistant-01" }),
+        expect.objectContaining({ kind: "current_approver", userId: "current-approver-dashboard" }),
         expect.objectContaining({ kind: "policy_escalation", roleKey: "tong_giam_doc" }),
       ]),
     );

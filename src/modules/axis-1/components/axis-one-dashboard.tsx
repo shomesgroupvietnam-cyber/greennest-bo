@@ -304,7 +304,7 @@ export function AxisOneDashboard({
                   {alert.reason}
                 </p>
                 <p className="mt-2 text-xs font-medium text-red-700">
-                  Deadline: {formatDate(alert.deadline)}
+                  Hạn xử lý: {formatDate(alert.deadline)}
                 </p>
               </Link>
             ))}

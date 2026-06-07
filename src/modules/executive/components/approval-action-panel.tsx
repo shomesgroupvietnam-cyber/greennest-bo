@@ -85,21 +85,21 @@ function Confirmation({ label }: { label: string }) {
 function renderFields(action: ApprovalCenterDetailAction) {
   switch (action.action) {
     case "approve":
-      return <TextArea label="Ghi chu duyet" name="notes" />;
+      return <TextArea label="Ghi chú duyệt" name="notes" />;
     case "reject":
       return (
         <>
-          <TextArea label="Ly do tu choi" name="reason" required />
-          <Confirmation label="Xac nhan tu choi" />
+          <TextArea label="Lý do từ chối" name="reason" required />
+          <Confirmation label="Xác nhận từ chối" />
         </>
       );
     case "request_change":
-      return <TextArea label="Ly do tra lai" name="reason" required />;
+      return <TextArea label="Lý do trả lại" name="reason" required />;
     case "forward":
       return (
         <>
           <label className="block text-sm font-medium text-slate-700">
-            Target role
+            Vai trò nhận chuyển tiếp
             <input
               className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               name="targetRole"
@@ -107,36 +107,36 @@ function renderFields(action: ApprovalCenterDetailAction) {
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
-            Target label
+            Nhãn người nhận
             <input
               className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               name="targetLabel"
             />
           </label>
-          <TextArea label="Ghi chu chuyen cap" name="notes" />
+          <TextArea label="Ghi chú chuyển cấp" name="notes" />
         </>
       );
     case "ask_meeting":
       return (
         <>
           <label className="block text-sm font-medium text-slate-700">
-            Loai hop
+            Loại họp
             <input
               className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               name="meetingType"
               required
             />
           </label>
-          <TextArea label="Agenda du thao" name="agendaDraft" />
+          <TextArea label="Agenda dự thảo" name="agendaDraft" />
         </>
       );
     case "hold":
-      return <TextArea label="Ghi chu tam giu" name="notes" />;
+      return <TextArea label="Ghi chú tạm giữ" name="notes" />;
     case "cancel":
       return (
         <>
-          <TextArea label="Ly do huy approval" name="reason" required />
-          <Confirmation label="Xac nhan huy approval" />
+          <TextArea label="Lý do hủy phê duyệt" name="reason" required />
+          <Confirmation label="Xác nhận hủy phê duyệt" />
         </>
       );
   }
@@ -146,17 +146,46 @@ export function ApprovalActionPanel({ detail }: { detail: ApprovalCenterDetailDa
   const enabledActions = detail.permissions.availableActions.filter(
     (action) => action.enabled,
   );
+  const disabledActions = detail.permissions.availableActions.filter(
+    (action) => !action.enabled,
+  );
 
   if (enabledActions.length === 0) {
-    return null;
+    return (
+      <section
+        aria-label="Hành động phê duyệt"
+        className="rounded-lg border bg-white p-5 shadow-sm"
+      >
+        <h2 className="text-base font-semibold text-slate-950">Hành động phê duyệt</h2>
+        <div className="mt-3 space-y-2">
+          {disabledActions.length > 0 ? (
+            disabledActions.map((action) => (
+              <div
+                className="rounded-md border bg-slate-50 p-3 text-sm text-slate-600"
+                key={action.action}
+              >
+                <p className="font-semibold text-slate-950">{action.label}</p>
+                <p className="mt-1 break-words">
+                  {action.disabledReason ?? "Khong kha dung trong trang thai hien tai."}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="rounded-md border bg-slate-50 p-3 text-sm text-slate-600">
+              Khong co workflow tiep theo trong trang thai hien tai.
+            </p>
+          )}
+        </div>
+      </section>
+    );
   }
 
   return (
     <section
-      aria-label="Approval actions"
+      aria-label="Hành động phê duyệt"
       className="rounded-lg border bg-white p-5 shadow-sm"
     >
-      <h2 className="text-base font-semibold text-slate-950">Approval actions</h2>
+      <h2 className="text-base font-semibold text-slate-950">Hành động phê duyệt</h2>
       <div className="mt-3 divide-y divide-slate-200">
         {enabledActions.map((action) => {
           const Icon = actionIcons[action.action];

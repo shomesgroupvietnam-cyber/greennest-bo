@@ -2,7 +2,12 @@ import {
   hasAnyScopedActionGrant,
   requiresAssignmentScopeForRole,
 } from "@/lib/permissions/access-scope";
-import { can, type PermissionAction, type PermissionUser } from "@/lib/permissions/can";
+import { businessDayIndex } from "@/lib/date/business-day";
+import {
+  can,
+  type PermissionAction,
+  type PermissionUser,
+} from "@/lib/permissions/can";
 import { selectScopeAssignmentsForUser } from "@/lib/permissions/navigation-context";
 import {
   buildExecutiveAiSummaryDraft,
@@ -12,6 +17,7 @@ import type {
   ExecutiveDashboardData,
   ExecutiveDashboardKpi,
   ExecutiveDashboardSourceItem,
+  ExecutiveFinancialSummary,
   ExecutiveRiskItem,
 } from "@/modules/dashboard/types";
 import { enrichExecutiveSourceItem } from "@/modules/dashboard/services/executive-drilldown-source";
@@ -46,10 +52,16 @@ import type {
   ExecutivePrivateWorkspaceVariant,
   PrivateWorkspaceAction,
   PrivateWorkspacePermissions,
+  PrivateWorkspacePermissionOverview,
+  PrivateWorkspaceProfessionalApprovals,
+  PrivateWorkspaceProjectCost,
+  PrivateWorkspaceResourceProgress,
   PrivateWorkspaceSectionItem,
+  PrivateWorkspaceWorkflowChecklist,
 } from "@/modules/workspaces/types";
 
-type ExecutivePrivateWorkspaceRepositories = ExecutiveDashboardOptions["repositories"];
+type ExecutivePrivateWorkspaceRepositories =
+  ExecutiveDashboardOptions["repositories"];
 
 export type ExecutivePrivateWorkspaceOptions = {
   selectedScopeId?: string;
@@ -70,6 +82,11 @@ type DelegationWorkspaceState = {
   delegation: LeadershipDelegation;
   reason: string;
 };
+
+type NoPermissionFinancialSummary = Extract<
+  ExecutiveFinancialSummary,
+  { state: "no_permission" }
+>;
 
 const delegatedCreateActions = new Set<PermissionAction>([
   "proposal.create",
@@ -149,14 +166,18 @@ function hasExecutiveAccessFromScope(
   return scopeAssignments.some(
     (assignment) =>
       canAccessExecutiveModule(assignment.roleKey) &&
-      ["project.view", "proposal.view", "meeting.view", "decision.approve"].some(
-        (permission) =>
-          hasScopedGrant(
-            user,
-            permission as PermissionAction,
-            rolePermissionCatalog,
-            [assignment],
-          ),
+      [
+        "project.view",
+        "proposal.view",
+        "meeting.view",
+        "decision.approve",
+      ].some((permission) =>
+        hasScopedGrant(
+          user,
+          permission as PermissionAction,
+          rolePermissionCatalog,
+          [assignment],
+        ),
       ),
   );
 }
@@ -180,7 +201,10 @@ function normalizeDimension(value?: string) {
   return value;
 }
 
-function dimensionsCompatible(assignmentValue?: string, delegationValue?: string) {
+function dimensionsCompatible(
+  assignmentValue?: string,
+  delegationValue?: string,
+) {
   if (
     !assignmentValue ||
     assignmentValue === "*" ||
@@ -190,7 +214,9 @@ function dimensionsCompatible(assignmentValue?: string, delegationValue?: string
     return true;
   }
 
-  return normalizeDimension(assignmentValue) === normalizeDimension(delegationValue);
+  return (
+    normalizeDimension(assignmentValue) === normalizeDimension(delegationValue)
+  );
 }
 
 function delegationMatchesAssignment(
@@ -198,7 +224,10 @@ function delegationMatchesAssignment(
   assignment: ScopeAssignment,
 ) {
   return (
-    dimensionsCompatible(assignment.organizationId, delegation.organizationId) &&
+    dimensionsCompatible(
+      assignment.organizationId,
+      delegation.organizationId,
+    ) &&
     dimensionsCompatible(assignment.projectId, delegation.projectId) &&
     dimensionsCompatible(assignment.axisId, delegation.axisId) &&
     dimensionsCompatible(assignment.workstreamId, delegation.workstreamId) &&
@@ -254,11 +283,11 @@ function resolveVariant(
 
 function readOnlyReason(permissions: PrivateWorkspacePermissions) {
   if (permissions.mutationMode === "read_only") {
-    return "Read-only trong scope hien tai.";
+    return "Chỉ xem trong phạm vi hiện tại.";
   }
 
   if (permissions.mutationMode === "none") {
-    return "Khong co quyen thao tac trong scope hien tai.";
+    return "Không có quyền thao tác trong phạm vi hiện tại.";
   }
 
   return undefined;
@@ -287,11 +316,11 @@ function sanitizeItemFinance<T extends Record<string, unknown>>(
 
 function healthLabel(status: string) {
   if (status === "red") {
-    return "Do";
+    return "Đỏ";
   }
 
   if (status === "yellow") {
-    return "Vang";
+    return "Vàng";
   }
 
   if (status === "green") {
@@ -307,14 +336,14 @@ function priorityLabelForRisk(item: ExecutiveRiskItem) {
 
 function priorityLabelForItem(item: ExecutiveDashboardSourceItem) {
   if (item.tone === "red") {
-    return item.status === "overdue" ? "Qua han" : "High";
+    return item.status === "overdue" ? "Quá hạn" : "Cao";
   }
 
   if (item.tone === "amber") {
-    return "Can chu y";
+    return "Cần chú ý";
   }
 
-  return "Thong tin";
+  return "Thông tin";
 }
 
 function toSectionItem(
@@ -349,29 +378,18 @@ function toProjectItem(
 ): PrivateWorkspaceSectionItem {
   return toSectionItem(
     item,
-    "Du an duoc giao",
+    "Dự án được giao",
     permissions,
     scopeLabel,
     healthLabel(item.status),
   );
 }
 
-function toUtcDay(value: string) {
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return Number.NaN;
-  }
-
-  return Date.UTC(
-    parsed.getUTCFullYear(),
-    parsed.getUTCMonth(),
-    parsed.getUTCDate(),
-  );
-}
-
 function scoreItem(item: PrivateWorkspaceSectionItem, today: Date) {
-  if (item.priorityLabel === "Critical" || item.priorityLabel === "Nghiêm trọng") {
+  if (
+    item.priorityLabel === "Critical" ||
+    item.priorityLabel === "Nghiêm trọng"
+  ) {
     return 100;
   }
 
@@ -380,7 +398,10 @@ function scoreItem(item: PrivateWorkspaceSectionItem, today: Date) {
   }
 
   if (item.sourceType === "risk") {
-    if (item.priorityLabel === "Medium" || item.priorityLabel === "Trung bình") {
+    if (
+      item.priorityLabel === "Medium" ||
+      item.priorityLabel === "Trung bình"
+    ) {
       return 60;
     }
 
@@ -388,18 +409,18 @@ function scoreItem(item: PrivateWorkspaceSectionItem, today: Date) {
   }
 
   if (item.deadline) {
-    const deadline = toUtcDay(item.deadline);
-    const current = Date.UTC(
-      today.getUTCFullYear(),
-      today.getUTCMonth(),
-      today.getUTCDate(),
-    );
+    const deadline = businessDayIndex(item.deadline);
+    const current = businessDayIndex(today);
 
-    if (!Number.isNaN(deadline) && deadline < current) {
+    if (deadline !== undefined && current !== undefined && deadline < current) {
       return 85;
     }
 
-    if (!Number.isNaN(deadline) && deadline === current) {
+    if (
+      deadline !== undefined &&
+      current !== undefined &&
+      deadline === current
+    ) {
       return 75;
     }
   }
@@ -473,24 +494,26 @@ function delegatedActionKeysForCatalog(
 
     const permission = permissionByKey(rolePermissionCatalog, actionKey);
 
-    return Boolean(permission && isDelegationActionAllowed(actionKey, permission));
+    return Boolean(
+      permission && isDelegationActionAllowed(actionKey, permission),
+    );
   });
 }
 
 function reasonForDelegationStatus(status: string) {
   if (status === "expired") {
-    return "Delegation da het hieu luc.";
+    return "Ủy quyền đã hết hiệu lực.";
   }
 
   if (status === "scheduled") {
-    return "Delegation chua den thoi gian hieu luc.";
+    return "Ủy quyền chưa đến thời gian hiệu lực.";
   }
 
   if (status === "inactive") {
-    return "Delegation dang inactive.";
+    return "Ủy quyền đang tạm ngưng.";
   }
 
-  return "Delegation khong hop le.";
+  return "Ủy quyền không hợp lệ.";
 }
 
 function buildDelegationWorkspaceStates(input: {
@@ -527,7 +550,7 @@ function buildDelegationWorkspaceStates(input: {
         allowedActionKeys,
         canActOnBehalf: false,
         delegation,
-        reason: "Delegation active nhung ngoai selected scope.",
+        reason: "Ủy quyền đang hiệu lực nhưng nằm ngoài phạm vi đã chọn.",
       };
     }
 
@@ -536,7 +559,8 @@ function buildDelegationWorkspaceStates(input: {
         allowedActionKeys,
         canActOnBehalf: false,
         delegation,
-        reason: "Khong co action delegatable trong permission catalog hien tai.",
+        reason:
+          "Không có thao tác được phép ủy quyền trong danh mục quyền hiện tại.",
       };
     }
 
@@ -544,38 +568,38 @@ function buildDelegationWorkspaceStates(input: {
       allowedActionKeys,
       canActOnBehalf: true,
       delegation,
-      reason: "Delegation active va match scope.",
+      reason: "Ủy quyền đang hiệu lực và khớp phạm vi.",
     };
   });
 }
 
 function actionLabel(actionKey: PermissionAction) {
   if (actionKey === "proposal.create") {
-    return "Tao de xuat thay lanh dao";
+    return "Tạo đề xuất thay lãnh đạo";
   }
 
   if (actionKey === "meeting.create") {
-    return "Tao lich hop thay lanh dao";
+    return "Tạo lịch họp thay lãnh đạo";
   }
 
   if (actionKey === "document.create") {
-    return "Tao ho so ho tro";
+    return "Tạo hồ sơ hỗ trợ";
   }
 
   if (actionKey === "task.create") {
-    return "Tao viec ho tro";
+    return "Tạo việc hỗ trợ";
   }
 
   if (actionKey === "risk.create") {
-    return "Tao risk/blocker thay lanh dao";
+    return "Tạo rủi ro/vướng mắc thay lãnh đạo";
   }
 
   if (actionKey === "risk.update") {
-    return "Cap nhat risk/blocker thay lanh dao";
+    return "Cập nhật rủi ro/vướng mắc thay lãnh đạo";
   }
 
   if (actionKey === "risk.override") {
-    return "Xac nhan/override risk thay lanh dao";
+    return "Xác nhận/điều chỉnh rủi ro thay lãnh đạo";
   }
 
   return actionKey;
@@ -716,17 +740,16 @@ function buildAssistantSupport(input: {
 }) {
   return {
     allowedActions: input.allowedActions,
-    delegations: input.delegationStates
-      .map((state) => ({
-        actionKeys: state.allowedActionKeys,
-        canActOnBehalf: state.canActOnBehalf,
-        delegationId: state.delegation.id,
-        endsAt: state.delegation.endsAt,
-        principalUserId: state.delegation.principalUserId,
-        reason: state.reason,
-        scope: scopeSnapshot(state.delegation),
-        startsAt: state.delegation.startsAt,
-      })),
+    delegations: input.delegationStates.map((state) => ({
+      actionKeys: state.allowedActionKeys,
+      canActOnBehalf: state.canActOnBehalf,
+      delegationId: state.delegation.id,
+      endsAt: state.delegation.endsAt,
+      principalUserId: state.delegation.principalUserId,
+      reason: state.reason,
+      scope: scopeSnapshot(state.delegation),
+      startsAt: state.delegation.startsAt,
+    })),
     meetingDocuments: input.meetingItems,
     pendingApprovals: input.approvalItems,
     reminders: input.deadlineItems,
@@ -746,17 +769,19 @@ function deriveEmptyState(input: {
 }): ExecutivePrivateWorkspaceEmptyState | undefined {
   if (input.selectedScopeInvalid) {
     return {
-      description: "Selected scope khong match assignment active cua user.",
+      description:
+        "Phạm vi đã chọn không khớp với phân quyền đang hiệu lực của người dùng.",
       kind: "invalid_scope",
-      title: "Selected scope khong hop le",
+      title: "Phạm vi đã chọn không hợp lệ",
     };
   }
 
   if (input.permissions.mutationMode === "none") {
     return {
-      description: "User khong co permission Module 1 trong scope hien tai.",
+      description:
+        "Người dùng không có quyền vào Module 1 trong phạm vi hiện tại.",
       kind: "no_permission",
-      title: "Khong co quyen xem Private Workspace",
+      title: "Không có quyền xem Không Gian Làm Việc Cá Nhân",
     };
   }
 
@@ -765,20 +790,18 @@ function deriveEmptyState(input: {
     input.assistantDelegations.length === 0
   ) {
     return {
-      description: "Khong co delegation active va match scope cho tro ly.",
+      description:
+        "Không có ủy quyền đang hiệu lực và khớp phạm vi cho trợ lý.",
       kind: "delegation_invalid",
-      title: "Delegation khong hop le",
+      title: "Ủy quyền không hợp lệ",
     };
   }
 
-  if (
-    input.assignedProjects.length === 0 &&
-    input.priorityItems.length === 0
-  ) {
+  if (input.assignedProjects.length === 0 && input.priorityItems.length === 0) {
     return {
-      description: "Khong co du lieu trong scope da chon.",
+      description: "Không có dữ liệu trong phạm vi đã chọn.",
       kind: "no_data",
-      title: "Khong co du lieu trong scope",
+      title: "Không có dữ liệu trong phạm vi",
     };
   }
 
@@ -797,7 +820,7 @@ function emptyDashboard(
       pending: 0,
     },
     financialSummary: {
-      reason: "No finance data for empty private workspace.",
+      reason: "Không có dữ liệu tài chính cho không gian làm việc trống.",
       state: "no_permission",
     },
     generatedAt,
@@ -857,7 +880,7 @@ function emptyDashboard(
       moduleIds: [],
       organizationIds: [],
       projectIds: [],
-      scopeLabel: "Selected scope khong hop le",
+      scopeLabel: "Phạm vi đã chọn không hợp lệ",
       selectedScopeId,
     },
     sourceCounts: {
@@ -888,13 +911,422 @@ function buildSourceCounts(
   };
 }
 
-function sourceKey(item: Pick<ExecutiveDashboardSourceItem, "sourceId" | "sourceType">) {
+function noPermissionFinancialSummary(
+  reason: string,
+): NoPermissionFinancialSummary {
+  return {
+    reason,
+    state: "no_permission",
+  };
+}
+
+function resolveWorkspaceFinancialSummary(
+  dashboard: ExecutiveDashboardData,
+  permissions: PrivateWorkspacePermissions,
+): ExecutiveFinancialSummary {
+  if (!permissions.canViewFinance) {
+    return noPermissionFinancialSummary(
+      "Không có quyền xem tài chính trong phạm vi Private Workspace hiện tại.",
+    );
+  }
+
+  return dashboard.financialSummary;
+}
+
+function buildPermissionOverview(
+  user: PermissionUser,
+  permissions: PrivateWorkspacePermissions,
+): PrivateWorkspacePermissionOverview {
+  const boAdminEnabled = can(user, "settings.manage");
+  const items: PrivateWorkspacePermissionOverview["items"] = [
+    {
+      actionKey: "project.view",
+      enabled: permissions.canViewProjects,
+      id: "project-view",
+      label: "Dữ liệu dự án",
+      reason: permissions.canViewProjects
+        ? "Được xem dự án trong dynamic scope hiện tại."
+        : "Không có project.view trong dynamic scope hiện tại.",
+      tone: permissions.canViewProjects ? "emerald" : "slate",
+    },
+    {
+      actionKey: "finance.view",
+      enabled: permissions.canViewFinance,
+      id: "finance-view",
+      label: "Dữ liệu tài chính",
+      reason: permissions.canViewFinance
+        ? "Được xem dòng tiền/chi phí trong phạm vi được cấp quyền."
+        : "Không có finance.view trong dynamic scope hiện tại.",
+      tone: permissions.canViewFinance ? "emerald" : "slate",
+    },
+    {
+      actionKey: "risk.override",
+      enabled: permissions.canOverrideRisk,
+      id: "risk-governance",
+      label: "Quản trị rủi ro",
+      reason: permissions.canOverrideRisk
+        ? "Có quyền override/quản trị rủi ro trong dynamic scope hiện tại."
+        : "Không có risk.override trong dynamic scope hiện tại.",
+      tone: permissions.canOverrideRisk ? "emerald" : "slate",
+    },
+    {
+      enabled: permissions.canDrillDown,
+      id: "source-drilldown",
+      label: "Drilldown nguồn",
+      reason: permissions.canDrillDown
+        ? "Được mở chi tiết nguồn nghiệp vụ đã lọc theo permission."
+        : "Không có quyền mở chi tiết nguồn trong scope hiện tại.",
+      tone: permissions.canDrillDown ? "emerald" : "slate",
+    },
+    {
+      actionKey: "settings.manage",
+      enabled: boAdminEnabled,
+      id: "bo-admin",
+      label: "BO/Admin",
+      reason: boAdminEnabled
+        ? "Có quyền quản trị hệ thống theo role hoặc permission trực tiếp."
+        : "Không tự động có quyền BO/Admin từ Private Workspace.",
+      tone: boAdminEnabled ? "amber" : "slate",
+    },
+  ];
+
+  return {
+    items,
+    state: "available",
+  };
+}
+
+function formatPercentage(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function buildResourceProgress(
+  dashboard: ExecutiveDashboardData,
+  assignedProjects: PrivateWorkspaceSectionItem[],
+  deadlineItems: PrivateWorkspaceSectionItem[],
+): PrivateWorkspaceResourceProgress {
+  const progressValues = dashboard.projectPortfolio.items
+    .map((item) => item.progress)
+    .filter(
+      (value): value is number =>
+        typeof value === "number" &&
+        Number.isFinite(value) &&
+        value >= 0 &&
+        value <= 100,
+    );
+  const averageProgress =
+    progressValues.length > 0
+      ? progressValues.reduce((total, value) => total + value, 0) /
+        progressValues.length
+      : undefined;
+  const owners = new Set(
+    [...assignedProjects, ...deadlineItems]
+      .map((item) => item.owner)
+      .filter((owner): owner is string => Boolean(owner)),
+  );
+  const deadlinePressure = deadlineItems.filter(
+    (item) => item.tone === "red" || item.status === "overdue",
+  ).length;
+  const hasProjectData = dashboard.projectPortfolio.items.length > 0;
+  const hasProgressMetadata = progressValues.length > 0;
+  const hasResourceMetadata = owners.size > 0;
+
+  if (!hasProjectData || !hasProgressMetadata || !hasResourceMetadata) {
+    return {
+      items: [],
+      reason:
+        "Chưa đủ progress và owner/resource metadata trong scope Private Workspace hiện tại.",
+      state: "empty",
+    };
+  }
+
+  return {
+    items: [
+      {
+        helper: `${dashboard.projectPortfolio.total} dự án trong scope vận hành.`,
+        id: "project-progress",
+        label: "Tiến độ trung bình",
+        tone:
+          averageProgress === undefined
+            ? "slate"
+            : averageProgress < 60
+              ? "red"
+              : averageProgress < 80
+                ? "amber"
+                : "emerald",
+        value:
+          averageProgress === undefined
+            ? "Chưa có"
+            : formatPercentage(averageProgress),
+      },
+      {
+        helper: "Đỏ / Vàng / Xanh theo danh mục dự án được thấy.",
+        id: "project-health-mix",
+        label: "Dự án đỏ/vàng/xanh",
+        tone:
+          dashboard.projectPortfolio.red > 0
+            ? "red"
+            : dashboard.projectPortfolio.yellow > 0
+              ? "amber"
+              : "emerald",
+        value: `${dashboard.projectPortfolio.red}/${dashboard.projectPortfolio.yellow}/${dashboard.projectPortfolio.green}`,
+      },
+      {
+        helper:
+          owners.size > 0
+            ? "Owner/resource xuất hiện trong việc và dự án."
+            : undefined,
+        id: "resource-load",
+        label: "Resource/owner active",
+        tone: owners.size > 0 ? "blue" : "slate",
+        value: owners.size,
+      },
+      {
+        helper: `${deadlineItems.length} việc có hạn trong scope.`,
+        id: "deadline-pressure",
+        label: "Áp lực deadline",
+        tone:
+          deadlinePressure > 0
+            ? "red"
+            : deadlineItems.length > 0
+              ? "amber"
+              : "slate",
+        value: deadlinePressure,
+      },
+    ],
+    state: "available",
+  };
+}
+
+function buildProjectCost(
+  permissions: PrivateWorkspacePermissions,
+  financialSummary: ExecutiveFinancialSummary,
+  assignedProjects: PrivateWorkspaceSectionItem[],
+): PrivateWorkspaceProjectCost {
+  if (
+    !permissions.canViewFinance &&
+    financialSummary.state === "no_permission"
+  ) {
+    return {
+      financialSummary,
+      items: [],
+      reason: financialSummary.reason,
+      state: "no_permission",
+    };
+  }
+
+  if (!permissions.canViewFinance) {
+    const deniedSummary = noPermissionFinancialSummary(
+      "Không có quyền xem tài chính trong phạm vi Private Workspace hiện tại.",
+    );
+
+    return {
+      financialSummary: deniedSummary,
+      items: [],
+      reason: deniedSummary.reason,
+      state: "no_permission",
+    };
+  }
+
+  if (financialSummary.state === "no_permission") {
+    return {
+      financialSummary,
+      items: [],
+      reason: financialSummary.reason,
+      state: "no_permission",
+    };
+  }
+
+  const assignedProjectIds = new Set(
+    assignedProjects
+      .map((item) => item.projectId)
+      .filter((projectId): projectId is string => Boolean(projectId)),
+  );
+  const scopedFinanceItems = financialSummary.items.filter(
+    (item) =>
+      item.projectId !== undefined && assignedProjectIds.has(item.projectId),
+  );
+  const scopedFinanceProjectIds = new Set(
+    scopedFinanceItems
+      .map((item) => item.projectId)
+      .filter((projectId): projectId is string => Boolean(projectId)),
+  );
+  const scopedFinancialSummary: ExecutiveFinancialSummary = {
+    ...financialSummary,
+    access:
+      scopedFinanceItems.length === financialSummary.items.length
+        ? financialSummary.access
+        : "partial",
+    items: scopedFinanceItems,
+    visibleAmountTotal: scopedFinanceItems.reduce(
+      (total, item) => total + item.amount,
+      0,
+    ),
+    visibleRecordCount: scopedFinanceItems.length,
+  };
+  const items = assignedProjects.filter(
+    (item) =>
+      item.projectId !== undefined &&
+      scopedFinanceProjectIds.has(item.projectId) &&
+      (!("financialAccess" in item) ||
+        (item as PrivateWorkspaceSectionItem & { financialAccess?: string })
+          .financialAccess === "allowed"),
+  );
+
+  return {
+    financialSummary: scopedFinancialSummary,
+    items,
+    reason:
+      items.length > 0
+        ? undefined
+        : "Không có dự án có dữ liệu chi phí/dòng tiền trong scope hiện tại.",
+    state:
+      items.length > 0 && scopedFinancialSummary.visibleRecordCount > 0
+        ? "available"
+        : "empty",
+  };
+}
+
+function withGroupLabel(
+  items: PrivateWorkspaceSectionItem[],
+  groupLabel: string,
+) {
+  return items.map((item) => ({
+    ...item,
+    groupLabel,
+  }));
+}
+
+function dedupeSectionItems(items: PrivateWorkspaceSectionItem[]) {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const key = `${item.sourceType}:${item.sourceId}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function isWorkflowChecklistCandidate(item: PrivateWorkspaceSectionItem) {
+  const text = [item.title, item.reason, item.moduleId, item.groupLabel]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return [
+    "workflow",
+    "checklist",
+    "hồ sơ",
+    "ho so",
+    "pháp lý",
+    "phap ly",
+    "quy hoạch",
+    "quy hoach",
+  ].some((keyword) => text.includes(keyword));
+}
+
+function isProfessionalApprovalCandidate(item: PrivateWorkspaceSectionItem) {
+  const text = [item.title, item.reason, item.moduleId, item.groupLabel]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const professionalModule = [
+    "compliance",
+    "contract",
+    "document",
+    "documents",
+    "legal",
+    "permit",
+    "planning",
+    "quality",
+  ].some((moduleId) => item.moduleId?.toLowerCase() === moduleId);
+
+  if (professionalModule) {
+    return true;
+  }
+
+  return [
+    "chuyên môn",
+    "chuyen mon",
+    "hồ sơ",
+    "ho so",
+    "hợp đồng",
+    "hop dong",
+    "legal",
+    "permit",
+    "pháp lý",
+    "phap ly",
+    "quy hoạch",
+    "quy hoach",
+    "thiết kế",
+    "thiet ke",
+    "workflow",
+  ].some((keyword) => text.includes(keyword));
+}
+
+function buildWorkflowChecklist(
+  approvalItems: PrivateWorkspaceSectionItem[],
+  deadlineItems: PrivateWorkspaceSectionItem[],
+  assignedProjects: PrivateWorkspaceSectionItem[],
+  excludedItems: PrivateWorkspaceSectionItem[] = [],
+): PrivateWorkspaceWorkflowChecklist {
+  const excludedKeys = new Set(
+    excludedItems.map((item) => `${item.sourceType}:${item.sourceId}`),
+  );
+  const candidates = [
+    ...deadlineItems,
+    ...approvalItems,
+    ...assignedProjects,
+  ].filter(
+    (item) =>
+      isWorkflowChecklistCandidate(item) &&
+      !excludedKeys.has(`${item.sourceType}:${item.sourceId}`),
+  );
+  const items = withGroupLabel(
+    dedupeSectionItems(candidates).slice(0, 8),
+    "Workflow/checklist chuyên môn",
+  );
+
+  return {
+    items,
+    reason:
+      items.length > 0
+        ? undefined
+        : "Chưa có workflow/checklist trong scope chuyên môn.",
+    state: items.length > 0 ? "available" : "empty",
+  };
+}
+
+function buildProfessionalApprovals(
+  approvalItems: PrivateWorkspaceSectionItem[],
+): PrivateWorkspaceProfessionalApprovals {
+  const items = withGroupLabel(
+    approvalItems.filter(isProfessionalApprovalCandidate).slice(0, 8),
+    "Phê duyệt chuyên môn",
+  );
+
+  return {
+    items,
+    reason:
+      items.length > 0
+        ? undefined
+        : "Chưa có phê duyệt chuyên môn trong scope hiện tại.",
+    state: items.length > 0 ? "available" : "empty",
+  };
+}
+
+function sourceKey(
+  item: Pick<ExecutiveDashboardSourceItem, "sourceId" | "sourceType">,
+) {
   return `${item.sourceType}:${item.sourceId}`;
 }
 
-function buildWorkspaceAiCitation(
-  item: PrivateWorkspaceSectionItem,
-) {
+function buildWorkspaceAiCitation(item: PrivateWorkspaceSectionItem) {
   return {
     href: item.href,
     id: `workspace-ai-citation-${item.sourceType}-${item.sourceId}`,
@@ -950,20 +1382,22 @@ function buildWorkspaceAiSource(input: {
     ],
     sourceText: visibleItems.length
       ? [
-          `Private Workspace ${input.variant} trong ${input.scopeLabel}.`,
-          `Priority: ${input.priorityItems.length}; approvals: ${input.approvalItems.length}; risks: ${input.riskItems.length}; deadlines: ${input.deadlineItems.length}; decisions: ${input.decisionItems.length}; meetings: ${input.meetingItems.length}.`,
-          ...visibleItems.slice(0, 8).map((item) =>
-            [
-              item.groupLabel,
-              item.priorityLabel,
-              item.title,
-              item.status,
-              item.deadline ? `deadline ${item.deadline}` : undefined,
-              item.reason,
-            ]
-              .filter(Boolean)
-              .join(" | "),
-          ),
+          `Không Gian Làm Việc Cá Nhân ${input.variant} trong ${input.scopeLabel}.`,
+          `Ưu tiên: ${input.priorityItems.length}; phê duyệt: ${input.approvalItems.length}; rủi ro: ${input.riskItems.length}; hạn xử lý: ${input.deadlineItems.length}; quyết định: ${input.decisionItems.length}; cuộc họp: ${input.meetingItems.length}.`,
+          ...visibleItems
+            .slice(0, 8)
+            .map((item) =>
+              [
+                item.groupLabel,
+                item.priorityLabel,
+                item.title,
+                item.status,
+                item.deadline ? `hạn xử lý ${item.deadline}` : undefined,
+                item.reason,
+              ]
+                .filter(Boolean)
+                .join(" | "),
+            ),
         ].join("\n")
       : "",
   };
@@ -982,11 +1416,12 @@ function buildKpis(
     ...dashboardKpis,
     {
       id: "assistant-delegated-actions",
-      label: "Delegated actions",
-      reason: "Active on-behalf actions in current scope",
+      label: "Thao tác được ủy quyền",
+      reason: "Thao tác thay mặt đang hiệu lực trong phạm vi hiện tại",
       sourceType: "executive_action" as const,
       value: delegatedActions.length,
-      tone: delegatedActions.length > 0 ? ("emerald" as const) : ("amber" as const),
+      tone:
+        delegatedActions.length > 0 ? ("emerald" as const) : ("amber" as const),
     },
   ];
 }
@@ -1037,9 +1472,7 @@ export async function getExecutivePrivateWorkspaceData(
   const scopedDelegations = assistantDelegationStates
     .filter((state) => state.canActOnBehalf)
     .map((state) => state.delegation);
-  const delegatedActions = buildDelegatedActions(
-    assistantDelegationStates,
-  );
+  const delegatedActions = buildDelegatedActions(assistantDelegationStates);
   const canUsePrivateWorkspace =
     !selectedScopeInvalid &&
     (canAccessExecutiveModule(user.role) ||
@@ -1095,6 +1528,10 @@ export async function getExecutivePrivateWorkspaceData(
       },
       options.aiSummary,
     );
+    const financialSummary = resolveWorkspaceFinancialSummary(
+      dashboard,
+      invalidScopePermissions,
+    );
 
     return {
       approvalItems: [],
@@ -1111,15 +1548,29 @@ export async function getExecutivePrivateWorkspaceData(
         selectedScopeInvalid,
         variant,
       }),
+      financialSummary,
       generatedAt: dashboard.generatedAt,
       kpis: [],
       meetingItems: [],
+      permissionOverview: buildPermissionOverview(
+        user,
+        invalidScopePermissions,
+      ),
       permissions: invalidScopePermissions,
+      professionalApprovals: buildProfessionalApprovals([]),
+      projectCost: buildProjectCost(
+        invalidScopePermissions,
+        financialSummary,
+        [],
+      ),
       priorityItems: [],
+      resourceProgress: buildResourceProgress(dashboard, [], []),
       riskItems: [],
+      riskMap: dashboard.riskSummary.riskMap,
       scope: dashboard.scope,
       sourceCounts: buildSourceCounts(dashboard, [], scopedDelegations),
       variant,
+      workflowChecklist: buildWorkflowChecklist([], [], []),
     };
   }
 
@@ -1170,35 +1621,35 @@ export async function getExecutivePrivateWorkspaceData(
   const approvalItems = dashboard.approvalSummary.items.map((item) =>
     toSectionItem(
       item,
-      variant === "secretary_assistant" ? "Ho so trinh" : "Approval can xu ly",
+      variant === "secretary_assistant" ? "Hồ sơ trình" : "Phê duyệt cần xử lý",
       permissions,
       scopeLabel,
       item.priority === "critical" || item.riskLevel === "critical"
-        ? "Critical"
+        ? "Nghiêm trọng"
         : item.priority === "high" || item.riskLevel === "high"
-          ? "High"
+          ? "Cao"
           : priorityLabelForItem(item),
     ),
   );
   const riskItems = dashboard.riskSummary.items.map((item) =>
     toSectionItem(
       item,
-      "Risk/blocker",
+      "Rủi ro/vướng mắc",
       permissions,
       scopeLabel,
       priorityLabelForRisk(item),
     ),
   );
   const deadlineItems = dashboard.todayDeadlines.items.map((item) =>
-    toSectionItem(item, "Deadline", permissions, scopeLabel),
+    toSectionItem(item, "Hạn xử lý", permissions, scopeLabel),
   );
   const decisionItems = dashboard.recentDecisions.items.map((item) =>
-    toSectionItem(item, "Quyet dinh", permissions, scopeLabel),
+    toSectionItem(item, "Quyết định", permissions, scopeLabel),
   );
   const meetingItems = dashboard.meetingSnapshot.items.map((item) =>
     toSectionItem(
       item,
-      variant === "secretary_assistant" ? "Lich lanh dao" : "Cuoc hop",
+      variant === "secretary_assistant" ? "Lịch lãnh đạo" : "Cuộc họp",
       permissions,
       scopeLabel,
     ),
@@ -1224,6 +1675,31 @@ export async function getExecutivePrivateWorkspaceData(
           meetingItems,
         })
       : emptyAssistantSupport();
+  const financialSummary = resolveWorkspaceFinancialSummary(
+    dashboard,
+    permissions,
+  );
+  const resourceProgress =
+    variant === "ceo"
+      ? buildResourceProgress(dashboard, assignedProjects, deadlineItems)
+      : undefined;
+  const projectCost =
+    variant === "project_director"
+      ? buildProjectCost(permissions, financialSummary, assignedProjects)
+      : undefined;
+  const professionalApprovals =
+    variant === "department_head"
+      ? buildProfessionalApprovals(approvalItems)
+      : undefined;
+  const workflowChecklist =
+    variant === "department_head"
+      ? buildWorkflowChecklist(
+          approvalItems,
+          deadlineItems,
+          assignedProjects,
+          professionalApprovals?.items,
+        )
+      : undefined;
   const workspaceAiSource = buildWorkspaceAiSource({
     approvalItems,
     assignedProjects,
@@ -1260,14 +1736,28 @@ export async function getExecutivePrivateWorkspaceData(
       selectedScopeInvalid,
       variant,
     }),
+    financialSummary: variant === "chairman" ? financialSummary : undefined,
     generatedAt: dashboard.generatedAt,
     kpis: buildKpis(dashboard.kpis, variant, delegatedActions),
     meetingItems,
+    permissionOverview:
+      variant === "chairman"
+        ? buildPermissionOverview(user, permissions)
+        : undefined,
     permissions,
+    professionalApprovals,
+    projectCost,
     priorityItems,
+    resourceProgress,
     riskItems,
+    riskMap: variant === "chairman" ? dashboard.riskSummary.riskMap : undefined,
     scope: dashboard.scope,
-    sourceCounts: buildSourceCounts(dashboard, priorityItems, scopedDelegations),
+    sourceCounts: buildSourceCounts(
+      dashboard,
+      priorityItems,
+      scopedDelegations,
+    ),
     variant,
+    workflowChecklist,
   };
 }
